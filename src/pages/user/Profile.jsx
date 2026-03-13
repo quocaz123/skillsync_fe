@@ -19,7 +19,7 @@ import {
     Zap,
     GraduationCap
 } from 'lucide-react';
-import { AddSkillModal } from '../../components/profile/AddSkillModal';
+import { AddSkillModal } from '../../components/profile/AddSkillModal.jsx';
 
 const Profile = () => {
     const { user, credits } = useStore();
