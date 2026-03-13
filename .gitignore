@@ -128,7 +128,7 @@ docs/build/
 # ============================================
 .performance/
 perf_hooks/
-profile/
+# profile/  ← removed: was incorrectly blocking src/components/profile/
 
 # ============================================
 # STORYBOOK (if using)
