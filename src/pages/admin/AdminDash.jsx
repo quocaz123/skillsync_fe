@@ -448,7 +448,7 @@ const AdminDash = () => {
     const [activeTab, setActiveTab] = useState('overview');
 
     return (
-        <div className="max-w-7xl mx-auto font-sans pb-12 space-y-8">
+        <div className="max-w-7xl mx-auto font-sans pb-4 space-y-6 sm:space-y-8">
 
             {/* Header */}
             <div className="bg-slate-900 rounded-[2rem] p-8 sm:p-10 relative overflow-hidden">

@@ -31,7 +31,7 @@ const AdminCredits = () => {
     const todayCount = MOCK_TRANSACTIONS.filter(t => t.date.startsWith('2026-03-09')).length;
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6 pb-12">
+        <div className="max-w-7xl mx-auto space-y-5 sm:space-y-6 pb-4">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
@@ -45,7 +45,7 @@ const AdminCredits = () => {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[
                     { label: 'Credits lưu thông', value: totalCirculating.toLocaleString(), icon: '💰', bg: 'bg-amber-50', border: 'border-amber-100', color: 'text-amber-700' },
                     { label: 'GD hôm nay', value: todayCount, icon: '📊', bg: 'bg-blue-50', border: 'border-blue-100', color: 'text-blue-700' },

@@ -35,7 +35,7 @@ const AdminReports = () => {
     const filtered = filter === 'all' ? MOCK_REPORTS : MOCK_REPORTS.filter(r => r.status === filter);
 
     return (
-        <div className="max-w-5xl mx-auto space-y-6 pb-12">
+        <div className="max-w-5xl mx-auto space-y-5 sm:space-y-6 pb-4">
             {/* Page Title */}
             <div className="flex items-center justify-between">
                 <div>
@@ -47,7 +47,7 @@ const AdminReports = () => {
             </div>
 
             {/* Stat Cards */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-3 sm:gap-4">
                 {statCards.map(s => (
                     <div key={s.label} className={`${s.bg} border ${s.border} rounded-2xl p-6 text-center`}>
                         <div className="text-3xl mb-1">{s.icon}</div>
@@ -85,7 +85,7 @@ const AdminReports = () => {
                 {filtered.map(report => {
                     const uc = urgencyConfig[report.urgency];
                     return (
-                        <div key={report.id} className={`bg-white border border-slate-200 border-l-4 ${uc.border} rounded-2xl p-5 flex gap-4 shadow-sm hover:shadow-md transition-shadow`}>
+                        <div key={report.id} className={`bg-white border border-slate-200 border-l-4 ${uc.border} rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row gap-4 shadow-sm hover:shadow-md transition-shadow`}>
                             <div className="text-2xl shrink-0 mt-0.5">{uc.icon}</div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -99,7 +99,7 @@ const AdminReports = () => {
                                 </p>
                                 <p className="text-sm text-slate-600 bg-slate-50 rounded-xl px-4 py-2.5 border border-slate-100">{report.desc}</p>
                             </div>
-                            <div className="flex flex-col items-end justify-between gap-2 shrink-0">
+                            <div className="flex flex-row sm:flex-col items-start sm:items-end justify-between sm:justify-between gap-2 shrink-0">
                                 <span className="text-xs text-slate-400 font-medium">{report.date}</span>
                                 <div className="flex flex-col gap-1.5">
                                     <button className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1">

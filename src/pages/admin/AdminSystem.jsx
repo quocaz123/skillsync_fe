@@ -37,7 +37,7 @@ const AdminSystem = () => {
     ];
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6 pb-12">
+        <div className="max-w-7xl mx-auto space-y-5 sm:space-y-6 pb-4">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
@@ -52,7 +52,7 @@ const AdminSystem = () => {
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[
                     { label: 'DAU (hôm nay)', value: '720', Icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
                     { label: 'MAU', value: '8,420', Icon: Activity, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100' },

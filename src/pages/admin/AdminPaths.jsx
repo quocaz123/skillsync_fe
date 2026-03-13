@@ -36,7 +36,7 @@ const AdminPaths = () => {
     const totalStudents = MOCK_PATHS.reduce((a, p) => a + p.students, 0);
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6 pb-12">
+        <div className="max-w-7xl mx-auto space-y-5 sm:space-y-6 pb-4">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
@@ -53,7 +53,7 @@ const AdminPaths = () => {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[
                     { label: 'Tổng lộ trình', value: MOCK_PATHS.length, icon: '🗺️', bg: 'bg-slate-50', border: 'border-slate-100', color: 'text-slate-700' },
                     { label: 'Chờ duyệt', value: pending, icon: '⏳', bg: 'bg-amber-50', border: 'border-amber-100', color: 'text-amber-700' },

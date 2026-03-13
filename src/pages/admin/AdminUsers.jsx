@@ -42,7 +42,7 @@ const AdminUsers = () => {
     );
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6 pb-12">
+        <div className="max-w-6xl mx-auto space-y-5 sm:space-y-6 pb-4">
             {/* Page Title */}
             <div>
                 <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
@@ -62,7 +62,7 @@ const AdminUsers = () => {
                             placeholder="Tìm theo tên, email..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            className="pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#5A63F6] focus:ring-1 focus:ring-[#5A63F6]/30 w-64 transition-all"
+                            className="pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#5A63F6] focus:ring-1 focus:ring-[#5A63F6]/30 w-full sm:w-64 transition-all"
                         />
                     </div>
                 </div>
