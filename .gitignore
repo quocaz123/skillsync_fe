@@ -1,0 +1,169 @@
+# ============================================
+# DEPENDENCIES & NODE
+# ============================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnp
+.pnp.js
+
+# ============================================
+# BUILD & VITE
+# ============================================
+dist/
+dist-ssr/
+build/
+out/
+*.local
+.vite/
+.turbo/
+
+# ============================================
+# ENVIRONMENT VARIABLES
+# ============================================
+.env
+.env.local
+.env.*.local
+.env.development
+.env.development.local
+.env.production
+.env.production.local
+.env.test
+.env.test.local
+
+# ============================================
+# IDE & EDITOR SETTINGS
+# ============================================
+.vscode/*
+!.vscode/extensions.json
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.idea/
+.idea/*
+*.suo
+*.sln
+*.njsproj
+*.ntvs*
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ============================================
+# TESTING & COVERAGE
+# ============================================
+coverage/
+.nyc_output/
+jest.config.js.bak
+__snapshots__/
+*.snap
+
+# ============================================
+# LOGGING
+# ============================================
+logs/
+*.log
+debug.log
+npm-debug.log*
+
+# ============================================
+# OS & SYSTEM FILES
+# ============================================
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.directory
+
+# ============================================
+# TEMPORARY & CACHE FILES
+# ============================================
+*.tmp
+*.temp
+.cache/
+.eslintcache
+.prettier-ignore
+.prettierignore
+test-results/
+
+# ============================================
+# GIT
+# ============================================
+.git/
+.gitignore.swp
+
+# ============================================
+# PACKAGE MANAGER LOCK FILES (OPTIONAL)
+# Uncomment if you don't want to commit them:
+# ============================================
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+# bun.lockb
+
+# ============================================
+# YARN
+# ============================================
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# ============================================
+# DOCUMENTATION
+# ============================================
+docs/generated/
+docs/build/
+
+# ============================================
+# PERFORMANCE & PROFILING
+# ============================================
+.performance/
+perf_hooks/
+profile/
+
+# ============================================
+# STORYBOOK (if using)
+# ============================================
+storybook-static/
+
+# ============================================
+# VSCode extensions
+# ============================================
+.vscode-test
+*.code-workspace
+
+# ============================================
+# IDE specific files
+# ============================================
+.classpath
+.project
+.c9/
+*.launch
+.settings/
+*.iml
+.vscode/
+.history/
+.ionide/
+
+# ============================================
+# ADMIN SYSTEM FILES (Development)
+# ============================================
+# Uncomment if you're working on admin system and want to keep it local:
+# src/pages/admin/*.bak
+# src/services/*.bak
+# src/hooks/*.bak
+
+# ============================================
+# BUILD ARTIFACTS
+# ============================================
+*.tsbuildinfo
+tsconfig.tsbuildinfo
