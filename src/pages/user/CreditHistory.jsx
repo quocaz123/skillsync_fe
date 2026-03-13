@@ -15,10 +15,10 @@ const CreditHistory = () => {
     const totalSpent = creditHistory.filter(tx => tx.amount < 0).reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
 
     return (
-        <div className="max-w-4xl mx-auto font-sans pb-12 space-y-8">
+        <div className="max-w-4xl mx-auto font-sans pb-4 space-y-5 sm:space-y-8">
 
             {/* Header */}
-            <div className="bg-slate-900 rounded-[2rem] p-8 sm:p-10 relative overflow-hidden">
+            <div className="bg-slate-900 rounded-[1.5rem] sm:rounded-[2rem] px-5 py-7 sm:p-10 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-80 h-80 bg-[#5A63F6] rounded-full mix-blend-screen filter blur-[100px] opacity-25 pointer-events-none"></div>
                 <div className="absolute -bottom-24 -left-10 w-60 h-60 bg-amber-500 rounded-full mix-blend-screen filter blur-[100px] opacity-15 pointer-events-none"></div>
 
@@ -27,7 +27,7 @@ const CreditHistory = () => {
                         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 text-white text-xs font-bold uppercase tracking-wider mb-4 border border-white/10">
                             <Wallet size={12} className="text-amber-300" /> Ví Credits
                         </div>
-                        <h1 className="text-4xl font-extrabold text-white tracking-tight">Credit History</h1>
+                        <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">Credit History</h1>
                         <p className="text-slate-400 mt-2">Theo dõi tất cả giao dịch credit của bạn</p>
                     </div>
 
@@ -119,7 +119,7 @@ const CreditHistory = () => {
             </div>
 
             {/* Earn More hint */}
-            <div className="bg-gradient-to-r from-[#5A63F6] to-indigo-500 rounded-[2rem] p-8 text-white relative overflow-hidden">
+            <div className="bg-gradient-to-r from-[#5A63F6] to-indigo-500 rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-8 text-white relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3"></div>
                 <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div>

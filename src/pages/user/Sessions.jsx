@@ -43,10 +43,10 @@ const Sessions = () => {
     const ratingLabels = { 1: 'Cần cải thiện nhiều', 2: 'Chưa hài lòng', 3: 'Bình thường', 4: 'Rất tốt', 5: 'Tuyệt vời!' };
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8 font-sans pb-12">
+        <div className="max-w-6xl mx-auto space-y-5 sm:space-y-8 font-sans pb-6">
 
             {/* Header Redesigned */}
-            <div className="bg-gradient-to-br from-indigo-900 via-violet-900 to-fuchsia-900 rounded-[2.5rem] p-8 sm:p-12 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-xl shadow-indigo-900/20">
+            <div className="bg-gradient-to-br from-indigo-900 via-violet-900 to-fuchsia-900 rounded-[1.5rem] sm:rounded-[2.5rem] px-5 py-7 sm:p-12 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-5 shadow-xl shadow-indigo-900/20">
                 <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-fuchsia-500 rounded-full mix-blend-screen filter blur-[120px] opacity-30 pointer-events-none translate-x-1/3 -translate-y-1/3"></div>
                 <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-blue-500 rounded-full mix-blend-screen filter blur-[100px] opacity-20 pointer-events-none -translate-x-1/2 translate-y-1/2"></div>
 

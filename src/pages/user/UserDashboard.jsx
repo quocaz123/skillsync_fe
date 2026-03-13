@@ -135,11 +135,11 @@ const UserDashboard = () => {
     ];
 
     return (
-        <div className="max-w-7xl mx-auto font-sans pb-14 space-y-6">
+        <div className="max-w-7xl mx-auto font-sans pb-4 space-y-5 sm:space-y-6">
 
             {/* ─── HERO BANNER ─── */}
             <div
-                className="relative rounded-3xl overflow-hidden p-8 sm:p-10"
+                className="relative rounded-2xl sm:rounded-3xl overflow-hidden px-5 py-7 sm:p-10"
                 style={{ background: 'linear-gradient(140deg, #5A63F6 0%, #7C3AED 55%, #A855F7 100%)' }}
             >
                 {/* Decorative circles */}
@@ -158,7 +158,7 @@ const UserDashboard = () => {
                     </div>
 
                     {/* Headline */}
-                    <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mb-1">
+                    <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight mb-1">
                         {displayName} — hôm nay dạy gì?
                     </h1>
                     <p className="text-sm text-white/65 mb-7 font-medium">
@@ -187,8 +187,8 @@ const UserDashboard = () => {
                         </Link>
                     </div>
 
-                    {/* Stats Row */}
-                    <div className="bg-white/15 backdrop-blur-sm border border-white/20 rounded-2xl flex flex-wrap divide-x divide-white/15">
+                    {/* Stats Row - scrollable on mobile */}
+                    <div className="bg-white/15 backdrop-blur-sm border border-white/20 rounded-2xl flex overflow-x-auto divide-x divide-white/15 -mx-1">
                         {bannerStats.map((s, i) => (
                             <BannerStat key={i} {...s} />
                         ))}

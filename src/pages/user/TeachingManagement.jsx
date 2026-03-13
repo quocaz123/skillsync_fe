@@ -480,7 +480,7 @@ const TeachingManagement = () => {
     const navigate = useNavigate();
 
     return (
-        <div className="max-w-6xl mx-auto font-sans pb-14 space-y-6">
+        <div className="max-w-6xl mx-auto font-sans pb-4 space-y-5 sm:space-y-6">
 
             {/* ─── HEADER ─── */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
