@@ -6,6 +6,7 @@ import {
     Bell, X
 } from '@phosphor-icons/react';
 import { useStore } from '../../store';
+import { logout as logoutApi } from '../../services/authService';
 
 const MainLayout = () => {
     const location = useLocation();
@@ -15,7 +16,12 @@ const MainLayout = () => {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        try {
+            await logoutApi();
+        } catch {
+            /* vẫn xóa session phía client */
+        }
         logout();
         navigate('/login');
     };

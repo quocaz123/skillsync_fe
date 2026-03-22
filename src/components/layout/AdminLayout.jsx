@@ -6,6 +6,7 @@ import {
     List, SignOut, ShieldCheck, X
 } from '@phosphor-icons/react';
 import { useStore } from '../../store';
+import { logout as logoutApi } from '../../services/authService';
 
 const AdminLayout = () => {
     const location = useLocation();
@@ -14,7 +15,12 @@ const AdminLayout = () => {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        try {
+            await logoutApi();
+        } catch {
+            /* vẫn xóa session phía client */
+        }
         logout();
         navigate('/login');
     };

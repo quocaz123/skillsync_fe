@@ -1,6 +1,21 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- Google OAuth: localhost và 127.0.0.1 là hai origin khác nhau. Chuyển về localhost để khớp Authorized JavaScript origins. -->
+    <script>
+      (function () {
+        if (location.hostname === '127.0.0.1') {
+          location.replace(
+            location.protocol +
+              '//localhost:' +
+              location.port +
+              location.pathname +
+              location.search +
+              location.hash
+          );
+        }
+      })();
+    </script>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
