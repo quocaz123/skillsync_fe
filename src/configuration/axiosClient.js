@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useStore } from '../store/index';
 
 const axiosClient = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/skillsync',
@@ -30,6 +31,9 @@ axiosClient.interceptors.response.use(
     (error) => {
         if (error.response && error.response.status === 401) {
             console.error('Unauthorized, please login again');
+            useStore.getState().logout();
+            // Automatically redirecting to login can also be handled here
+            // window.location.href = '/login';
         }
 
         // Không có response: thường là backend tắt, sai URL, hoặc CORS (trình duyệt vẫn báo network)

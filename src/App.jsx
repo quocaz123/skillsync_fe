@@ -3,6 +3,7 @@ import MainLayout from './components/layout/MainLayout';
 import AdminLayout from './components/layout/AdminLayout';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import GoogleAuthCallback from './pages/auth/GoogleAuthCallback';
 import LandingPage from './pages/auth/LandingPage';
 import UserDashboard from './pages/user/UserDashboard';
 import AdminDash from './pages/admin/AdminDash';
@@ -53,6 +54,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/auth/google/callback" element={<GoogleAuthCallback />} />
 
         {/* User Routes (Protected) */}
         <Route path="/app" element={<ProtectedUserRoute><MainLayout /></ProtectedUserRoute>}>

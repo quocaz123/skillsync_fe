@@ -1,4 +1,3 @@
-import { googleLogout } from '@react-oauth/google';
 import httpClient from '../configuration/axiosClient';
 import { API_ENDPOINTS } from '../configuration/apiEndpoints';
 
@@ -67,21 +66,66 @@ export const loginWithGoogleIdToken = async (idToken) => {
     return mapAuthUser(unwrapData(res), displayName);
 };
 
+function randomState() {
+    if (window.crypto?.getRandomValues) {
+        const arr = new Uint8Array(16);
+        window.crypto.getRandomValues(arr);
+        return Array.from(arr, (b) => b.toString(16).padStart(2, '0')).join('');
+    }
+    return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+export const startGoogleLoginRedirect = () => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+        throw new Error('Thiếu VITE_GOOGLE_CLIENT_ID trong .env');
+    }
+
+    const redirectUri = `${window.location.origin}/auth/google/callback`;
+    const state = randomState();
+    sessionStorage.setItem('google_oauth_state', state);
+    sessionStorage.setItem('google_oauth_redirect_uri', redirectUri);
+
+    const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        response_type: 'code',
+        scope: 'openid email profile',
+        access_type: 'offline',
+        prompt: 'select_account',
+        include_granted_scopes: 'true',
+        state,
+    });
+
+    window.location.assign(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+};
+
+export const exchangeGoogleAuthCode = async (code, state) => {
+    const expectedState = sessionStorage.getItem('google_oauth_state');
+    const redirectUri =
+        sessionStorage.getItem('google_oauth_redirect_uri') ||
+        `${window.location.origin}/auth/google/callback`;
+
+    if (!code) {
+        throw new Error('Thiếu mã xác thực Google (code).');
+    }
+    if (!state || !expectedState || state !== expectedState) {
+        throw new Error('State OAuth không hợp lệ. Vui lòng thử lại.');
+    }
+
+    const res = await httpClient.post(AUTH.GOOGLE_EXCHANGE, { code, redirectUri });
+    sessionStorage.removeItem('google_oauth_state');
+    sessionStorage.removeItem('google_oauth_redirect_uri');
+    return mapAuthUser(unwrapData(res));
+};
+
 export const getCurrentUser = async () => {
     const res = await httpClient.get(AUTH.GET_ME);
     return mapAuthUser(unwrapData(res));
 };
 
 export const logout = async () => {
-    try {
-        await httpClient.post(AUTH.LOGOUT);
-    } finally {
-        try {
-            googleLogout();
-        } catch {
-            /* GSI chưa load hoặc không dùng Google */
-        }
-    }
+    await httpClient.post(AUTH.LOGOUT);
 };
 
 export const refreshSession = async () => {

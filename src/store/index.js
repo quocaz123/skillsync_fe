@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 // Mock Tasks System for Welcome Credit
 const MOCK_TASKS = [
@@ -19,8 +20,10 @@ const INITIAL_LEARNING_PROGRESS = [
     { id: 'lp2', skill: 'Public Speaking', mentor: null, level: 'Beginner', goal: 'Advanced', totalSessions: 5, completedSessions: 0, lastSession: null },
 ];
 
-export const useStore = create((set) => ({
-    // AUTH STATE
+export const useStore = create(
+    persist(
+        (set) => ({
+            // AUTH STATE
     user: null,
     isAuthenticated: false,
     role: 'user',
@@ -154,4 +157,14 @@ export const useStore = create((set) => ({
                 : lp
         )
     })),
-}));
+        }),
+        {
+            name: 'skillsync-auth-storage',
+            partialize: (state) => ({
+                user: state.user,
+                isAuthenticated: state.isAuthenticated,
+                role: state.role
+            }),
+        }
+    )
+);

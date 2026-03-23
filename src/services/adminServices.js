@@ -1,15 +1,6 @@
-/**
- * ◀ ADMIN SERVICE LAYER
- * Business logic implementation for admin operations
- * Handles all data transformations, calculations, and API calls
- */
 
-// ─── TRUST SCORE CALCULATION ───────────────────────────────────────────────────
 export class TrustScoreService {
-    /**
-     * Calculate comprehensive trust score for a user
-     * Formula: (Rating×40%) + (Verification×30%) + (Activity×20%) + (Reputation×10%)
-     */
+   
     static calculateTrustScore(userData) {
         const ratingScore = this.calculateRatingScore(userData);
         const verificationScore = this.calculateVerificationScore(userData);
