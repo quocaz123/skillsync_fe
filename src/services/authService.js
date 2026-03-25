@@ -11,12 +11,28 @@ export function mapAuthUser(apiPayload, displayName) {
     const email = apiPayload.email;
     const name =
         displayName ||
+        apiPayload.fullName ||
         (email && email.includes('@') ? email.split('@')[0] : 'User');
     return {
-        id: apiPayload.userId,
+        id: apiPayload.userId || apiPayload.id,
         name,
         email,
         role: apiPayload.role === 'ADMIN' ? 'admin' : 'user',
+        avatarUrl: apiPayload.avatarUrl || null,
+        creditsBalance: apiPayload.creditsBalance ?? null,
+    };
+}
+
+/** Map UserResponse DTO (từ GET /users/me) — dùng field names khác với auth response */
+export function mapUserResponse(payload) {
+    if (!payload) return null;
+    return {
+        id: payload.id,
+        name: payload.fullName || payload.email?.split('@')[0] || 'User',
+        email: payload.email,
+        role: payload.role === 'ADMIN' ? 'admin' : 'user',
+        avatarUrl: payload.avatarUrl || null,
+        creditsBalance: payload.creditsBalance ?? null,
     };
 }
 
@@ -121,6 +137,7 @@ export const exchangeGoogleAuthCode = async (code, state) => {
 
 export const getCurrentUser = async () => {
     const res = await httpClient.get(AUTH.GET_ME);
+    // /auth/me trả AuthPayload, còn /users/me trả UserResponse — dùng mapAuthUser đã support cả 2
     return mapAuthUser(unwrapData(res));
 };
 

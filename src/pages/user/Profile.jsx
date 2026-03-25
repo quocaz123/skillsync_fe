@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../../store';
 import {
     MapPin,
@@ -17,16 +17,42 @@ import {
     Clock,
     Camera,
     Zap,
-    GraduationCap
+    GraduationCap,
+    Loader2,
+    X
 } from 'lucide-react';
 import { AddSkillModal } from '../../components/profile/AddSkillModal.jsx';
+import { uploadFile } from '../../services/uploadService.js';
+import { getMyProfile, updateAvatar } from '../../services/userService.js';
+import { getMyTeachingSkills, deleteTeachingSkill } from '../../services/skillService.js';
 
 const Profile = () => {
-    const { user, credits } = useStore();
+    const { user, credits, setUser } = useStore();
     const [activeTab, setActiveTab] = useState('learner'); // 'learner' | 'mentor'
     const [showAddSkillModal, setShowAddSkillModal] = useState(false);
 
-    // Mock data based on the UI/UX analysis
+    // Avatar state — init from store, refreshed from API on mount
+    const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || null);
+    const [avatarUploading, setAvatarUploading] = useState(false);
+    const avatarInputRef = useRef(null);
+
+    // Teaching skills state
+    const [teachingSkills, setTeachingSkills] = useState([]);
+    const [loadingSkills, setLoadingSkills] = useState(false);
+
+    // Load profile + teaching skills on mount
+    useEffect(() => {
+        // Always fetch fresh user data to get latest avatarUrl from BE
+        getMyProfile()
+            .then(profile => {
+                if (profile?.avatarUrl) setAvatarUrl(profile.avatarUrl);
+                if (setUser && profile) setUser(prev => ({ ...prev, ...profile }));
+            })
+            .catch(err => console.error('Failed to load profile:', err));
+
+        loadTeachingSkills();
+    }, []);
+
     const learnerData = {
         totalSessions: 24,
         hoursLearning: 36,
@@ -44,7 +70,6 @@ const Profile = () => {
         hoursTeaching: 234,
         rating: 4.8,
         reviews: 89,
-        expertise: ['JavaScript', 'Frontend Dev', 'Career Advice', 'React Native', 'Node.js'],
         earnings: '3,450 CR',
         badges: [
             { name: 'Top Rated', icon: '⭐', color: 'from-amber-400 to-amber-600', text: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
@@ -53,20 +78,84 @@ const Profile = () => {
         ]
     };
 
+    // Load teaching skills on mount
+    useEffect(() => {
+        loadTeachingSkills();
+    }, []);
+
+    const loadTeachingSkills = async () => {
+        setLoadingSkills(true);
+        try {
+            const data = await getMyTeachingSkills();
+            setTeachingSkills(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error('Failed to load teaching skills:', err);
+        } finally {
+            setLoadingSkills(false);
+        }
+    };
+
+    const handleAvatarChange = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('Vui lòng chọn file ảnh (JPG, PNG, WEBP)');
+            return;
+        }
+
+        // Preview immediately
+        const previewUrl = URL.createObjectURL(file);
+        setAvatarUrl(previewUrl);
+        setAvatarUploading(true);
+
+        try {
+            // Bước 1: upload lên S3 lấy fileKey
+            const { fileKey } = await uploadFile(file, 'AVATAR');
+            // Bước 2: gọi BE cập nhật avatar (BE build URL từ fileKey)
+            const updatedUser = await updateAvatar(fileKey);
+            const newAvatarUrl = updatedUser?.avatarUrl;
+            if (newAvatarUrl) {
+                setAvatarUrl(newAvatarUrl);
+                // Cập nhật store để các component khác cũng phản ánh ngay
+                if (setUser) setUser(prev => ({ ...prev, avatarUrl: newAvatarUrl }));
+            }
+        } catch (err) {
+            console.error('Avatar upload failed:', err);
+            setAvatarUrl(user?.avatarUrl || null);
+            alert('Upload avatar thất bại. Vui lòng thử lại.');
+        } finally {
+            setAvatarUploading(false);
+            URL.revokeObjectURL(previewUrl);
+        }
+    };
+
+    const handleDeleteSkill = async (skillId) => {
+        if (!confirm('Bạn có chắc muốn xóa kỹ năng dạy này?')) return;
+        try {
+            await deleteTeachingSkill(skillId);
+            setTeachingSkills(prev => prev.filter(s => s.id !== skillId));
+        } catch (err) {
+            console.error('Delete skill failed:', err);
+            alert('Xóa thất bại. Vui lòng thử lại.');
+        }
+    };
+
+    const handleSkillSaved = (newSkill) => {
+        if (newSkill) setTeachingSkills(prev => [newSkill, ...prev]);
+    };
+
     return (
         <div className="max-w-6xl mx-auto space-y-8 font-sans pb-12">
 
-            {/* Top Profile Header - Glassmorphism & Gradient */}
+            {/* Top Profile Header */}
             <div className="bg-white rounded-[2rem] border border-slate-200/60 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 relative group">
 
-                {/* Banner Gradient Modern */}
+                {/* Banner */}
                 <div className="h-48 w-full relative overflow-hidden bg-slate-900">
-                    {/* Abstract Shapes */}
                     <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-600/90 via-purple-600/90 to-fuchsia-600/90 z-10 mix-blend-multiply"></div>
                     <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-500 rounded-full mix-blend-screen filter blur-[80px] opacity-70 z-0 animate-pulse"></div>
                     <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-fuchsia-500 rounded-full mix-blend-screen filter blur-[60px] opacity-60 z-0"></div>
-
-                    {/* Banner Control */}
                     <button className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl backdrop-blur-md transition-all duration-300 flex items-center gap-2 text-sm font-medium z-20 border border-white/10 shadow-lg opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0">
                         <Edit3 size={16} /> Cập nhật ảnh bìa
                     </button>
@@ -75,26 +164,45 @@ const Profile = () => {
                 {/* Avatar & Info */}
                 <div className="px-6 sm:px-10 pb-10 relative z-20">
                     <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-end -mt-16 sm:-mt-20 mb-6">
-                        {/* Avatar Wrapper with glow */}
+
+                        {/* Avatar with real upload */}
                         <div className="relative group/avatar">
                             <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500 to-fuchsia-500 rounded-[2rem] blur opacity-30 group-hover/avatar:opacity-50 transition-opacity"></div>
-                            <label className="w-32 h-32 sm:w-40 sm:h-40 relative rounded-[2rem] bg-white p-2 shadow-xl border border-white block cursor-pointer">
+                            <label
+                                className="w-32 h-32 sm:w-40 sm:h-40 relative rounded-[2rem] bg-white p-2 shadow-xl border border-white block cursor-pointer"
+                            >
                                 <div className="w-full h-full bg-[#f1f4f9] rounded-[1.5rem] flex items-center justify-center text-5xl sm:text-6xl text-[#3b4758] font-extrabold overflow-hidden relative">
-                                    {/* Fallback to Initials */}
-                                    {user?.name?.charAt(0) || 'G'}
+                                    {avatarUrl ? (
+                                        <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover rounded-[1.5rem]" />
+                                    ) : (
+                                        <span>{user?.name?.charAt(0)?.toUpperCase() || 'G'}</span>
+                                    )}
 
-                                    {/* Upload Overlay */}
-                                    <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover/avatar:opacity-100 transition-opacity z-10">
-                                        <Camera size={28} weight="fill" className="mb-1 text-white/90 drop-shadow-md" />
-                                        <span className="text-xs font-bold tracking-wide drop-shadow-md">Tải lên</span>
+                                    {/* Upload overlay */}
+                                    <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover/avatar:opacity-100 transition-opacity z-10 rounded-[1.5rem]">
+                                        {avatarUploading
+                                            ? <Loader2 size={28} className="animate-spin mb-1 text-white/90" />
+                                            : <Camera size={28} className="mb-1 text-white/90 drop-shadow-md" />
+                                        }
+                                        <span className="text-xs font-bold tracking-wide drop-shadow-md">
+                                            {avatarUploading ? 'Đang tải...' : 'Tải lên'}
+                                        </span>
                                     </div>
-                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => console.log(e.target.files[0])} />
+
+                                    <input
+                                        ref={avatarInputRef}
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/webp"
+                                        className="hidden"
+                                        onChange={handleAvatarChange}
+                                        disabled={avatarUploading}
+                                    />
                                 </div>
                                 <div className="absolute bottom-1 right-1 w-6 h-6 bg-emerald-500 border-4 border-white rounded-full z-20 shadow-sm"></div>
                             </label>
                         </div>
 
-                        {/* Name & Primary Actions */}
+                        {/* Name & Actions */}
                         <div className="flex-1 w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2">
                             <div>
                                 <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
@@ -114,16 +222,16 @@ const Profile = () => {
                         </div>
                     </div>
 
-                    {/* Metadata Grid / Stats Strip */}
+                    {/* Stats Strip */}
                     <div className="flex items-center justify-between sm:justify-around text-center overflow-x-auto gap-6 hide-scrollbar pt-6 pb-2 border-t border-slate-100">
                         <div className="flex flex-col items-center shrink-0 min-w-[70px]">
                             <Zap size={24} className="text-orange-500 mb-2 fill-current" />
-                            <h3 className="text-2xl font-black text-indigo-600 mb-0.5 tracking-tight">47</h3>
+                            <h3 className="text-2xl font-black text-indigo-600 mb-0.5 tracking-tight">{credits ?? 47}</h3>
                             <p className="text-slate-400 text-xs sm:text-sm font-medium">Credits</p>
                         </div>
                         <div className="flex flex-col items-center shrink-0 min-w-[70px]">
                             <GraduationCap size={24} className="text-[#41396b] mb-2 fill-current" />
-                            <h3 className="text-2xl font-black text-indigo-600 mb-0.5 tracking-tight">12</h3>
+                            <h3 className="text-2xl font-black text-indigo-600 mb-0.5 tracking-tight">{teachingSkills.length}</h3>
                             <p className="text-slate-400 text-xs sm:text-sm font-medium">Buổi dạy</p>
                         </div>
                         <div className="flex flex-col items-center shrink-0 min-w-[70px]">
@@ -145,35 +253,32 @@ const Profile = () => {
                 </div>
             </div>
 
-            {/* Role Tabs Switcher - Apple iOS Style */}
+            {/* Role Tabs */}
             <div className="flex justify-center">
                 <div className="bg-slate-100/80 backdrop-blur-md p-1.5 rounded-2xl inline-flex shadow-inner">
                     <button
                         onClick={() => setActiveTab('learner')}
                         className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold transition-all duration-300 ${activeTab === 'learner' ? 'bg-white text-blue-600 shadow-sm shadow-slate-200/50 scale-100' : 'text-slate-500 hover:text-slate-700 scale-95 hover:scale-100'}`}
                     >
-                        <BookOpen size={18} className={activeTab === 'learner' ? 'animate-bounce-slight' : ''} /> Học viên
+                        <BookOpen size={18} /> Học viên
                     </button>
                     <button
                         onClick={() => setActiveTab('mentor')}
                         className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold transition-all duration-300 ${activeTab === 'mentor' ? 'bg-white text-purple-600 shadow-sm shadow-slate-200/50 scale-100' : 'text-slate-500 hover:text-slate-700 scale-95 hover:scale-100'}`}
                     >
-                        <Users size={18} className={activeTab === 'mentor' ? 'animate-bounce-slight' : ''} /> Giảng viên
+                        <Users size={18} /> Giảng viên
                     </button>
                 </div>
             </div>
 
-            {/* Layout Main Content */}
+            {/* Main Content */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                {/* Left Column (Stats & Metrics based on Tab) */}
+                {/* Left Column */}
                 <div className="lg:col-span-2 space-y-8 animate-in slide-in-from-bottom-4 duration-500 fade-in">
 
-
-
-                    {/* MAIN SKILL SECTION */}
+                    {/* Skills Section */}
                     <div className="bg-white rounded-3xl border border-slate-200/60 p-8 shadow-sm relative overflow-hidden">
-                        {/* Decorative blob */}
                         <div className={`absolute top-0 right-0 w-64 h-64 rounded-full mix-blend-multiply filter blur-[80px] opacity-40 -z-0 pointer-events-none ${activeTab === 'learner' ? 'bg-blue-100' : 'bg-purple-100'}`}></div>
 
                         <div className="relative z-10 flex justify-between items-center mb-8">
@@ -195,28 +300,50 @@ const Profile = () => {
                         </div>
 
                         <div className="flex flex-wrap gap-3 relative z-10">
-                            {(activeTab === 'learner' ? learnerData.interests : mentorData.expertise).map((item, idx) => (
-                                <div key={idx} className={`px-5 py-2.5 rounded-xl border font-semibold text-sm transition-all hover:-translate-y-1 shadow-sm
-                                    ${activeTab === 'learner'
-                                        ? 'bg-blue-50/50 border-blue-200 text-blue-700 hover:shadow-blue-200'
-                                        : 'bg-purple-50/50 border-purple-200 text-purple-700 hover:shadow-purple-200'
-                                    }`}
-                                >
-                                    {item}
+                            {activeTab === 'learner' ? (
+                                learnerData.interests.map((item, idx) => (
+                                    <div key={idx} className="px-5 py-2.5 rounded-xl border font-semibold text-sm transition-all hover:-translate-y-1 shadow-sm bg-blue-50/50 border-blue-200 text-blue-700 hover:shadow-blue-200">
+                                        {item}
+                                    </div>
+                                ))
+                            ) : loadingSkills ? (
+                                <div className="flex items-center gap-2 text-slate-400">
+                                    <Loader2 size={18} className="animate-spin" />
+                                    <span className="text-sm">Đang tải...</span>
                                 </div>
-                            ))}
-                            <button onClick={() => setShowAddSkillModal(true)} className="px-5 py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-semibold text-sm hover:bg-slate-50 hover:border-slate-400 hover:text-slate-700 transition-colors flex items-center gap-2">
+                            ) : teachingSkills.length === 0 ? (
+                                <p className="text-slate-400 text-sm">Bạn chưa có kỹ năng dạy nào. Thêm ngay!</p>
+                            ) : (
+                                teachingSkills.map((ts) => (
+                                    <div key={ts.id} className="group flex items-center gap-2 px-4 py-2.5 rounded-xl border font-semibold text-sm bg-purple-50/50 border-purple-200 text-purple-700 hover:shadow-purple-200 hover:-translate-y-1 transition-all shadow-sm">
+                                        <span>{ts.skillIcon}</span>
+                                        <span>{ts.skillName}</span>
+                                        <span className="text-[10px] bg-purple-100 px-1.5 py-0.5 rounded font-bold">{ts.level}</span>
+                                        <button
+                                            onClick={() => handleDeleteSkill(ts.id)}
+                                            className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all ml-1"
+                                            title="Xóa"
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+
+                            <button
+                                onClick={() => setShowAddSkillModal(true)}
+                                className="px-5 py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-semibold text-sm hover:bg-slate-50 hover:border-slate-400 hover:text-slate-700 transition-colors flex items-center gap-2"
+                            >
                                 + Thêm mới
                             </button>
                         </div>
                     </div>
-
                 </div>
 
-                {/* Right Column (Badges & About) */}
+                {/* Right Column */}
                 <div className="space-y-8 animate-in slide-in-from-bottom-8 duration-700 fade-in">
 
-                    {/* About Widget */}
+                    {/* About */}
                     <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-sm">
                         <h3 className="text-lg font-bold text-slate-900 mb-4">Giới thiệu bản thân</h3>
                         <p className="text-slate-600 leading-relaxed text-sm">
@@ -233,18 +360,17 @@ const Profile = () => {
                         </div>
                     </div>
 
-                    {/* Badges Widget */}
+                    {/* Badges */}
                     <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-sm relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-amber-100 rounded-full mix-blend-multiply filter blur-[50px] opacity-60"></div>
                         <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2 relative z-10">
                             <Award className="text-amber-500" />
                             {activeTab === 'learner' ? 'Danh hiệu Học viên' : 'Huy hiệu Giảng viên'}
                         </h3>
-
                         <div className="space-y-4 relative z-10">
                             {(activeTab === 'learner' ? learnerData.badges : mentorData.badges).map((badge, idx) => (
                                 <div key={idx} className={`flex items-center gap-4 p-4 rounded-2xl border ${badge.border} ${badge.bg} group hover:shadow-md transition-all`}>
-                                    <div className={`w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-2xl group-hover:scale-110 transition-transform`}>
+                                    <div className="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
                                         {badge.icon}
                                     </div>
                                     <div>
@@ -256,15 +382,14 @@ const Profile = () => {
                         </div>
                     </div>
                 </div>
-
             </div>
 
             {showAddSkillModal && (
                 <AddSkillModal
                     onClose={() => setShowAddSkillModal(false)}
-                    onSave={(skillData) => {
-                        console.log('Saved SKill:', skillData);
-                        // Typically we would update the store/backend here
+                    onSave={(newSkill) => {
+                        handleSkillSaved(newSkill);
+                        setShowAddSkillModal(false);
                     }}
                 />
             )}

@@ -13,13 +13,27 @@ export const API_ENDPOINTS = {
         REFRESH: '/auth/refresh',
     },
     USERS: {
-        GET_ALL: '/users',
-        GET_BY_ID: (id) => `/users/${id}`,
-        UPDATE: (id) => `/users/${id}`,
-        DELETE: (id) => `/users/${id}`,
+        GET_ALL: '/api/users',
+        GET_BY_ID: (id) => `/api/users/${id}`,
+        UPDATE: (id) => `/api/users/${id}`,
+        DELETE: (id) => `/api/users/${id}`,
+        ME: '/api/users/me',
+        UPDATE_AVATAR: '/api/users/me/avatar',
+    },
+    SKILLS: {
+        GET_ALL: '/api/skills',
+    },
+    TEACHING_SKILLS: {
+        GET_MY: '/api/teaching-skills/me',
+        CREATE: '/api/teaching-skills',
+        DELETE: (id) => `/api/teaching-skills/${id}`,
+    },
+    UPLOADS: {
+        PRESIGNED_URL: '/api/uploads/presigned-url',
     },
     ADMIN: {
         SYSTEM_STATS: '/admin/stats',
+        TEACHING_SKILLS: '/api/admin/teaching-skills',
     },
     COURSES: {
         GET_ALL: '/courses',
@@ -28,3 +42,4 @@ export const API_ENDPOINTS = {
 };
 
 export default API_ENDPOINTS;
+

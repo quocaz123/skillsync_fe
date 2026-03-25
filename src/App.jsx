@@ -14,6 +14,7 @@ import AdminCredits from './pages/admin/AdminCredits';
 import AdminPaths from './pages/admin/AdminPaths';
 import AdminSystem from './pages/admin/AdminSystem';
 import AdminSettings from './pages/admin/AdminSettings';
+import AdminTeachingSkills from './pages/admin/AdminTeachingSkills';
 import Explore from './pages/user/Explore';
 import Skills from './pages/user/Skills';
 import Sessions from './pages/user/Sessions';
@@ -79,6 +80,7 @@ function App() {
           <Route path="sessions" element={<AdminSessions />} />
           <Route path="credits" element={<AdminCredits />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="teaching-skills" element={<AdminTeachingSkills />} />
           <Route path="paths" element={<AdminPaths />} />
           <Route path="system" element={<AdminSystem />} />
           <Route path="settings" element={<AdminSettings />} />

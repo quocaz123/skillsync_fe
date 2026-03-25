@@ -39,6 +39,7 @@ const AdminLayout = () => {
             label: 'Người dùng',
             items: [
                 { path: '/admin/users', label: 'Quản lý Người dùng', icon: Users },
+                { path: '/admin/teaching-skills', label: 'Xét duyệt Mentor', icon: ShieldCheck },
                 { path: '/admin/paths', label: 'Lộ trình Học', icon: BookOpen },
             ],
         },
@@ -57,6 +58,7 @@ const AdminLayout = () => {
         '/admin/sessions': 'Quản lý Sessions',
         '/admin/credits': 'Credits & Giao dịch',
         '/admin/users': 'Quản lý Người dùng',
+        '/admin/teaching-skills': 'Xét duyệt Kỹ năng Mentor',
         '/admin/paths': 'Quản lý Lộ trình Học',
         '/admin/system': 'Sức khoẻ Hệ thống',
         '/admin/settings': 'Cài đặt Hệ thống',
