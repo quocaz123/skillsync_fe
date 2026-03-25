@@ -7,6 +7,7 @@ import {
     GraduationCap, FolderOpen, SealCheck,
     CalendarBlank, Clock, ChartBar, CheckCircle, Warning
 } from '@phosphor-icons/react';
+import { trackAction } from '../../services/missionService';
 
 // ── Mock Data ─────────────────────────────────────────────
 const MOCK_MENTORS = [
@@ -391,6 +392,8 @@ const Explore = () => {
     const handleConfirmBooking = () => {
         if (credits < selectedMentor.price) return;
         bookSession({ topic: selectedMentor.skill, mentor: selectedMentor.name, date: new Date().toISOString(), cost: selectedMentor.price });
+        trackAction('JOIN_SESSION').catch(e => console.error(e));
+        trackAction('FIRST_SESSION_JOINED').catch(e => console.error(e));
         setBookingStep(3);
     };
 

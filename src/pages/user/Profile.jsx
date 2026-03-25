@@ -25,6 +25,7 @@ import { AddSkillModal } from '../../components/profile/AddSkillModal.jsx';
 import { uploadFile } from '../../services/uploadService.js';
 import { getMyProfile, updateAvatar } from '../../services/userService.js';
 import { getMyTeachingSkills, deleteTeachingSkill } from '../../services/skillService.js';
+import { trackAction } from '../../services/missionService.js';
 
 const Profile = () => {
     const { user, credits, setUser } = useStore();
@@ -119,6 +120,8 @@ const Profile = () => {
                 setAvatarUrl(newAvatarUrl);
                 // Cập nhật store để các component khác cũng phản ánh ngay
                 if (setUser) setUser(prev => ({ ...prev, avatarUrl: newAvatarUrl }));
+                // Track action mission
+                trackAction('UPDATE_PROFILE').catch(e => console.error(e));
             }
         } catch (err) {
             console.error('Avatar upload failed:', err);

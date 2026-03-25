@@ -27,8 +27,13 @@ export const useStore = create(
     user: null,
     isAuthenticated: false,
     role: 'user',
-    login: (userData) => set({ user: userData, isAuthenticated: true, role: userData.role || 'user' }),
-    logout: () => set({ user: null, isAuthenticated: false, role: 'user' }),
+    login: (userData) => set({ 
+        user: userData, 
+        isAuthenticated: true, 
+        role: userData.role || 'user',
+        credits: userData.creditsBalance !== undefined && userData.creditsBalance !== null ? userData.creditsBalance : 0
+    }),
+    logout: () => set({ user: null, isAuthenticated: false, role: 'user', credits: 0, creditHistory: [] }),
 
     // CREDIT & PROFILE STATE
     credits: 180, // 200 welcome - 20 spent = 180 after initial tx
@@ -163,7 +168,9 @@ export const useStore = create(
             partialize: (state) => ({
                 user: state.user,
                 isAuthenticated: state.isAuthenticated,
-                role: state.role
+                role: state.role,
+                credits: state.credits,
+                creditHistory: state.creditHistory
             }),
         }
     )
