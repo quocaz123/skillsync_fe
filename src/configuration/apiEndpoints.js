@@ -33,7 +33,6 @@ export const API_ENDPOINTS = {
     },
     ADMIN: {
         SYSTEM_STATS: '/admin/stats',
-        TEACHING_SKILLS: '/api/admin/teaching-skills',
     },
     COURSES: {
         GET_ALL: '/courses',

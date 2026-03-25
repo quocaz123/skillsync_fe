@@ -51,8 +51,8 @@ axiosClient.interceptors.response.use(
             return Promise.reject(error);
         }
 
-        // 401 — Access Token hết hạn → thử refresh một lần
-        if (error.response.status === 401 && !originalRequest._retry) {
+        // Token hết hạn / thiếu quyền thường có thể trả 401 hoặc 403 → thử refresh một lần
+        if ((error.response.status === 401 || error.response.status === 403) && !originalRequest._retry) {
             // Tránh retry loop cho chính request /auth/refresh
             if (originalRequest.url?.includes('/auth/refresh')) {
                 useStore.getState().logout();
@@ -72,7 +72,8 @@ axiosClient.interceptors.response.use(
 
             try {
                 // Cookie HttpOnly (refresh token) tự gửi kèm nhờ withCredentials
-                await axios.post(`${BASE_URL}/api/auth/refresh`, {}, { withCredentials: true });
+                // Backend route là: /auth/refresh (không có /api prefix)
+                await axios.post(`${BASE_URL}/auth/refresh`, {}, { withCredentials: true });
                 processQueue(null);
                 return axiosClient(originalRequest); // Retry request gốc
             } catch (refreshError) {
