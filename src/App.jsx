@@ -26,6 +26,7 @@ import TeachingManagement from './pages/user/TeachingManagement';
 import CreateTeachingSession from './pages/user/CreateTeachingSession';
 import CreateLearningPath from './pages/user/CreateLearningPath';
 import Community from './pages/user/Community';
+import VideoCallPage from './pages/user/VideoCallPage';
 import { useStore } from './store';
 
 // Mock Pages for now
@@ -70,6 +71,7 @@ function App() {
           <Route path="teaching" element={<TeachingManagement />} />
           <Route path="teaching/create" element={<CreateTeachingSession />} />
           <Route path="teaching/create-path" element={<CreateLearningPath />} />
+          <Route path="call/:sessionId" element={<VideoCallPage />} />
           <Route path="community" element={<Community />} />
         </Route>
 

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../../store';
+import * as sessionService from '../../services/sessionService';
 import {
     MagnifyingGlass, Star, Sparkle, ArrowLeft, ChatCircle,
     Shield, Check, CalendarCheck, Lightning,
@@ -8,91 +9,70 @@ import {
     CalendarBlank, Clock, ChartBar, CheckCircle, Warning
 } from '@phosphor-icons/react';
 
-// ── Mock Data ─────────────────────────────────────────────
-const MOCK_MENTORS = [
-    {
-        id: 'm1', name: 'Hà My', avatar: 'HM', avatarBg: 'bg-red-500',
-        skill: 'Public Speaking', subSkills: ['Thuyết trình', 'Storytelling', 'Body Language'],
-        level: 'Expert', rating: 5.0, totalReviews: 2, totalSessions: 64, responseTime: '<1h',
-        price: 20, match: 98, slots: 3, trustScore: 100, isTopRated: true,
-        bio: 'MC chuyên nghiệp, TEDx Speaker, đào tạo kỹ năng mềm 7 năm.',
-        bioFull: 'MC chuyên nghiệp, TEDx Speaker, đào tạo kỹ năng mềm 7 năm. Đã từng nói sợ đám đông nhưng đã vượt qua và muốn giúp bạn làm điều tương tự.',
-        teachingStyle: 'Practice makes perfect. 70% thời gian buổi học là bạn đứng trình bày, tôi phân tích và cho feedback cụ thể từng điểm. Không lý thuyết suông.',
-        outcomes: [
-            'Vượt qua nỗi sợ nói trước đám đông',
-            'Kỹ thuật storytelling cuốn hút',
-            'Body language và giọng nói chuyên nghiệp',
-            'Chuẩn bị và thực hành thuyết trình thực tế',
-        ],
-        certs: [
-            { name: 'TEDx Speaker', org: 'TEDx · Ho Chi Minh City · 2023', icon: '🎤', verified: true },
-            { name: 'ICF Coaching', org: 'ICF · 2017', icon: '🏆', verified: true },
-        ],
-        evidences: [
-            { type: 'video', label: 'Video bằng chứng', verified: true },
-            { type: 'linkedin', label: 'LinkedIn với endorsements', verified: true },
-            { type: 'cert', label: 'Lời chứng nhận tổ chức', verified: true },
-            { type: 'event', label: 'Chứng chỉ đào tạo', verified: true },
-            { type: 'link', label: 'Link sự kiện / hội nghị', verified: true },
-            { type: 'badge', label: '2 Chứng chỉ', verified: true },
-            { type: 'veteran', label: 'Veteran 64+ buổi', verified: true },
-            { type: 'top', label: 'Top Rated 5', verified: true },
-        ],
-        portfolio: [
-            { title: 'youtube.com/@hamyspeaks', sub: 'Kênh YouTube Public Speaking' },
-            { title: 'hamyspeaking.vn', sub: 'Website cá nhân' },
-        ],
-        reviews: [
-            { initials: 'KT', color: 'bg-violet-600', name: 'Khang T.', stars: 5, label: 'Đã học minh buổi học', comment: 'Đã vượt qua nỗi sợ nói trước đám đông!' },
-            { initials: 'LN', color: 'bg-emerald-600', name: 'Linh N.', stars: 5, label: 'Đã học minh buổi học', comment: '5/5 không có gì để chê!' },
-        ],
-        availableSlots: [
-            { day: 'T2 10/3', time: '19:00 CH', status: 'open' },
-            { day: 'T4 12/3', time: '16:00 CH', status: 'open' },
-            { day: 'T6 14/3', time: '9:00 SA', status: 'open' },
-        ],
-    },
-    {
-        id: 'm2', name: 'Bảo Nguyên', avatar: 'BN', avatarBg: 'bg-teal-600',
-        skill: 'Machine Learning', subSkills: ['Python', 'PyTorch', 'Data Analysis'],
-        level: 'Advanced', rating: 4.7, totalReviews: 8, totalSessions: 42, responseTime: '<2h',
-        price: 18, match: 85, slots: 2, trustScore: 85, isTopRated: false,
-        bio: 'Data Scientist và AI enthusiast. Hướng dẫn từ cơ bản đến ML models.',
-        bioFull: 'Data Scientist tại một startup fintech, 4 năm kinh nghiệm build production ML models. Đam mê chia sẻ kiến thức và giúp người học rút ngắn con đường học AI.',
-        teachingStyle: 'Học qua dự án thực tế 100%. Mỗi buổi sẽ có một mini-project nhỏ để áp dụng ngay. Có repo GitHub cá nhân cho từng học viên.',
-        outcomes: [
-            'Hiểu nền tảng Toán và Thống kê cần thiết',
-            'Xây dựng models với Scikit-learn & PyTorch',
-            'Deploy model lên production',
-            'Phân tích và xử lý dữ liệu thực tế',
-        ],
-        certs: [
-            { name: 'AWS Machine Learning Specialty', org: 'Amazon Web Services · 2023', icon: '☁️', verified: true },
-            { name: 'Google Data Analytics', org: 'Google · 2022', icon: '📊', verified: true },
-        ],
-        evidences: [
-            { type: 'linkedin', label: 'LinkedIn với endorsements', verified: true },
-            { type: 'cert', label: 'Chứng chỉ AWS & Google', verified: true },
-            { type: 'badge', label: 'Veteran 42+ buổi', verified: true },
-        ],
-        portfolio: [
-            { title: 'github.com/baonguyen-ml', sub: 'GitHub với 20+ projects' },
-        ],
-        reviews: [
-            { initials: 'AT', color: 'bg-blue-600', name: 'Anh Tuấn', stars: 5, label: 'Đã học 3 buổi', comment: 'Giải thích cực kỳ rõ ràng, có nhiều ví dụ thực tế.' },
-            { initials: 'PT', color: 'bg-pink-600', name: 'Phương Thy', stars: 4, label: 'Đã học 1 buổi', comment: 'Rất nhiệt tình, content chất lượng.' },
-        ],
-        availableSlots: [
-            { day: 'T3 11/3', time: '20:00 CH', status: 'open' },
-            { day: 'T5 13/3', time: '9:00 SA', status: 'open' },
-        ],
-    },
-];
+// ─── API Mapping ───────────────────────────────────────────────────────────
+const mapSkillToMentor = (ts) => {
+    // Generate an avatar badge from name if no image
+    const name = ts.teacherName || 'Unknown';
+    const parts = name.split(' ');
+    const initials = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : name.substring(0, 2).toUpperCase();
+    const colors = ['bg-red-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-violet-500', 'bg-teal-500'];
+    const color = colors[name.length % colors.length];
+
+    return {
+        id: ts.id, // ID của TeachingSkill
+        teacherId: ts.teacherId,
+        name: name,
+        avatar: initials,
+        avatarBg: color,
+        avatarUrl: ts.teacherAvatar || null, // ảnh thật từ S3
+        skill: ts.skillName,
+        subSkills: [ts.skillCategory, ts.level], // Tạm dùng map category và level
+        level: ts.level,
+        rating: 5.0, // Mock rating
+        totalReviews: 0,
+        totalSessions: 0,
+        responseTime: '<1h',
+        price: ts.creditsPerHour,
+        match: 95,
+        slots: 0, // Sẽ fill sau từ API /slots/open hoặc pass 0
+        trustScore: 90,
+        isTopRated: false,
+        bio: ts.teacherBio || ts.experienceDesc, // Ưu tiên Bio user, fallback bằng experience
+        bioFull: ts.teacherBio || ts.experienceDesc,
+        teachingStyle: ts.experienceDesc,
+        outcomes: ts.outcomeDesc ? ts.outcomeDesc.split('\n').filter(Boolean) : ['Đạt được mục tiêu mong muốn'],
+        certs: [], // Mock list cho evidence type cert
+        evidences: [{ type: 'veteran', label: 'Verified Teacher', verified: true }],
+        portfolio: [],
+        reviews: [],
+        availableSlots: [], // Sẽ load khi click
+    };
+};
 
 const DATES = ['T2 10/3', 'T3 11/3', 'T4 12/3', 'T5 13/3', 'T6 14/3'];
 const TIMES = ['8:00 SA', '9:00 SA', '10:00 SA', '14:00 CH', '15:00 CH', '16:00 CH', '19:00 CH', '20:00 CH'];
 
-// ── Trust Score Bar ───────────────────────────────────────
+// ─── Avatar helper ───────────────────────────────────────────────────────
+const AvatarImg = ({ src, fallback, fallbackBg, size = 'w-14 h-14', textSize = 'text-xl', rounded = 'rounded-2xl', extra = '' }) => {
+    const [imgError, setImgError] = useState(false);
+    if (src && !imgError) {
+        return (
+            <img
+                src={src}
+                alt="avatar"
+                onError={() => setImgError(true)}
+                className={`${size} ${rounded} object-cover shadow-md shrink-0 ${extra}`}
+            />
+        );
+    }
+    return (
+        <div className={`${size} ${rounded} ${fallbackBg} text-white flex items-center justify-center font-extrabold ${textSize} shadow-md shrink-0 ${extra}`}>
+            {fallback}
+        </div>
+    );
+};
+
+// ─── Trust Score Bar ─────────────────────────────────────────────────────
 const TrustBar = ({ score }) => {
     const color = score >= 90 ? 'bg-emerald-500' : score >= 70 ? 'bg-amber-400' : 'bg-red-400';
     const label = score >= 90 ? 'Đáng tin cậy cao' : score >= 70 ? 'Tin cậy tốt' : 'Đang xây dựng';
@@ -102,7 +82,7 @@ const TrustBar = ({ score }) => {
                 <div className="w-12 h-12 rounded-xl bg-emerald-50 border-2 border-emerald-300 flex items-center justify-center font-extrabold text-emerald-700 text-lg">{score}</div>
                 <div>
                     <p className="font-extrabold text-slate-800 text-sm">Trust Score</p>
-                    <p className="text-xs text-emerald-600 font-semibold">● {label}</p>
+                    <p className="text-xs text-emerald-600 font-semibold">⏳ {label}</p>
                 </div>
             </div>
             <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden mb-1.5">
@@ -113,7 +93,7 @@ const TrustBar = ({ score }) => {
     );
 };
 
-// ── Evidence chips ────────────────────────────────────────
+// ─── Evidence chips ──────────────────────────────────────────────────────
 const EvidenceIcon = ({ type }) => {
     const map = {
         video: <VideoCamera size={12} weight="fill" className="text-blue-500" />,
@@ -128,7 +108,7 @@ const EvidenceIcon = ({ type }) => {
     return map[type] || <Check size={12} weight="bold" className="text-slate-400" />;
 };
 
-// ── TAB: Giới thiệu ───────────────────────────────────────
+// ─── TAB: Giới thiệu ─────────────────────────────────────────────────────
 const TabIntro = ({ mentor }) => (
     <div className="space-y-6">
         <div className="bg-white rounded-2xl border border-slate-100 p-6">
@@ -138,7 +118,7 @@ const TabIntro = ({ mentor }) => (
 
         <div className="bg-white rounded-2xl border border-slate-100 p-6">
             <h3 className="font-extrabold text-slate-900 text-base mb-4 flex items-center gap-2">
-                🎯 Tôi sẽ dạy bạn
+                Tôi sẽ dạy bạn
             </h3>
             <div className="space-y-2.5">
                 {mentor.outcomes.map((o, i) => (
@@ -161,13 +141,13 @@ const TabIntro = ({ mentor }) => (
     </div>
 );
 
-// ── TAB: Bằng chứng năng lực ──────────────────────────────
+// ─── TAB: Bằng chứng năng lực ────────────────────────────────────────────
 const TabCredentials = ({ mentor }) => (
     <div className="space-y-5">
         {/* Trust Score */}
         <div className="bg-white rounded-2xl border border-slate-100 p-6">
             <h3 className="font-extrabold text-slate-900 text-sm mb-1 flex items-center gap-2">
-                🏆 Bằng chứng — Kỹ năng mềm
+                Bằng chứng — Kỹ năng mềm
             </h3>
             <p className="text-xs text-slate-400 mb-4">Kỹ năng chuyên ngành: xác minh bởi cộng đồng SkillSync</p>
             <TrustBar score={mentor.trustScore} />
@@ -186,7 +166,7 @@ const TabCredentials = ({ mentor }) => (
         {/* Certs */}
         <div className="bg-white rounded-2xl border border-slate-100 p-6">
             <h3 className="font-extrabold text-slate-900 text-sm mb-4 flex items-center gap-2">
-                🎓 Bằng clip & Chứng chỉ
+                Bằng clip & Chứng chỉ
             </h3>
             <div className="space-y-3">
                 {mentor.certs.map((c, i) => (
@@ -210,7 +190,7 @@ const TabCredentials = ({ mentor }) => (
         {mentor.portfolio.length > 0 && (
             <div className="bg-white rounded-2xl border border-slate-100 p-6">
                 <h3 className="font-extrabold text-slate-900 text-sm mb-4 flex items-center gap-2">
-                    🗂️ Portfolio & Bằng chứng thực tế
+                    Portfolio & Bằng chứng thực tế
                 </h3>
                 <div className="space-y-2.5">
                     {mentor.portfolio.map((p, i) => (
@@ -229,7 +209,7 @@ const TabCredentials = ({ mentor }) => (
         {/* Reviews preview */}
         <div className="bg-white rounded-2xl border border-slate-100 p-6">
             <h3 className="font-extrabold text-slate-900 text-sm mb-4 flex items-center gap-2">
-                💬 Kết quả học viên thực tế
+                Kết quả học viên thực tế
             </h3>
             <p className="text-xs text-slate-400 mb-3">Đánh giá từ học viên thực sự đã học</p>
             <div className="space-y-3">
@@ -247,7 +227,7 @@ const TabCredentials = ({ mentor }) => (
     </div>
 );
 
-// ── TAB: Lịch trống ───────────────────────────────────────
+// ─── TAB: Lịch trống ─────────────────────────────────────────────────────
 const TabSchedule = ({ mentor, onBook }) => (
     <div className="bg-white rounded-2xl border border-slate-100 p-6">
         <h3 className="font-extrabold text-slate-900 text-base mb-1 flex items-center gap-2">
@@ -285,7 +265,7 @@ const TabSchedule = ({ mentor, onBook }) => (
     </div>
 );
 
-// ── TAB: Đánh giá ─────────────────────────────────────────
+// ─── TAB: Đánh giá ───────────────────────────────────────────────────────
 const TabReviews = ({ mentor }) => {
     const ratingDist = [
         { star: 5, pct: 75 },
@@ -349,7 +329,7 @@ const TabReviews = ({ mentor }) => {
     );
 };
 
-// ── Detail Tabs ───────────────────────────────────────────
+// ─── Detail Tabs ─────────────────────────────────────────────────────────
 const DETAIL_TABS = [
     { id: 'intro', label: 'Giới thiệu', emoji: '👤' },
     { id: 'creds', label: 'Bằng chứng năng lực', emoji: '🏅' },
@@ -357,20 +337,76 @@ const DETAIL_TABS = [
     { id: 'reviews', label: 'Đánh giá', emoji: '⭐' },
 ];
 
-// ── Main Explore Component ────────────────────────────────
+// ─── Main Explore Component ──────────────────────────────────────────────
+
 const Explore = () => {
-    const { credits, bookSession, mySkills } = useStore();
+    const { credits, mySkills, user } = useStore();
+    const currentUserId = user?.id ?? null;
     const [searchTerm, setSearchTerm] = useState('');
+    const [mentors, setMentors] = useState([]);
+    const [loadingMentors, setLoadingMentors] = useState(true);
+
     const [selectedMentor, setSelectedMentor] = useState(null);
     const [activeTab, setActiveTab] = useState('intro');
     const [bookingStep, setBookingStep] = useState(0);
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedTime, setSelectedTime] = useState('');
+    const [selectedSlotId, setSelectedSlotId] = useState('');
     const [note, setNote] = useState('');
+    const [bookingLoading, setBookingLoading] = useState(false);
+
+    // Fetch Danh sách mentors 
+    useEffect(() => {
+        const load = async () => {
+            try {
+                // Sử dụng custom getter (phải add vào sessionService hoặc axios config)
+                // Vì /api/teaching-skills/approved thuộc skill, nên tạm dùng instance axios.
+                const { default: axiosClient } = await import('../../configuration/axiosClient');
+                const { default: API_ENDPOINTS } = await import('../../configuration/apiEndpoints');
+
+                const res = await axiosClient.get(API_ENDPOINTS.TEACHING_SKILLS.GET_APPROVED);
+                const data = res?.result ?? (Array.isArray(res) ? res : []);
+                setMentors(data.map(mapSkillToMentor));
+            } catch (err) {
+                console.error('Lỗi lấy danh sách khám phá:', err);
+                setMentors([]);
+            } finally {
+                setLoadingMentors(false);
+            }
+        };
+        load();
+    }, []);
+
+    // Fetch lịch trống khi click vào mentor
+    useEffect(() => {
+        if (!selectedMentor) return;
+        const loadSlots = async () => {
+            try {
+                const slots = await sessionService.getOpenSlotsBySkill(selectedMentor.id);
+                // Map API slots to { day, time, status, id }
+                // Backend trả về: [{ id, slotDate, slotTime, status }]
+                const mappedSlots = slots.map(s => {
+                    const d = new Date(s.slotDate);
+                    const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+                    return {
+                        id: s.id,
+                        day: `${days[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`,
+                        time: s.slotTime.slice(0, 5),
+                        status: 'open',
+                        rawDate: s.slotDate
+                    };
+                });
+                setSelectedMentor(prev => ({ ...prev, availableSlots: mappedSlots, slots: mappedSlots.length }));
+            } catch (err) {
+                console.error("Lỗi lấy slots của mentor", err);
+            }
+        };
+        loadSlots();
+    }, [selectedMentor?.id]);
 
     const learningInterests = mySkills.filter(s => s.type === 'learn').map(s => s.name.toLowerCase());
 
-    const filteredMentors = MOCK_MENTORS.filter(m =>
+    const filteredMentors = mentors.filter(m =>
         m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         m.skill.toLowerCase().includes(searchTerm.toLowerCase())
     ).sort((a, b) => {
@@ -388,13 +424,21 @@ const Explore = () => {
         setNote('');
     };
 
-    const handleConfirmBooking = () => {
+    const handleConfirmBooking = async () => {
         if (credits < selectedMentor.price) return;
-        bookSession({ topic: selectedMentor.skill, mentor: selectedMentor.name, date: new Date().toISOString(), cost: selectedMentor.price });
-        setBookingStep(3);
+        setBookingLoading(true);
+        try {
+            await sessionService.bookSession(selectedSlotId, note);
+            setBookingStep(3);
+        } catch (error) {
+            console.error('Lỗi khi book session:', error);
+            alert(error.response?.data?.message || error.message || 'Lỗi đặt lịch. Vui lòng thử lại.');
+        } finally {
+            setBookingLoading(false);
+        }
     };
 
-    // ── DETAIL VIEW ──────────────────────────────────────
+    // ─── DETAIL VIEW ────────────────────────────────────────────────────
     if (selectedMentor && bookingStep === 0) {
         const m = selectedMentor;
         const tabCount = m.reviews?.length ?? 0;
@@ -406,13 +450,18 @@ const Explore = () => {
                     <ArrowLeft size={16} weight="bold" /> Quay lại Khám phá
                 </button>
 
-                {/* ── Hero Header Card ─────────────────── */}
+                {/* ─── Hero Header Card ─────────────────────────── */}
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-5">
                     <div className="flex flex-col sm:flex-row items-start gap-5">
                         {/* Avatar */}
-                        <div className={`w-20 h-20 rounded-2xl ${m.avatarBg} text-white flex items-center justify-center text-3xl font-extrabold shadow-md shrink-0`}>
-                            {m.avatar}
-                        </div>
+                        <AvatarImg
+                            src={m.avatarUrl}
+                            fallback={m.avatar}
+                            fallbackBg={m.avatarBg}
+                            size="w-20 h-20"
+                            textSize="text-3xl"
+                            rounded="rounded-2xl"
+                        />
                         <div className="flex-1 min-w-0">
                             {/* Name + badges */}
                             <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -454,7 +503,7 @@ const Explore = () => {
                 </div>
 
                 <div className="flex flex-col lg:flex-row gap-5 items-start">
-                    {/* ── Left: Tabs ───────────────────── */}
+                    {/* ─── Left: Tabs ────────────────────────────── */}
                     <div className="flex-1 space-y-4 min-w-0">
                         {/* Tab bar */}
                         <div className="flex items-center gap-1 bg-white rounded-2xl border border-slate-100 shadow-sm p-1.5 overflow-x-auto">
@@ -477,7 +526,7 @@ const Explore = () => {
                         {activeTab === 'reviews' && <TabReviews mentor={m} />}
                     </div>
 
-                    {/* ── Right: Booking Widget ─────────── */}
+                    {/* ─── Right: Booking Widget ────────────────── */}
                     <div className="lg:w-72 shrink-0 space-y-4" style={{ position: 'sticky', top: '1rem' }}>
                         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
                             {/* Price */}
@@ -498,12 +547,18 @@ const Explore = () => {
                                 </div>
                             )}
 
-                            <button
-                                onClick={() => setBookingStep(1)}
-                                className="w-full py-3 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl shadow-md shadow-violet-100 active:scale-95 transition-all mb-2.5 flex items-center justify-center gap-2 text-sm"
-                            >
-                                <CalendarCheck size={16} weight="duotone" /> Chọn slot & đặt lịch
-                            </button>
+                            {currentUserId && currentUserId === m.teacherId ? (
+                                <div className="w-full py-3 bg-slate-100 text-slate-500 font-bold rounded-xl text-sm text-center mb-2.5 flex items-center justify-center gap-2">
+                                    🎓 Đây là kỹ năng của bạn
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => setBookingStep(1)}
+                                    className="w-full py-3 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl shadow-md shadow-violet-100 active:scale-95 transition-all mb-2.5 flex items-center justify-center gap-2 text-sm"
+                                >
+                                    <CalendarCheck size={16} weight="duotone" /> Chọn slot & Đặt lịch
+                                </button>
+                            )}
                             <button className="w-full py-3 border-2 border-slate-200 hover:bg-slate-50 text-slate-600 font-bold rounded-xl transition-all text-sm flex items-center justify-center gap-2">
                                 <ChatCircle size={16} weight="duotone" /> Nhắn tin trước
                             </button>
@@ -546,7 +601,7 @@ const Explore = () => {
         );
     }
 
-    // ── BOOKING FLOW (steps 1-3) ─────────────────────────
+    // ─── BOOKING FLOW (steps 1-3) ──────────────────────────────────────
     if (selectedMentor && bookingStep >= 1) {
         const m = selectedMentor;
         return (
@@ -583,24 +638,25 @@ const Explore = () => {
                 {bookingStep === 1 && (
                     <div className="flex flex-col md:flex-row gap-6 items-start">
                         <div className="flex-1 bg-white rounded-2xl border border-slate-100 shadow-sm p-7">
-                            <h2 className="text-xl font-extrabold text-slate-900 mb-5">Chọn ngày học</h2>
-                            <div className="flex flex-wrap gap-3 mb-8">
-                                {DATES.map(d => (
-                                    <button key={d} onClick={() => setSelectedDate(d)}
-                                        className={`px-5 py-3.5 rounded-xl text-sm font-bold border-2 transition-all active:scale-95 ${selectedDate === d ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-slate-100 text-slate-600 hover:border-slate-200'}`}>
-                                        {d}
-                                    </button>
-                                ))}
-                            </div>
-                            <h2 className="text-xl font-extrabold text-slate-900 mb-5">Chọn giờ</h2>
-                            <div className="grid grid-cols-4 gap-3 mb-8">
-                                {TIMES.map(t => (
-                                    <button key={t} onClick={() => setSelectedTime(t)}
-                                        className={`px-3 py-3.5 rounded-xl text-sm font-bold border-2 transition-all active:scale-95 ${selectedTime === t ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-slate-100 text-slate-600 hover:border-slate-200'}`}>
-                                        {t}
-                                    </button>
-                                ))}
-                            </div>
+                            <h2 className="text-xl font-extrabold text-slate-900 mb-5">Chọn lịch học trống</h2>
+                            {m.availableSlots.length > 0 ? (
+                                <div className="flex flex-wrap gap-3 mb-8">
+                                    {m.availableSlots.map(sl => (
+                                        <button key={sl.id} onClick={() => { setSelectedDate(sl.day); setSelectedTime(sl.time); setSelectedSlotId(sl.id); }}
+                                            className={`px-5 py-3.5 rounded-xl text-sm font-bold border-2 transition-all active:scale-95 text-left ${selectedSlotId === sl.id ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-slate-100 text-slate-600 hover:border-slate-200'}`}>
+                                            <p className="font-extrabold text-base mb-1">{sl.day}</p>
+                                            <p className="flex items-center gap-1 text-xs opacity-90 font-semibold mt-1">
+                                                <Clock size={13} weight="bold" /> {sl.time}
+                                            </p>
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="bg-slate-50 border border-slate-100 rounded-xl p-6 text-center text-slate-500 mb-8 text-sm">
+                                    <p className="font-semibold mb-1">Mentor này hiện chưa có slot trống mới 😔</p>
+                                    <p className="text-xs">Hãy sử dụng tính năng "Nhắn tin trước" để hỏi xin lịch nhé.</p>
+                                </div>
+                            )}
                             <h2 className="text-base font-extrabold text-slate-900 mb-3">Ghi chú (tùy chọn)</h2>
                             <textarea className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm outline-none focus:border-violet-400 focus:bg-white min-h-[100px] resize-none transition-all" placeholder="Bạn muốn tập trung vào điểm gì trong buổi học này?" value={note} onChange={e => setNote(e.target.value)} />
                         </div>
@@ -609,7 +665,14 @@ const Explore = () => {
                         <div className="lg:w-72 shrink-0" style={{ position: 'sticky', top: '1rem' }}>
                             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
                                 <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-                                    <div className={`w-12 h-12 ${m.avatarBg} text-white rounded-xl flex items-center justify-center font-extrabold shrink-0`}>{m.avatar}</div>
+                                    <AvatarImg
+                                        src={m.avatarUrl}
+                                        fallback={m.avatar}
+                                        fallbackBg={m.avatarBg}
+                                        size="w-12 h-12"
+                                        textSize="text-base"
+                                        rounded="rounded-xl"
+                                    />
                                     <div>
                                         <p className="font-extrabold text-slate-900 text-sm">{m.name}</p>
                                         <p className="text-xs text-slate-400">{m.skill}</p>
@@ -639,7 +702,14 @@ const Explore = () => {
                     <div className="max-w-lg mx-auto bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
                         <h2 className="text-2xl font-extrabold text-slate-900 mb-6 pb-4 border-b border-slate-100">Xác nhận đặt lịch</h2>
                         <div className="bg-slate-50 rounded-xl p-4 flex items-center gap-4 mb-6 border border-slate-100">
-                            <div className={`w-14 h-14 ${m.avatarBg} text-white rounded-xl flex items-center justify-center font-extrabold text-xl shrink-0`}>{m.avatar}</div>
+                            <AvatarImg
+                                src={m.avatarUrl}
+                                fallback={m.avatar}
+                                fallbackBg={m.avatarBg}
+                                size="w-14 h-14"
+                                textSize="text-xl"
+                                rounded="rounded-xl"
+                            />
                             <div>
                                 <p className="font-extrabold text-slate-900">{m.name}</p>
                                 <p className="text-sm text-slate-400">{m.skill}</p>
@@ -659,9 +729,13 @@ const Explore = () => {
                                 <Warning size={16} weight="duotone" className="shrink-0" /> Không đủ credits để đặt lịch này.
                             </div>
                         )}
-                        <button disabled={credits < m.price} onClick={handleConfirmBooking}
-                            className={`w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-base ${credits >= m.price ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-md shadow-violet-200 active:scale-95' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>
-                            <CheckCircle size={20} weight="duotone" /> Xác nhận đặt lịch
+                        <button disabled={credits < m.price || bookingLoading} onClick={handleConfirmBooking}
+                            className={`w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-base ${credits >= m.price && !bookingLoading ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-md shadow-violet-200 active:scale-95' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>
+                            {bookingLoading ? (
+                                <span className="flex items-center gap-2"><svg className="animate-spin h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Đang đặt lịch...</span>
+                            ) : (
+                                <><CheckCircle size={20} weight="duotone" /> Xác nhận đặt lịch</>
+                            )}
                         </button>
                     </div>
                 )}
@@ -688,7 +762,7 @@ const Explore = () => {
         );
     }
 
-    // ── EXPLORE LIST VIEW ────────────────────────────────
+    // ─── EXPLORE LIST VIEW ──────────────────────────────────────────────
     return (
         <div className="max-w-6xl mx-auto font-sans pb-12 space-y-8">
             {/* Quick Filter Section */}
@@ -733,8 +807,8 @@ const Explore = () => {
                         <button
                             key={cat.id}
                             className={`px-4 py-2 rounded-full text-sm font-bold border transition-all ${cat.id === 'all'
-                                    ? 'bg-indigo-50/50 text-indigo-600 border-indigo-200'
-                                    : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                                ? 'bg-indigo-50/50 text-indigo-600 border-indigo-200'
+                                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                                 }`}
                         >
                             {cat.label}
@@ -752,9 +826,14 @@ const Explore = () => {
                             {isHigh && <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-400 to-orange-400" />}
                             <div className="p-6 flex-1">
                                 <div className="flex items-start justify-between mb-5">
-                                    <div className={`w-14 h-14 rounded-2xl ${mentor.avatarBg} text-white flex items-center justify-center text-xl font-extrabold shadow-md`}>
-                                        {mentor.avatar}
-                                    </div>
+                                    <AvatarImg
+                                        src={mentor.avatarUrl}
+                                        fallback={mentor.avatar}
+                                        fallbackBg={mentor.avatarBg}
+                                        size="w-14 h-14"
+                                        textSize="text-xl"
+                                        rounded="rounded-2xl"
+                                    />
                                     <span className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-full ${isHigh ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-violet-50 text-violet-700 border border-violet-100'}`}>
                                         <Sparkle size={11} weight="fill" /> {mentor.match}% Match
                                     </span>
@@ -771,7 +850,7 @@ const Explore = () => {
                                 <p className="text-slate-500 text-sm leading-relaxed line-clamp-2 italic">"{mentor.bio}"</p>
                             </div>
                             <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                                <span className="font-extrabold text-slate-900 text-sm">⚡ {mentor.price} <span className="text-slate-400 font-normal">tín/giờ</span></span>
+                                <span className="font-extrabold text-slate-900 text-sm">⚡ {mentor.price} <span className="text-slate-400 font-normal">tin/giờ</span></span>
                                 <button onClick={() => { setSelectedMentor(mentor); setBookingStep(0); setActiveTab('intro'); }}
                                     className="px-5 py-2.5 bg-slate-900 hover:bg-violet-600 text-white font-bold rounded-xl transition-all text-sm active:scale-95 shadow-sm">
                                     Xem hồ sơ
