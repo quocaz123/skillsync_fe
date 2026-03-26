@@ -29,14 +29,20 @@ export const useStore = create(
     role: 'user',
     showMissionPopup: false,
     dismissMissionPopup: () => set({ showMissionPopup: false }),
-    login: (userData) => set({ 
+    login: (userData) => set((state) => ({ 
         user: userData, 
         isAuthenticated: true, 
         role: userData.role || 'user',
-        credits: userData.creditsBalance !== undefined && userData.creditsBalance !== null ? userData.creditsBalance : 0,
+        // Chỉ update credits nếu backend trả về giá trị hợp lệ (không null/undefined)
+        // Tránh overwrite credits về 0 khi creditsBalance bị thiếu trong response
+        credits: (userData.creditsBalance !== undefined && userData.creditsBalance !== null)
+            ? userData.creditsBalance
+            : state.credits,
         showMissionPopup: true,
-    }),
-    logout: () => set({ user: null, isAuthenticated: false, role: 'user', credits: 0, creditHistory: [] }),
+    })),
+    // Sync credits từ server (gọi sau khi login hoặc khi cần đồng bộ)
+    syncCredits: (balance) => set({ credits: balance }),
+    logout: () => set({ user: null, isAuthenticated: false, role: 'user', creditHistory: [] }),
 
     // CREDIT & PROFILE STATE
     credits: 180, // 200 welcome - 20 spent = 180 after initial tx
