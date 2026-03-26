@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useStore } from '../../store/index';
 import {
     ChalkboardTeacher, CalendarBlank, BellRinging, CurrencyDollar, ChartBar,
     Plus, Star, Lightning, PencilSimple, Pause, CalendarCheck, Clock,
@@ -7,55 +8,65 @@ import {
 } from '@phosphor-icons/react';
 
 // ────────────────────────────────────────────────
-// Mock Data
+// Helpers & Mock Data (now date-aware)
 // ────────────────────────────────────────────────
-const TEACHING_SUBJECTS = [
-    {
-        id: 's1',
-        icon: '⚛️',
-        iconBg: 'bg-blue-100',
-        name: 'React',
-        level: 'Advanced',
-        levelColor: 'bg-blue-100 text-blue-600',
-        status: 'Hoạt động',
-        desc: 'Dạy React từ cơ bản đến nâng cao: JSX, Hooks, Context API, Redux. Sau khoá học tự xây dựng project thực tế.',
-        tags: ['React Hooks', 'TypeScript', 'Redux'],
-        rate: 15,
-        totalSessions: 12,
-        creditsEarned: 180,
-        rating: 4.9,
-        slotsOpen: 3,
-        slotsBooked: 1,
-        slots: [
-            { id: 'sl1', day: 'T2 10/3', time: '9:00 SA', status: 'open' },
-            { id: 'sl2', day: 'T2 10/3', time: '14:00 CH', status: 'booked', student: 'Thanh Hà' },
-            { id: 'sl3', day: 'T3 11/3', time: '19:00 CH', status: 'open' },
-            { id: 'sl4', day: 'T4 12/3', time: '9:00 SA', status: 'pending', student: 'Duy Khang' },
-            { id: 'sl5', day: 'T5 13/3', time: '16:00 CH', status: 'open' },
-        ],
-    },
-    {
-        id: 's2',
-        icon: '🐍',
-        iconBg: 'bg-yellow-100',
-        name: 'Python',
-        level: 'Intermediate',
-        levelColor: 'bg-green-100 text-green-600',
-        status: 'Hoạt động',
-        desc: 'Python từ cơ bản cho người mới. OOP, xử lý file, thư viện phổ biến. Nhiều bài tập thực hành.',
-        tags: ['Python', 'OOP', 'Pandas'],
-        rate: 12,
-        totalSessions: 5,
-        creditsEarned: 60,
-        rating: 4.7,
-        slotsOpen: 1,
-        slotsBooked: 0,
-        slots: [
-            { id: 'sl6', day: 'T2 10/3', time: '16:00 CH', status: 'open' },
-            { id: 'sl7', day: 'T4 12/3', time: '14:00 CH', status: 'booked', student: 'Lan H.' },
-        ],
-    },
-];
+const getMonday = (d) => {
+    const date = new Date(d);
+    const day = date.getDay();
+    const diff = (day === 0 ? -6 : 1) - day; // shift so Monday is start
+    date.setDate(date.getDate() + diff);
+    date.setHours(0,0,0,0);
+    return date;
+};
+
+const formatISODate = (d) => {
+    const date = new Date(d);
+    return date.toISOString().slice(0,10); // YYYY-MM-DD
+};
+
+const formatDayLabel = (d) => {
+    const wd = d.getDay();
+    const label = wd === 0 ? 'CN' : `T${wd + 1}`;
+    return `${label} ${d.getDate()}/${d.getMonth()+1}`;
+};
+
+const generateWeekDates = (startDate) => {
+    const monday = getMonday(startDate || new Date());
+    const arr = [];
+    for (let i=0;i<7;i++){
+        const d = new Date(monday);
+        d.setDate(monday.getDate()+i);
+        arr.push(d);
+    }
+    return arr;
+};
+
+const createInitialSubjects = () => {
+    const week = generateWeekDates(new Date());
+    // sample slots for demo — using ISO dates and start/end times
+    return [
+        {
+            id: 's1', icon: '⚛️', iconBg: 'bg-blue-100', name: 'React', level: 'Advanced', levelColor: 'bg-blue-100 text-blue-600',
+            status: 'Hoạt động', desc: 'Dạy React từ cơ bản đến nâng cao', tags: ['React Hooks','TypeScript'], rate: 15, totalSessions:12, creditsEarned:180, rating:4.9,
+            slotsOpen:3, slotsBooked:1,
+            slots: [
+                { id: 'sl1', day: formatISODate(week[0]), start: '09:00', end: '10:00', status: 'open' },
+                { id: 'sl2', day: formatISODate(week[0]), start: '14:00', end: '15:00', status: 'booked', student: 'Thanh Hà' },
+                { id: 'sl3', day: formatISODate(week[2]), start: '19:00', end: '20:30', status: 'open' },
+                { id: 'sl4', day: formatISODate(week[3]), start: '09:00', end: '10:00', status: 'pending', student: 'Duy Khang' },
+            ],
+        },
+        {
+            id: 's2', icon: '🐍', iconBg: 'bg-yellow-100', name: 'Python', level: 'Intermediate', levelColor: 'bg-green-100 text-green-600',
+            status: 'Hoạt động', desc: 'Python từ cơ bản cho người mới', tags: ['Python','Pandas'], rate: 12, totalSessions:5, creditsEarned:60, rating:4.7,
+            slotsOpen:1, slotsBooked:0,
+            slots: [
+                { id: 'sl6', day: formatISODate(week[0]), start: '16:00', end: '17:00', status: 'open' },
+                { id: 'sl7', day: formatISODate(week[2]), start: '14:00', end: '15:00', status: 'booked', student: 'Lan H.' },
+            ],
+        }
+    ];
+};
 
 const REQUESTS = [
     {
@@ -97,10 +108,11 @@ const SlotChip = ({ slot }) => {
         booked: { border: 'border-sky-300 bg-sky-50', dot: 'bg-sky-500', label: '📅 Đã đặt', labelCls: 'text-sky-600' },
         pending: { border: 'border-amber-300 bg-amber-50', dot: 'bg-amber-500', label: '⏳ Chờ duyệt', labelCls: 'text-amber-600' },
     }[slot.status];
+    const timeLabel = slot.start && slot.end ? `${slot.start} - ${slot.end}` : slot.time || '';
     return (
-        <div className={`rounded-xl border-2 ${cfg.border} px-3 pt-2.5 pb-3 min-w-[88px] shrink-0 text-xs font-semibold`}>
-            <p className="text-slate-700 font-bold">{slot.day}</p>
-            <p className="text-slate-500 mb-1.5">{slot.time}</p>
+        <div className={`rounded-xl border-2 ${cfg.border} px-3 pt-2.5 pb-3 min-w-22 shrink-0 text-xs font-semibold`}>
+            <p className="text-slate-700 font-bold">{slot.dayLabel || slot.day}</p>
+            <p className="text-slate-500 mb-1.5">{timeLabel}</p>
             <p className={`text-[11px] font-bold ${cfg.labelCls}`}>{cfg.label}</p>
             {slot.student && <p className="text-[10px] text-slate-500 mt-0.5 truncate">👤 {slot.student}</p>}
         </div>
@@ -110,9 +122,9 @@ const SlotChip = ({ slot }) => {
 // ────────────────────────────────────────────────
 // TAB: Buổi dạy
 // ────────────────────────────────────────────────
-const TabSubjects = () => (
+const TabSubjects = ({ subjects }) => (
     <div className="space-y-5">
-        {TEACHING_SUBJECTS.map(sub => (
+        {subjects.map(sub => (
             <div key={sub.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 {/* Card header */}
                 <div className="p-6 pb-4 flex flex-col md:flex-row md:items-start gap-4">
@@ -197,96 +209,96 @@ const TabSubjects = () => (
 );
 
 // ────────────────────────────────────────────────
-// TAB: Lịch rảnh
+// TAB: Lịch dạy
 // ────────────────────────────────────────────────
 const DAYS_OF_WEEK = ['T2 10/3', 'T3 11/3', 'T4 12/3', 'T5 13/3', 'T6 14/3', 'T7 15/3', 'CN 16/3'];
 const TIME_SLOTS = ['7:00 SA', '8:00 SA', '9:00 SA', '10:00 SA', '11:00 SA', '13:00 CH', '14:00 CH', '15:00 CH', '16:00 CH', '17:00 CH', '19:00 CH', '20:00 CH', '21:00 CH'];
 
-const TabSchedule = () => {
-    const [selectedSubject, setSelectedSubject] = useState('s1');
-    const [selectedDay, setSelectedDay] = useState(null);
-    const [selectedTime, setSelectedTime] = useState(null);
-    const sub = TEACHING_SUBJECTS.find(s => s.id === selectedSubject);
+const TabSchedule = ({ subjects }) => {
+    // get current logged-in user from zustand store
+    const user = useStore(state => state.user);
+    const week = generateWeekDates(new Date());
+    const hours = Array.from({length: 16}, (_,i) => 7 + i); // 7..22
+
+    const rowHeight = 72; // px per hour - increased for better text fit
+
+    const timeToMinutes = (t) => {
+        const [hh, mm] = t.split(':').map(Number);
+        return hh * 60 + mm;
+    };
 
     return (
-        <div className="flex flex-col lg:flex-row gap-5">
-            {/* Subject picker */}
-            <div className="lg:w-52 shrink-0 space-y-3">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Chọn buổi dạy:</p>
-                {TEACHING_SUBJECTS.map(s => (
-                    <button key={s.id}
-                        onClick={() => setSelectedSubject(s.id)}
-                        className={`w-full text-left p-4 rounded-2xl border-2 transition-all ${selectedSubject === s.id ? 'border-violet-400 bg-violet-50' : 'border-slate-100 bg-white hover:border-slate-200'}`}
-                    >
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="text-base">{s.icon}</span>
-                            <span className={`font-bold text-sm ${selectedSubject === s.id ? 'text-violet-700' : 'text-slate-700'}`}>{s.name}</span>
-                        </div>
-                        <p className="text-[11px] text-slate-400">{s.slots.length} slots · {s.slotsOpen} trống</p>
-                    </button>
-                ))}
-            </div>
-
-            {/* Schedule panel */}
-            <div className="flex-1 bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-6">
+        <div className="flex flex-col gap-5">
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-6 space-y-4">
                 <div>
                     <h3 className="font-extrabold text-slate-900 flex items-center gap-2 text-base mb-1">
                         <CalendarBlank size={18} weight="duotone" className="text-violet-500" />
-                        Lịch rảnh — {sub.name}
+                        Lịch dạy — {user?.fullName || 'Bạn'}
                     </h3>
-                    <p className="text-xs text-slate-400">
-                        <span className="inline-block w-2.5 h-2.5 rounded-sm bg-emerald-200 mr-1" />Xanh=trống ·
-                        <span className="inline-block w-2.5 h-2.5 rounded-sm bg-amber-200 mx-1" />Vàng=chờ ·
-                        <span className="inline-block w-2.5 h-2.5 rounded-sm bg-sky-200 mx-1" />Xanh dương=đã đặt
+                    <p className="text-xs font-semibold text-slate-500 flex items-center gap-3">
+                        <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded shadow-sm bg-emerald-400" /> Trống</span>
+                        <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded shadow-sm bg-amber-400" /> Chờ duyệt</span>
+                        <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded shadow-sm bg-sky-500" /> Đã đặt</span>
                     </p>
                 </div>
 
-                {/* Existing slots */}
-                <div className="flex flex-wrap gap-2">
-                    {sub.slots.map(sl => <SlotChip key={sl.id} slot={sl} />)}
-                </div>
-
-                {/* Add new slot */}
-                <div className="border-t border-slate-100 pt-5">
-                    <p className="font-bold text-slate-700 mb-4 flex items-center gap-1.5">
-                        <Plus size={16} weight="bold" className="text-violet-500" /> Thêm slot mới
-                    </p>
-                    <div className="flex flex-col md:flex-row gap-4">
-                        {/* Day picker */}
-                        <div className="flex-1">
-                            <p className="text-xs font-bold text-slate-500 mb-2">Ngày:</p>
-                            <div className="space-y-1.5">
-                                {DAYS_OF_WEEK.map(d => (
-                                    <button key={d}
-                                        onClick={() => setSelectedDay(d)}
-                                        className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all ${selectedDay === d ? 'border-violet-400 bg-violet-50 text-violet-700' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'}`}
-                                    >
-                                        {d}
-                                    </button>
+                {/* Weekly grid - shared across all subjects, wider day columns */}
+                <div className="overflow-auto border border-slate-200 rounded-xl bg-white">
+                    <div className="flex min-w-[900px]">
+                        {/* left column: hour labels */}
+                        <div className="w-16 shrink-0 border-r border-slate-200 sticky left-0 bg-white z-20 shadow-[1px_0_0_0_rgba(0,0,0,0.03)] relative">
+                            <div className="h-14 border-b border-slate-200 bg-slate-50" />
+                            <div className="relative" style={{height: `${hours.length * rowHeight}px`}}>
+                                {hours.map((h, i) => (
+                                    <div key={h} className="absolute right-2 w-full text-xs text-slate-400 font-bold text-right" style={{top: `${i * rowHeight}px`, transform: 'translateY(-50%)'}}>
+                                        {h}:00
+                                    </div>
                                 ))}
                             </div>
                         </div>
-                        {/* Time picker */}
-                        <div className="flex-1">
-                            <p className="text-xs font-bold text-slate-500 mb-2">Giờ:</p>
-                            <div className="grid grid-cols-2 gap-1.5">
-                                {TIME_SLOTS.map(t => (
-                                    <button key={t}
-                                        onClick={() => setSelectedTime(t)}
-                                        className={`px-3 py-2.5 rounded-xl text-sm font-semibold border transition-all ${selectedTime === t ? 'border-violet-400 bg-violet-50 text-violet-700' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'}`}
-                                    >
-                                        {t}
-                                    </button>
-                                ))}
-                            </div>
+                        
+                        {/* day columns (shared) */}
+                        <div className="flex w-full">
+                            {week.map((d, idx) => (
+                                <div key={idx} className="flex-1 min-w-[200px] border-r border-slate-200 last:border-r-0 relative group">
+                                    <div className="h-14 flex flex-col items-center justify-center bg-slate-50 border-b border-slate-200 sticky top-0 z-10 transition-colors group-hover:bg-slate-100">
+                                        <span className="text-sm font-extrabold text-slate-800">{d.getDay() === 0 ? 'CN' : `T${d.getDay() + 1}`}</span>
+                                        <span className="text-[11px] font-bold text-slate-500">{String(d.getDate()).padStart(2, '0')}/{String(d.getMonth()+1).padStart(2, '0')}</span>
+                                    </div>
+                                    <div className="relative" style={{height: `${hours.length * rowHeight}px`}}>
+                                        {/* Background hour grid lines */}
+                                        <div className="absolute inset-0 pointer-events-none">
+                                            {hours.map((h, i) => (
+                                                <div key={h} className="absolute left-0 right-0 border-t border-slate-100 w-full transition-colors group-hover:border-slate-200" style={{top: `${i * rowHeight}px`}} />
+                                            ))}
+                                        </div>
+
+                                        {/* Events */}
+                                        {subjects.flatMap(s => s.slots.map(slot => ({...slot, subjectName: s.name, subjectIcon: s.icon, subjectDesc: s.desc})))
+                                            .filter(slot => slot.day === formatISODate(d))
+                                            .map((slot) => {
+                                                const top = (timeToMinutes(slot.start) - hours[0]*60) / 60 * rowHeight;
+                                                const height = (timeToMinutes(slot.end) - timeToMinutes(slot.start)) / 60 * rowHeight;
+                                                const cfg = slot.status === 'booked' ? 'bg-sky-500 text-white shadow-sky-200/50' : slot.status === 'pending' ? 'bg-amber-400 text-amber-950 shadow-amber-200/50' : 'bg-emerald-400 text-white shadow-emerald-200/50';
+                                                
+                                                return (
+                                                    <div 
+                                                        key={`${slot.id}-${slot.subjectName}`} 
+                                                        className={`absolute left-1.5 right-1.5 rounded-lg px-2.5 py-1.5 text-sm shadow-sm transition-all hover:scale-[1.02] cursor-pointer border border-white/20 active:scale-95 z-0 hover:z-10 ${cfg}`} 
+                                                        style={{top: `${top}px`, height: `${height}px`, overflow:'hidden'}}
+                                                    >
+                                                        <div className="flex flex-col h-full justify-start text-left">
+                                                            <div className="font-extrabold truncate text-[13px] leading-tight mb-0.5">{slot.subjectName}</div>
+                                                            <div className="text-[10px] font-bold opacity-90 truncate">{slot.start} - {slot.end}</div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
-                    <button
-                        disabled={!selectedDay || !selectedTime}
-                        className={`mt-4 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${selectedDay && selectedTime ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
-                    >
-                        + Thêm slot
-                    </button>
                 </div>
             </div>
         </div>
@@ -435,7 +447,7 @@ const TabStats = () => (
                         </div>
                         <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
                             <div
-                                className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-400 rounded-full"
+                                className="h-full bg-linear-to-r from-violet-500 to-fuchsia-400 rounded-full"
                                 style={{ width: `${(s.totalSessions / 17) * 100}%` }}
                             />
                         </div>
@@ -469,7 +481,7 @@ const TabStats = () => (
 // ────────────────────────────────────────────────
 const TABS = [
     { id: 'subjects', label: 'Buổi dạy', icon: ChalkboardTeacher },
-    { id: 'schedule', label: 'Lịch rảnh', icon: CalendarBlank },
+    { id: 'schedule', label: 'Lịch dạy', icon: CalendarBlank },
     { id: 'requests', label: 'Yêu cầu', icon: BellRinging, badge: 2 },
     { id: 'income', label: 'Thu nhập', icon: CurrencyDollar },
     { id: 'stats', label: 'Thống kê', icon: ChartBar },
@@ -477,6 +489,7 @@ const TABS = [
 
 const TeachingManagement = () => {
     const [activeTab, setActiveTab] = useState('subjects');
+    const [subjects, setSubjects] = useState(createInitialSubjects());
     const navigate = useNavigate();
 
     return (
@@ -530,8 +543,8 @@ const TeachingManagement = () => {
 
             {/* ─── CONTENT ─── */}
             <div>
-                {activeTab === 'subjects' && <TabSubjects />}
-                {activeTab === 'schedule' && <TabSchedule />}
+                {activeTab === 'subjects' && <TabSubjects subjects={subjects} />}
+                {activeTab === 'schedule' && <TabSchedule subjects={subjects} setSubjects={setSubjects} />}
                 {activeTab === 'requests' && <TabRequests />}
                 {activeTab === 'income' && <TabIncome />}
                 {activeTab === 'stats' && <TabStats />}
