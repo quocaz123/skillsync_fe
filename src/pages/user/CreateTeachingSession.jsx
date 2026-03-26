@@ -27,12 +27,32 @@ const LEVELS = [
     { id: 'advanced', label: 'Advanced', sub: 'Chuyên sâu, nhiều dự án' },
 ];
 
-const DAYS = ['T2 10/3', 'T3 11/3', 'T4 12/3', 'T5 13/3', 'T6 14/3', 'T7 15/3', 'CN 16/3'];
+// generate next 7 days starting from today
+const getVietnamWeekday = (d) => {
+    const wd = d.getDay(); // 0 (Sun) - 6 (Sat)
+    if (wd === 0) return 'CN';
+    return `T${wd + 1}`; // 1->T2, 2->T3 ... 6->T7
+};
+
+const generateNextNDays = (n = 7) => {
+    const res = [];
+    const today = new Date();
+    for (let i = 0; i < n; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() + i);
+        res.push(d);
+    }
+    return res;
+};
+
+const DAYS = generateNextNDays(7);
+
+// Hours options (display strings). We'll use indexes to compare start/end ordering.
 const HOURS = ['7:00 SA', '8:00 SA', '9:00 SA', '10:00 SA', '11:00 SA', '13:00 CH', '14:00 CH', '15:00 CH', '16:00 CH', '17:00 CH', '19:00 CH', '20:00 CH', '21:00 CH'];
 
 // ── Step Indicator ───────────────────────────────
 const StepBar = ({ step }) => {
-    const steps = ['Kỹ năng', 'Mô tả', 'Lịch rảnh', 'Xác nhận'];
+    const steps = ['Kỹ năng', 'Tạo Lịch', 'Xác nhận'];
     return (
         <div className="flex items-center gap-0 mb-8">
             {steps.map((label, i) => {
@@ -101,11 +121,30 @@ const Step1 = ({ data, setData, onNext }) => {
     );
 };
 
-// ── Step 2: Description ──────────────────────────
-const Step2 = ({ data, setData, onNext, onBack }) => {
+// ── Step 2: Tạo Lịch (Mô tả + Lịch gọn) ──────────────────────────
+const StepSchedule = ({ data, setData, onNext, onBack }) => {
+    // merged description + compact schedule
     const [tagInput, setTagInput] = useState('');
+    // selDay will be an ISO date string 'YYYY-MM-DD'
+    const [selDay, setSelDay] = useState('');
+    // selStart/selEnd will be time strings like '07:00'
+    const [selStart, setSelStart] = useState('');
+    const [selEnd, setSelEnd] = useState('');
+    const [err, setErr] = useState('');
     const descLen = data.desc?.trim().length || 0;
     const canNext = descLen >= 3;
+
+    // Lấy chuỗi ngày giờ hiện tại theo local time
+    const todayStr = (() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    })();
+    const currentTimeStr = (() => {
+        const d = new Date();
+        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    })();
+
+    const minStartTime = selDay === todayStr ? (currentTimeStr > "07:00" ? currentTimeStr : "07:00") : "07:00";
 
     const addTag = () => {
         const t = tagInput.trim();
@@ -115,215 +154,214 @@ const Step2 = ({ data, setData, onNext, onBack }) => {
         setTagInput('');
     };
 
-    return (
-        <div>
-            <h2 className="text-lg font-extrabold text-slate-900 mb-5">Mô tả buổi dạy của bạn</h2>
-
-            {/* Selected skill preview */}
-            {data.skill && (
-                <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border ${data.skill.bg} border-${data.skill.border} mb-5`}>
-                    <span className="text-xl">{data.skill.icon}</span>
-                    <span className={`font-extrabold text-sm ${data.skill.text}`}>{data.skill.name}</span>
-                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${data.level?.id === 'intermediate' ? 'bg-amber-100 text-amber-600' : data.level?.id === 'advanced' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}`}>
-                        {data.level?.label}
-                    </span>
-                </div>
-            )}
-
-            <div className="space-y-5">
-                <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-sm font-bold text-slate-700">
-                            Mô tả nội dung sẽ dạy <span className="text-red-400">*</span>
-                        </label>
-                        <span className={`text-[11px] font-semibold ${descLen >= 3 ? 'text-emerald-500' : 'text-slate-400'}`}>
-                            {descLen} ký tự {descLen < 3 ? `(cần ít nhất 3)` : '✓'}
-                        </span>
-                    </div>
-                    <textarea
-                        rows={4}
-                        className={`w-full bg-slate-50 border rounded-xl px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:bg-white resize-none transition-all ${descLen > 0 && descLen < 3 ? 'border-red-300 focus:border-red-400' : 'border-slate-200 focus:border-violet-400'}`}
-                        placeholder="Ví dụ: Tôi sẽ dạy React từ JSX, Hooks đến state management. Học viên được code thực hành và nhận feedback ngay..."
-                        value={data.desc || ''}
-                        onChange={e => setData(d => ({ ...d, desc: e.target.value }))}
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Học viên đạt được gì?</label>
-                    <input
-                        type="text"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-violet-400 focus:bg-white transition-all"
-                        placeholder="Ví dụ: Hiểu và áp dụng React Hooks vào project thực tế"
-                        value={data.outcome || ''}
-                        onChange={e => setData(d => ({ ...d, outcome: e.target.value }))}
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Tags <span className="text-slate-400 font-normal">(tối đa 5)</span></label>
-                    <div className="flex gap-2">
-                        <input
-                            type="text"
-                            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-violet-400 focus:bg-white transition-all"
-                            placeholder="Tag rồi Enter..."
-                            value={tagInput}
-                            onChange={e => setTagInput(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && addTag()}
-                        />
-                        <button onClick={addTag} className="px-4 py-2.5 bg-slate-100 hover:bg-violet-100 text-violet-600 font-bold text-sm rounded-xl border border-slate-200 transition-all">
-                            + Thêm
-                        </button>
-                    </div>
-                    {(data.tags || []).length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                            {data.tags.map(t => (
-                                <span key={t} className="flex items-center gap-1 bg-violet-100 text-violet-700 text-xs font-bold px-2.5 py-1 rounded-full">
-                                    {t}
-                                    <button onClick={() => setData(d => ({ ...d, tags: d.tags.filter(x => x !== t) }))} className="hover:text-red-500 transition-colors">×</button>
-                                </span>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                        Credits / giờ <span className="text-red-400">*</span>
-                    </label>
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-0 bg-slate-100 rounded-xl overflow-hidden border border-slate-200">
-                            <button onClick={() => setData(d => ({ ...d, credits: Math.max(5, (d.credits || 12) - 1) }))}
-                                className="w-10 h-10 flex items-center justify-center text-slate-500 hover:bg-slate-200 font-bold text-lg transition-colors">−</button>
-                            <span className="w-12 text-center font-extrabold text-violet-600 text-lg">{data.credits || 12}</span>
-                            <button onClick={() => setData(d => ({ ...d, credits: Math.min(50, (d.credits || 12) + 1) }))}
-                                className="w-10 h-10 flex items-center justify-center text-slate-500 hover:bg-slate-200 font-bold text-lg transition-colors">+</button>
-                        </div>
-                        <div>
-                            <span className="flex items-center gap-1 text-sm font-bold text-amber-600">
-                                <Lightning size={14} weight="fill" className="text-amber-400" /> credits / giờ
-                            </span>
-                            <p className="text-[11px] text-slate-400 mt-0.5">Gợi ý: 10–20 credits. Trung bình cộng đồng: 14.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex justify-between mt-6">
-                <button onClick={onBack} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all">
-                    <ArrowLeft size={15} weight="bold" /> Quay lại
-                </button>
-                <button onClick={onNext} disabled={!canNext}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${canNext ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>
-                    Tiếp theo <ArrowRight size={15} weight="bold" />
-                </button>
-            </div>
-        </div>
-    );
-};
-
-// ── Step 3: Schedule ─────────────────────────────
-const Step3 = ({ data, setData, onNext, onBack }) => {
-    const [selDay, setSelDay] = useState(null);
-    const [selTime, setSelTime] = useState(null);
-    const slots = data.slots || [];
-
     const addSlot = () => {
-        if (!selDay || !selTime) return;
-        const exists = slots.find(s => s.day === selDay && s.time === selTime);
-        if (exists) return;
-        setData(d => ({ ...d, slots: [...(d.slots || []), { day: selDay, time: selTime }] }));
-        setSelTime(null);
+        setErr('');
+        if (!selDay || !selStart || !selEnd) {
+            setErr('Vui lòng chọn ngày, giờ bắt đầu và giờ kết thúc.');
+            return;
+        }
+
+        // Chặn ngày giờ trong quá khứ
+        if (selDay < todayStr) {
+            setErr('Không thể chọn ngày đã qua.');
+            return;
+        }
+        if (selDay === todayStr && selStart < currentTimeStr) {
+            setErr('Không thể chọn giờ hiện tại.');
+            return;
+        }
+
+        // selStart/selEnd are 'HH:MM' strings; lexicographic compare works for zero-padded 24h times
+        if (selEnd <= selStart) {
+            setErr('Giờ kết thúc phải sau giờ bắt đầu.');
+            return;
+        }
+        const exists = (data.slots || []).find(s => s.day === selDay && s.start === selStart && s.end === selEnd);
+        if (exists) {
+            setErr('Khung giờ này đã có trong danh sách!');
+            return;
+        }
+        
+        const newSlot = { day: selDay, start: selStart, end: selEnd };
+        setData(d => ({ ...d, slots: [...(d.slots || []), newSlot] }));
+        setSelStart('');
+        setSelEnd('');
+        setSelDay('');
     };
 
     const removeSlot = (idx) => setData(d => ({ ...d, slots: d.slots.filter((_, i) => i !== idx) }));
 
     return (
         <div>
-            <h2 className="text-lg font-extrabold text-slate-900 mb-1">Tạo lịch rảnh</h2>
-            <p className="text-xs text-slate-400 mb-5">Học viên chỉ đặt được vào slot bạn tạo. Có thể chỉnh sửa sau.</p>
+            <h2 className="text-lg font-extrabold text-slate-900 mb-4">Tạo Lịch</h2>
 
-            {/* Flow hint */}
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-2 mb-6">
-                <span className="text-lg shrink-0">💡</span>
+            {/* compact description area */}
+            <div className="mb-4">
+                <label className="block text-sm font-bold text-slate-700 mb-1">Mô tả buổi dạy <span className="text-red-400">*</span></label>
+                <textarea rows={3} className={`w-full bg-slate-50 border rounded-xl px-3 py-2 text-sm text-slate-700 resize-none outline-none ${descLen > 0 && descLen < 3 ? 'border-red-300' : 'border-slate-200'}`} placeholder="Tóm tắt ngắn (ít nhất 3 ký tự)" value={data.desc || ''} onChange={e => setData(d => ({ ...d, desc: e.target.value }))} />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                    <p className="text-xs font-bold text-amber-800">Luồng hoạt động</p>
-                    <p className="text-xs text-amber-600 mt-0.5">Bạn tạo slot → Học viên gửi yêu cầu chọn slot → Bạn xác nhận → Buổi học được lên lịch → Credits chuyển sau khi hoàn thành.</p>
+                    <label className="text-sm font-bold text-slate-700 mb-1 block">Học viên đạt được</label>
+                    <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="Kết quả mong đợi" value={data.outcome || ''} onChange={e => setData(d => ({ ...d, outcome: e.target.value }))} />
                 </div>
-            </div>
-
-            <div className="flex flex-col md:flex-row gap-6 mb-5">
-                {/* Day picker */}
-                <div className="flex-1">
-                    <p className="text-xs font-bold text-slate-500 mb-2 flex items-center gap-1.5">
-                        <CalendarBlank size={12} weight="duotone" className="text-violet-500" /> Chọn ngày:
-                    </p>
-                    <div className="space-y-1.5">
-                        {DAYS.map(d => (
-                            <button key={d} onClick={() => setSelDay(d)}
-                                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all ${selDay === d ? 'border-violet-400 bg-violet-50 text-violet-700' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-violet-200'}`}>
-                                {d}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Time picker */}
-                <div className="flex-1">
-                    <p className="text-xs font-bold text-slate-500 mb-2 flex items-center gap-1.5">
-                        🕐 Chọn giờ:
-                    </p>
-                    <div className="grid grid-cols-2 gap-1.5">
-                        {HOURS.map(h => (
-                            <button key={h} onClick={() => setSelTime(h)}
-                                className={`px-3 py-2.5 rounded-xl text-sm font-semibold border transition-all ${selTime === h ? 'border-violet-400 bg-violet-50 text-violet-700' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-violet-200'}`}>
-                                {h}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            <button onClick={addSlot} disabled={!selDay || !selTime}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold border transition-all mb-5 ${selDay && selTime ? 'border-violet-300 text-violet-600 bg-violet-50 hover:bg-violet-100' : 'border-slate-200 text-slate-400 bg-slate-50 cursor-not-allowed'}`}>
-                <Plus size={14} weight="bold" /> Thêm slot
-            </button>
-
-            {/* Added slots */}
-            {slots.length > 0 ? (
-                <div className="bg-white rounded-xl border border-slate-100 divide-y divide-slate-50 mb-5 shadow-sm">
-                    {slots.map((s, i) => (
-                        <div key={i} className="flex items-center justify-between px-4 py-3">
-                            <div className="flex items-center gap-3">
-                                <div className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                                <span className="text-sm font-bold text-slate-700">{s.day}</span>
-                                <span className="text-sm text-slate-500">{s.time}</span>
-                            </div>
-                            <button onClick={() => removeSlot(i)} className="text-slate-300 hover:text-red-400 transition-colors">
-                                <Trash size={15} weight="duotone" />
-                            </button>
+                <div>
+                    <label className="text-sm font-bold text-slate-700 mb-1 block">Credits / giờ</label>
+                    <div className="flex items-center gap-2">
+                            <button onClick={() => setData(d => ({ ...d, credits: Math.max(5, (d.credits || 12) - 1) }))} className="px-3 py-2 bg-slate-100 rounded-xl">−</button>
+                            <input
+                                type="number"
+                                min={5}
+                                max={50}
+                                step={1}
+                                value={data.credits || 12}
+                                onChange={(e) => {
+                                    const v = Number(e.target.value || 0);
+                                    const clamped = Math.max(5, Math.min(50, isNaN(v) ? 12 : Math.floor(v)));
+                                    setData(d => ({ ...d, credits: clamped }));
+                                }}
+                                className="w-14 text-center font-extrabold text-violet-600 bg-transparent outline-none"
+                            />
+                            <button onClick={() => setData(d => ({ ...d, credits: Math.min(50, (d.credits || 12) + 1) }))} className="px-3 py-2 bg-slate-100 rounded-xl">+</button>
                         </div>
+                </div>
+            </div>
+
+            {/* compact tag input */}
+            <div className="mb-4">
+                <label className="text-sm font-bold text-slate-700 mb-1 block">Tags</label>
+                <div className="flex gap-2">
+                    <input type="text" className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="Tag rồi Enter..." value={tagInput} onChange={e => setTagInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && addTag()} />
+                    <button onClick={addTag} className="px-3 py-2 bg-violet-50 text-violet-600 rounded-xl">Thêm</button>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                    {(data.tags || []).map(t => (
+                        <span key={t} className="px-2 py-1 rounded-full bg-violet-100 text-violet-700 text-xs font-bold flex items-center gap-2">{t}<button onClick={() => setData(d => ({ ...d, tags: d.tags.filter(x => x !== t) }))} className="ml-1">×</button></span>
                     ))}
                 </div>
-            ) : (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 mb-5 text-center">
-                    <p className="text-sm font-bold text-amber-700">📅 Chưa có slot. Chọn ngày + giờ rồi bấm "Thêm slot"!</p>
-                    <p className="text-xs text-amber-500 mt-0.5">Bạn vẫn có thể đăng và thêm slot sau.</p>
-                </div>
-            )}
+            </div>
 
-            <div className="flex justify-between">
-                <button onClick={onBack} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all">
-                    <ArrowLeft size={15} weight="bold" /> Quay lại
-                </button>
-                <button onClick={onNext}
-                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-violet-600 text-white hover:bg-violet-700 shadow-sm transition-all">
-                    Tiếp theo <ArrowRight size={15} weight="bold" />
-                </button>
+            {/* compact schedule picker */}
+            <div className="mb-5">
+                <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-bold text-slate-700">Lịch dạy (chọn ngày và khung giờ)</label>
+                </div>
+                
+                <div className="flex flex-col md:flex-row items-stretch gap-2 bg-slate-50 border border-slate-200 p-2 rounded-xl shadow-sm">
+                    {/* Ngày dạy */}
+                    <div className="w-full md:flex-[1.2] bg-white rounded-lg border border-slate-200 px-3 py-2 flex flex-col justify-center hover:border-violet-300 focus-within:border-violet-500 focus-within:ring-1 focus-within:ring-violet-500 transition-all">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Ngày dạy</label>
+                        <input
+                            type="date"
+                            min={todayStr}
+                            className="w-full bg-transparent text-sm font-bold outline-none text-slate-800 cursor-text leading-none"
+                            value={selDay}
+                            onChange={(e) => setSelDay(e.target.value)}
+                        />
+                    </div>
+                    
+                    {/* Giờ */}
+                    <div className="w-full md:flex-[2] flex gap-2">
+                        <div className="flex-1 bg-white rounded-lg border border-slate-200 px-3 py-2 flex flex-col justify-center hover:border-violet-300 focus-within:border-violet-500 focus-within:ring-1 focus-within:ring-violet-500 transition-all">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Bắt đầu</label>
+                            <input
+                                type="time"
+                                step={1800}
+                                min={minStartTime}
+                                max="21:00"
+                                className="w-full bg-transparent text-sm font-bold outline-none text-slate-800 cursor-text leading-none"
+                                value={selStart}
+                                onChange={(e) => {
+                                    const v = e.target.value;
+                                    setSelStart(v);
+                                    if (!selEnd || selEnd <= v) {
+                                        const [hh, mm] = v.split(':').map(Number);
+                                        const date = new Date();
+                                        date.setHours(hh);
+                                        date.setMinutes(mm + 60);
+                                        const newEndH = String(date.getHours()).padStart(2, '0');
+                                        const newEndM = String(date.getMinutes()).padStart(2, '0');
+                                        const newEnd = `${newEndH}:${newEndM}`;
+                                        setSelEnd(newEnd > '21:00' ? '21:00' : newEnd);
+                                    }
+                                }}
+                            />
+                        </div>
+                        <div className="flex-1 bg-white rounded-lg border border-slate-200 px-3 py-2 flex flex-col justify-center hover:border-violet-300 focus-within:border-violet-500 focus-within:ring-1 focus-within:ring-violet-500 transition-all">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Kết thúc</label>
+                            <input
+                                type="time"
+                                step={1800}
+                                className="w-full bg-transparent text-sm font-bold outline-none text-slate-800 cursor-text leading-none"
+                                value={selEnd}
+                                onChange={(e) => {
+                                    const v = e.target.value;
+                                    if (selStart && v <= selStart) {
+                                        setErr('Giờ kết thúc phải sau giờ bắt đầu.');
+                                    } else {
+                                        setErr('');
+                                    }
+                                    setSelEnd(v);
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Thêm btn */}
+                    <div className="w-full md:w-auto md:min-w-[110px]">
+                        <button 
+                            onClick={addSlot} 
+                            disabled={!selDay || !selStart || !selEnd} 
+                            className={`w-full h-full min-h-[48px] px-4 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${selDay && selStart && selEnd ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm shadow-violet-200 transform active:scale-[0.98]' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                        >
+                            <Plus size={18} weight="bold" className="shrink-0" />
+                            <span className="md:hidden lg:inline">Thêm</span>
+                        </button>
+                    </div>
+                </div>
+                {err && <p className="text-xs text-red-600 mt-2 font-semibold bg-red-50 px-3 py-2 rounded-lg inline-flex items-center gap-1.5 border border-red-100">⚠️ {err}</p>}
+
+                {/* slots list compact */}
+                <div className="mt-4">
+                    {(data.slots || []).length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {(data.slots || []).map((s, i) => {
+                                const d = new Date(s.day + 'T00:00');
+                                const label = `${getVietnamWeekday(d)} ${d.getDate()}/${d.getMonth() + 1}`;
+                                const timeLabel = `${s.start} - ${s.end}`;
+                                return (
+                                    <div key={i} className="group flex items-center justify-between px-3.5 py-3 rounded-xl border border-slate-200 bg-white hover:border-violet-300 hover:shadow-sm transition-all">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-9 h-9 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center shrink-0">
+                                                <CalendarBlank size={18} weight="duotone" />
+                                            </div>
+                                            <div>
+                                                <div className="text-[13px] font-bold text-slate-800 leading-tight">{label}</div>
+                                                <div className="text-xs font-semibold text-slate-500 mt-0.5">{timeLabel}</div>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => removeSlot(i)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                                            <Trash size={16} weight="duotone" />
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="text-[13px] font-semibold text-slate-400 bg-slate-50 border border-slate-100 border-dashed rounded-xl p-6 text-center">Chưa có slot nào. Thêm khung giờ để học viên có thể đặt lịch.</div>
+                    )}
+                </div>
+            </div>
+
+            <div className="flex justify-between mt-4">
+                <button onClick={onBack} className="px-4 py-2 rounded-xl bg-slate-100">Quay lại</button>
+                <button onClick={onNext} disabled={!canNext} className={`px-4 py-2 rounded-xl font-bold ${canNext ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-400'}`}>Tiếp theo</button>
             </div>
         </div>
     );
 };
+
 
 // ── Step 4: Confirm ──────────────────────────────
 const Step4 = ({ data, onBack, onSubmit }) => (
@@ -361,11 +399,16 @@ const Step4 = ({ data, onBack, onSubmit }) => (
                     <CalendarBlank size={12} weight="duotone" className="text-violet-500" /> {data.slots.length} slot được tạo
                 </p>
                 <div className="flex flex-wrap gap-2">
-                    {data.slots.map((s, i) => (
-                        <span key={i} className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
-                            {s.day} · {s.time}
-                        </span>
-                    ))}
+                    {data.slots.map((s, i) => {
+                        const d = new Date(s.day);
+                        const label = `${getVietnamWeekday(d)} ${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+                        const timeLabel = `${s.start} - ${s.end}`;
+                        return (
+                            <span key={i} className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                {label} · {timeLabel}
+                            </span>
+                        );
+                    })}
                 </div>
             </div>
         )}
@@ -422,7 +465,7 @@ const CreateTeachingSession = () => {
     const [done, setDone] = useState(false);
     const [form, setForm] = useState({ credits: 12 });
 
-    const next = () => setStep(s => Math.min(s + 1, 4));
+    const next = () => setStep(s => Math.min(s + 1, 3));
     const back = () => step === 1 ? navigate(-1) : setStep(s => s - 1);
 
     return (
@@ -446,9 +489,7 @@ const CreateTeachingSession = () => {
                 ) : step === 1 ? (
                     <Step1 data={form} setData={setForm} onNext={next} />
                 ) : step === 2 ? (
-                    <Step2 data={form} setData={setForm} onNext={next} onBack={back} />
-                ) : step === 3 ? (
-                    <Step3 data={form} setData={setForm} onNext={next} onBack={back} />
+                    <StepSchedule data={form} setData={setForm} onNext={next} onBack={back} />
                 ) : (
                     <Step4 data={form} onBack={back} onSubmit={() => setDone(true)} />
                 )}
