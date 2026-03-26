@@ -1,43 +1,60 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, ArrowRight, Check, Sparkle, Lightning,
-    CalendarBlank, Plus, Trash, Rocket
+    CalendarBlank, Plus, Trash, Rocket, Spinner, WarningCircle
 } from '@phosphor-icons/react';
+import httpClient from '../../configuration/axiosClient';
+import { API_ENDPOINTS } from '../../configuration/apiEndpoints';
+import { createSlotsBatch } from '../../services/sessionService';
 
-// ── Data ─────────────────────────────────────────
-const SKILLS = [
-    { id: 'react', icon: '⚛️', name: 'React', cat: 'Công nghệ', bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-600' },
-    { id: 'uiux', icon: '🎨', name: 'UI/UX Design', cat: 'Thiết kế', bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-600' },
-    { id: 'python', icon: '🐍', name: 'Python', cat: 'Công nghệ', bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-600' },
-    { id: 'speaking', icon: '🎤', name: 'Public Speaking', cat: 'Kỹ năng mềm', bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-600' },
-    { id: 'figma', icon: '🖼️', name: 'Figma', cat: 'Thiết kế', bg: 'bg-pink-50', border: 'border-pink-200', text: 'text-pink-600' },
-    { id: 'ml', icon: '🤖', name: 'Machine Learning', cat: 'Công nghệ', bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-600' },
-    { id: 'excel', icon: '📊', name: 'Excel & Data', cat: 'Kinh doanh', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-600' },
-    { id: 'guitar', icon: '🎸', name: 'Guitar', cat: 'Sáng tạo', bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-600' },
-    { id: 'photo', icon: '📷', name: 'Nhiếp ảnh', cat: 'Sáng tạo', bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-600' },
-    { id: 'english', icon: '🌐', name: 'Tiếng Anh', cat: 'Ngôn ngữ', bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-600' },
-    { id: 'marketing', icon: '📣', name: 'Marketing', cat: 'Kinh doanh', bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-600' },
-    { id: 'nodejs', icon: '🟩', name: 'Node.js', cat: 'Công nghệ', bg: 'bg-lime-50', border: 'border-lime-200', text: 'text-lime-600' },
-];
+const { TEACHING_SKILLS } = API_ENDPOINTS;
 
 const LEVELS = [
-    { id: 'beginner', label: 'Beginner', sub: 'Biết cơ bản' },
-    { id: 'intermediate', label: 'Intermediate', sub: 'Có kinh nghiệm thực tế' },
-    { id: 'advanced', label: 'Advanced', sub: 'Chuyên sâu, nhiều dự án' },
+    { id: 'BEGINNER',     label: 'Beginner',     sub: 'Biết cơ bản' },
+    { id: 'INTERMEDIATE', label: 'Intermediate', sub: 'Có kinh nghiệm thực tế' },
+    { id: 'ADVANCED',     label: 'Advanced',     sub: 'Chuyên sâu, nhiều dự án' },
 ];
 
-const DAYS = ['T2 10/3', 'T3 11/3', 'T4 12/3', 'T5 13/3', 'T6 14/3', 'T7 15/3', 'CN 16/3'];
-const HOURS = ['7:00 SA', '8:00 SA', '9:00 SA', '10:00 SA', '11:00 SA', '13:00 CH', '14:00 CH', '15:00 CH', '16:00 CH', '17:00 CH', '19:00 CH', '20:00 CH', '21:00 CH'];
+// Màu sắc theo category
+const categoryStyle = (cat) => {
+    const map = {
+        'Công nghệ': { bg: 'bg-blue-50',    border: 'border-blue-200',   text: 'text-blue-600'   },
+        'Thiết kế':  { bg: 'bg-purple-50',  border: 'border-purple-200', text: 'text-purple-600' },
+        'Kinh doanh':{ bg: 'bg-emerald-50', border: 'border-emerald-200',text: 'text-emerald-600'},
+        'Ngôn ngữ':  { bg: 'bg-cyan-50',    border: 'border-cyan-200',   text: 'text-cyan-600'   },
+        'Sáng tạo':  { bg: 'bg-orange-50',  border: 'border-orange-200', text: 'text-orange-600' },
+        'Kỹ năng mềm':{ bg: 'bg-green-50',  border: 'border-green-200',  text: 'text-green-600'  },
+    };
+    return map[cat] ?? { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-600' };
+};
 
-// ── Step Indicator ───────────────────────────────
+// Thời gian có thể chọn
+const TIME_OPTIONS = [
+    '07:00', '08:00', '09:00', '10:00', '11:00',
+    '13:00', '14:00', '15:00', '16:00', '17:00',
+    '19:00', '20:00', '21:00',
+];
+
+// Tạo 14 ngày tiếp theo
+const getNext14Days = () =>
+    Array.from({ length: 14 }, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() + i + 1);
+        return {
+            iso: d.toISOString().split('T')[0],
+            label: d.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'numeric' }),
+        };
+    });
+
+// ── Step Indicator ────────────────────────────────
 const StepBar = ({ step }) => {
-    const steps = ['Kỹ năng', 'Mô tả', 'Lịch rảnh', 'Xác nhận'];
+    const steps = ['Kỹ năng', 'Lịch rảnh', 'Xác nhận'];
     return (
         <div className="flex items-center gap-0 mb-8">
             {steps.map((label, i) => {
                 const idx = i + 1;
-                const done = step > idx;
+                const done   = step > idx;
                 const active = step === idx;
                 return (
                     <div key={idx} className="flex items-center flex-1 last:flex-none">
@@ -57,39 +74,84 @@ const StepBar = ({ step }) => {
     );
 };
 
-// ── Step 1: Skill ────────────────────────────────
-const Step1 = ({ data, setData, onNext }) => {
-    const canNext = data.skill && data.level;
+// ── Step 1: Chọn kỹ năng đã được duyệt ──────────
+const Step1 = ({ approvedSkills, loading, data, setData, onNext }) => {
+    const canNext = data.teachingSkill;
+    const style = data.teachingSkill
+        ? categoryStyle(data.teachingSkill.skillCategory)
+        : {};
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center gap-4 py-20 text-slate-400">
+                <Spinner size={28} className="animate-spin text-violet-500" />
+                <p className="text-sm font-medium">Đang tải kỹ năng đã duyệt…</p>
+            </div>
+        );
+    }
+
+    if (approvedSkills.length === 0) {
+        return (
+            <div className="text-center py-16">
+                <div className="w-20 h-20 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <WarningCircle size={40} weight="duotone" className="text-amber-400" />
+                </div>
+                <h3 className="text-xl font-extrabold text-slate-800 mb-2">Chưa có kỹ năng nào được duyệt</h3>
+                <p className="text-slate-500 text-sm max-w-sm mx-auto">
+                    Bạn cần đăng ký kỹ năng dạy và chờ Admin duyệt trước khi tạo lịch rảnh.
+                </p>
+                <a href="/app/teaching"
+                    className="inline-flex items-center gap-2 mt-6 px-6 py-2.5 bg-violet-600 text-white font-bold rounded-xl text-sm hover:bg-violet-700 transition-all">
+                    Đến trang quản lý kỹ năng →
+                </a>
+            </div>
+        );
+    }
+
     return (
         <div>
-            <h2 className="text-lg font-extrabold text-slate-900 mb-5">Bạn muốn dạy kỹ năng gì?</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-7">
-                {SKILLS.map(s => (
-                    <button
-                        key={s.id}
-                        onClick={() => setData(d => ({ ...d, skill: s }))}
-                        className={`rounded-2xl border-2 p-4 flex flex-col items-center gap-2 transition-all hover:shadow-md ${data.skill?.id === s.id ? `border-violet-500 ${s.bg} shadow-sm` : `border-transparent ${s.bg} hover:border-slate-200`}`}
-                    >
-                        <span className="text-3xl">{s.icon}</span>
-                        <span className={`text-sm font-extrabold ${data.skill?.id === s.id ? 'text-violet-700' : s.text}`}>{s.name}</span>
-                        <span className="text-[10px] text-slate-400">{s.cat}</span>
-                    </button>
-                ))}
+            <h2 className="text-lg font-extrabold text-slate-900 mb-1">Chọn kỹ năng để tạo lịch dạy</h2>
+            <p className="text-xs text-slate-400 mb-5">Chỉ hiển thị kỹ năng đã được Admin duyệt ✅</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-7">
+                {approvedSkills.map(skill => {
+                    const s = categoryStyle(skill.skillCategory);
+                    const selected = data.teachingSkill?.id === skill.id;
+                    return (
+                        <button
+                            key={skill.id}
+                            onClick={() => setData(d => ({ ...d, teachingSkill: skill }))}
+                            className={`rounded-2xl border-2 p-4 flex items-center gap-4 transition-all hover:shadow-md text-left ${selected ? `border-violet-500 ${s.bg} shadow-sm` : `border-transparent ${s.bg} hover:border-slate-200`}`}
+                        >
+                            <span className="text-3xl shrink-0">{skill.skillIcon || '📘'}</span>
+                            <div className="flex-1 min-w-0">
+                                <p className={`font-extrabold text-sm truncate ${selected ? 'text-violet-700' : s.text}`}>
+                                    {skill.skillName}
+                                </p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">{skill.skillCategory} · {skill.level}</p>
+                                <p className="text-[11px] text-amber-600 font-bold mt-1 flex items-center gap-1">
+                                    <Lightning size={10} weight="fill" /> {skill.creditsPerHour} credits/giờ
+                                </p>
+                            </div>
+                            {selected && (
+                                <div className="w-6 h-6 bg-violet-600 rounded-full flex items-center justify-center shrink-0">
+                                    <Check size={13} weight="bold" className="text-white" />
+                                </div>
+                            )}
+                        </button>
+                    );
+                })}
             </div>
 
-            <h3 className="text-sm font-extrabold text-slate-700 mb-3">Cấp độ của bạn:</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-                {LEVELS.map(lv => (
-                    <button
-                        key={lv.id}
-                        onClick={() => setData(d => ({ ...d, level: lv }))}
-                        className={`rounded-2xl border-2 px-5 py-4 text-left transition-all ${data.level?.id === lv.id ? 'border-violet-500 bg-violet-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
-                    >
-                        <p className={`font-extrabold text-sm ${data.level?.id === lv.id ? 'text-violet-700' : 'text-slate-700'}`}>{lv.label}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">{lv.sub}</p>
-                    </button>
-                ))}
-            </div>
+            {data.teachingSkill && (
+                <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 ${style.bg} ${style.border} mb-6`}>
+                    <span className="text-2xl">{data.teachingSkill.skillIcon || '📘'}</span>
+                    <div>
+                        <p className={`font-extrabold text-sm ${style.text}`}>Đã chọn: {data.teachingSkill.skillName}</p>
+                        <p className="text-xs text-slate-500">{data.teachingSkill.outcomeDesc}</p>
+                    </div>
+                </div>
+            )}
 
             <div className="flex justify-end">
                 <button onClick={onNext} disabled={!canNext}
@@ -101,223 +163,91 @@ const Step1 = ({ data, setData, onNext }) => {
     );
 };
 
-// ── Step 2: Description ──────────────────────────
+// ── Step 2: Tạo lịch rảnh (batch) ────────────────
 const Step2 = ({ data, setData, onNext, onBack }) => {
-    const [tagInput, setTagInput] = useState('');
-    const descLen = data.desc?.trim().length || 0;
-    const canNext = descLen >= 3;
+    const DAYS = getNext14Days();
+    const [selectedDates, setSelectedDates] = useState([]);
+    const [selectedTimes, setSelectedTimes] = useState([]);
 
-    const addTag = () => {
-        const t = tagInput.trim();
-        if (t && (data.tags || []).length < 5 && !data.tags?.includes(t)) {
-            setData(d => ({ ...d, tags: [...(d.tags || []), t] }));
-        }
-        setTagInput('');
+    const toggleDate = (d) => setSelectedDates(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
+    const toggleTime = (t) => setSelectedTimes(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+
+    const handleNext = () => {
+        setData(d => ({ ...d, selectedDates, selectedTimes }));
+        onNext();
     };
-
-    return (
-        <div>
-            <h2 className="text-lg font-extrabold text-slate-900 mb-5">Mô tả buổi dạy của bạn</h2>
-
-            {/* Selected skill preview */}
-            {data.skill && (
-                <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border ${data.skill.bg} border-${data.skill.border} mb-5`}>
-                    <span className="text-xl">{data.skill.icon}</span>
-                    <span className={`font-extrabold text-sm ${data.skill.text}`}>{data.skill.name}</span>
-                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${data.level?.id === 'intermediate' ? 'bg-amber-100 text-amber-600' : data.level?.id === 'advanced' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}`}>
-                        {data.level?.label}
-                    </span>
-                </div>
-            )}
-
-            <div className="space-y-5">
-                <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-sm font-bold text-slate-700">
-                            Mô tả nội dung sẽ dạy <span className="text-red-400">*</span>
-                        </label>
-                        <span className={`text-[11px] font-semibold ${descLen >= 3 ? 'text-emerald-500' : 'text-slate-400'}`}>
-                            {descLen} ký tự {descLen < 3 ? `(cần ít nhất 3)` : '✓'}
-                        </span>
-                    </div>
-                    <textarea
-                        rows={4}
-                        className={`w-full bg-slate-50 border rounded-xl px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:bg-white resize-none transition-all ${descLen > 0 && descLen < 3 ? 'border-red-300 focus:border-red-400' : 'border-slate-200 focus:border-violet-400'}`}
-                        placeholder="Ví dụ: Tôi sẽ dạy React từ JSX, Hooks đến state management. Học viên được code thực hành và nhận feedback ngay..."
-                        value={data.desc || ''}
-                        onChange={e => setData(d => ({ ...d, desc: e.target.value }))}
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Học viên đạt được gì?</label>
-                    <input
-                        type="text"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-violet-400 focus:bg-white transition-all"
-                        placeholder="Ví dụ: Hiểu và áp dụng React Hooks vào project thực tế"
-                        value={data.outcome || ''}
-                        onChange={e => setData(d => ({ ...d, outcome: e.target.value }))}
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Tags <span className="text-slate-400 font-normal">(tối đa 5)</span></label>
-                    <div className="flex gap-2">
-                        <input
-                            type="text"
-                            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-violet-400 focus:bg-white transition-all"
-                            placeholder="Tag rồi Enter..."
-                            value={tagInput}
-                            onChange={e => setTagInput(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && addTag()}
-                        />
-                        <button onClick={addTag} className="px-4 py-2.5 bg-slate-100 hover:bg-violet-100 text-violet-600 font-bold text-sm rounded-xl border border-slate-200 transition-all">
-                            + Thêm
-                        </button>
-                    </div>
-                    {(data.tags || []).length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                            {data.tags.map(t => (
-                                <span key={t} className="flex items-center gap-1 bg-violet-100 text-violet-700 text-xs font-bold px-2.5 py-1 rounded-full">
-                                    {t}
-                                    <button onClick={() => setData(d => ({ ...d, tags: d.tags.filter(x => x !== t) }))} className="hover:text-red-500 transition-colors">×</button>
-                                </span>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                        Credits / giờ <span className="text-red-400">*</span>
-                    </label>
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-0 bg-slate-100 rounded-xl overflow-hidden border border-slate-200">
-                            <button onClick={() => setData(d => ({ ...d, credits: Math.max(5, (d.credits || 12) - 1) }))}
-                                className="w-10 h-10 flex items-center justify-center text-slate-500 hover:bg-slate-200 font-bold text-lg transition-colors">−</button>
-                            <span className="w-12 text-center font-extrabold text-violet-600 text-lg">{data.credits || 12}</span>
-                            <button onClick={() => setData(d => ({ ...d, credits: Math.min(50, (d.credits || 12) + 1) }))}
-                                className="w-10 h-10 flex items-center justify-center text-slate-500 hover:bg-slate-200 font-bold text-lg transition-colors">+</button>
-                        </div>
-                        <div>
-                            <span className="flex items-center gap-1 text-sm font-bold text-amber-600">
-                                <Lightning size={14} weight="fill" className="text-amber-400" /> credits / giờ
-                            </span>
-                            <p className="text-[11px] text-slate-400 mt-0.5">Gợi ý: 10–20 credits. Trung bình cộng đồng: 14.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex justify-between mt-6">
-                <button onClick={onBack} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all">
-                    <ArrowLeft size={15} weight="bold" /> Quay lại
-                </button>
-                <button onClick={onNext} disabled={!canNext}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${canNext ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>
-                    Tiếp theo <ArrowRight size={15} weight="bold" />
-                </button>
-            </div>
-        </div>
-    );
-};
-
-// ── Step 3: Schedule ─────────────────────────────
-const Step3 = ({ data, setData, onNext, onBack }) => {
-    const [selDay, setSelDay] = useState(null);
-    const [selTime, setSelTime] = useState(null);
-    const slots = data.slots || [];
-
-    const addSlot = () => {
-        if (!selDay || !selTime) return;
-        const exists = slots.find(s => s.day === selDay && s.time === selTime);
-        if (exists) return;
-        setData(d => ({ ...d, slots: [...(d.slots || []), { day: selDay, time: selTime }] }));
-        setSelTime(null);
-    };
-
-    const removeSlot = (idx) => setData(d => ({ ...d, slots: d.slots.filter((_, i) => i !== idx) }));
 
     return (
         <div>
             <h2 className="text-lg font-extrabold text-slate-900 mb-1">Tạo lịch rảnh</h2>
-            <p className="text-xs text-slate-400 mb-5">Học viên chỉ đặt được vào slot bạn tạo. Có thể chỉnh sửa sau.</p>
+            <p className="text-xs text-slate-400 mb-5">
+                Chọn nhiều ngày + nhiều giờ → hệ thống tạo tất cả tổ hợp (dates x times).
+                Slot trùng tự được bỏ qua.
+            </p>
 
-            {/* Flow hint */}
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-2 mb-6">
                 <span className="text-lg shrink-0">💡</span>
-                <div>
-                    <p className="text-xs font-bold text-amber-800">Luồng hoạt động</p>
-                    <p className="text-xs text-amber-600 mt-0.5">Bạn tạo slot → Học viên gửi yêu cầu chọn slot → Bạn xác nhận → Buổi học được lên lịch → Credits chuyển sau khi hoàn thành.</p>
-                </div>
+                <p className="text-xs text-amber-700">
+                    Học viên sẽ thấy các slot <strong>Trống</strong> và đặt lịch trực tiếp. Credits chuyển ngay khi đặt.
+                </p>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-6 mb-5">
-                {/* Day picker */}
+            <div className="flex flex-col md:flex-row gap-4 mb-5">
+                {/* Date picker */}
                 <div className="flex-1">
-                    <p className="text-xs font-bold text-slate-500 mb-2 flex items-center gap-1.5">
-                        <CalendarBlank size={12} weight="duotone" className="text-violet-500" /> Chọn ngày:
+                    <p className="text-xs font-bold text-slate-500 mb-2">
+                        📅 Chọn ngày ({selectedDates.length} đã chọn):
                     </p>
-                    <div className="space-y-1.5">
-                        {DAYS.map(d => (
-                            <button key={d} onClick={() => setSelDay(d)}
-                                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all ${selDay === d ? 'border-violet-400 bg-violet-50 text-violet-700' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-violet-200'}`}>
-                                {d}
-                            </button>
-                        ))}
+                    <div className="grid grid-cols-2 gap-1.5 max-h-72 overflow-y-auto pr-1">
+                        {DAYS.map(({ iso, label }) => {
+                            const sel = selectedDates.includes(iso);
+                            return (
+                                <button key={iso} onClick={() => toggleDate(iso)}
+                                    className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left ${sel ? 'border-violet-400 bg-violet-50 text-violet-700' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'}`}>
+                                    {sel && <Check size={10} weight="bold" className="inline mr-1" />}
+                                    {label}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
-
                 {/* Time picker */}
                 <div className="flex-1">
-                    <p className="text-xs font-bold text-slate-500 mb-2 flex items-center gap-1.5">
-                        🕐 Chọn giờ:
+                    <p className="text-xs font-bold text-slate-500 mb-2">
+                        🕐 Chọn giờ ({selectedTimes.length} đã chọn):
                     </p>
                     <div className="grid grid-cols-2 gap-1.5">
-                        {HOURS.map(h => (
-                            <button key={h} onClick={() => setSelTime(h)}
-                                className={`px-3 py-2.5 rounded-xl text-sm font-semibold border transition-all ${selTime === h ? 'border-violet-400 bg-violet-50 text-violet-700' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-violet-200'}`}>
-                                {h}
-                            </button>
-                        ))}
+                        {TIME_OPTIONS.map(t => {
+                            const sel = selectedTimes.includes(t);
+                            return (
+                                <button key={t} onClick={() => toggleTime(t)}
+                                    className={`px-3 py-2.5 rounded-xl text-sm font-semibold border transition-all ${sel ? 'border-violet-400 bg-violet-50 text-violet-700' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'}`}>
+                                    {sel && <Check size={11} weight="bold" className="inline mr-1" />}
+                                    {t}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             </div>
 
-            <button onClick={addSlot} disabled={!selDay || !selTime}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold border transition-all mb-5 ${selDay && selTime ? 'border-violet-300 text-violet-600 bg-violet-50 hover:bg-violet-100' : 'border-slate-200 text-slate-400 bg-slate-50 cursor-not-allowed'}`}>
-                <Plus size={14} weight="bold" /> Thêm slot
-            </button>
-
-            {/* Added slots */}
-            {slots.length > 0 ? (
-                <div className="bg-white rounded-xl border border-slate-100 divide-y divide-slate-50 mb-5 shadow-sm">
-                    {slots.map((s, i) => (
-                        <div key={i} className="flex items-center justify-between px-4 py-3">
-                            <div className="flex items-center gap-3">
-                                <div className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                                <span className="text-sm font-bold text-slate-700">{s.day}</span>
-                                <span className="text-sm text-slate-500">{s.time}</span>
-                            </div>
-                            <button onClick={() => removeSlot(i)} className="text-slate-300 hover:text-red-400 transition-colors">
-                                <Trash size={15} weight="duotone" />
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 mb-5 text-center">
-                    <p className="text-sm font-bold text-amber-700">📅 Chưa có slot. Chọn ngày + giờ rồi bấm "Thêm slot"!</p>
-                    <p className="text-xs text-amber-500 mt-0.5">Bạn vẫn có thể đăng và thêm slot sau.</p>
-                </div>
+            {selectedDates.length > 0 && selectedTimes.length > 0 && (
+                <p className="text-sm text-violet-700 font-bold bg-violet-50 px-4 py-2 rounded-xl inline-block mb-4">
+                    Sẽ tạo tối đa <strong>{selectedDates.length * selectedTimes.length}</strong> slot
+                    &nbsp;({selectedDates.length} ngày × {selectedTimes.length} giờ)
+                </p>
             )}
 
-            <div className="flex justify-between">
+            {selectedDates.length === 0 || selectedTimes.length === 0 ? (
+                <p className="text-xs text-amber-600 font-semibold mb-4">⚠️ Vui lòng chọn ít nhất 1 ngày và 1 giờ.</p>
+            ) : null}
+
+            <div className="flex justify-between mt-2">
                 <button onClick={onBack} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all">
                     <ArrowLeft size={15} weight="bold" /> Quay lại
                 </button>
-                <button onClick={onNext}
-                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-violet-600 text-white hover:bg-violet-700 shadow-sm transition-all">
+                <button onClick={handleNext} disabled={selectedDates.length === 0 || selectedTimes.length === 0}
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${selectedDates.length > 0 && selectedTimes.length > 0 ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>
                     Tiếp theo <ArrowRight size={15} weight="bold" />
                 </button>
             </div>
@@ -325,132 +255,191 @@ const Step3 = ({ data, setData, onNext, onBack }) => {
     );
 };
 
-// ── Step 4: Confirm ──────────────────────────────
-const Step4 = ({ data, onBack, onSubmit }) => (
-    <div>
-        <h2 className="text-lg font-extrabold text-slate-900 mb-5">Xem lại & đăng</h2>
+// ── Step 3: Xác nhận + Submit ─────────────────────
+const Step3 = ({ data, onBack, onSubmit, submitting, submitError }) => {
+    const s = data.teachingSkill;
+    const slotCount = (data.selectedDates?.length ?? 0) * (data.selectedTimes?.length ?? 0);
 
-        {/* Subject preview */}
-        <div className={`rounded-2xl border-2 p-5 mb-4 ${data.skill?.bg} border-${data.skill?.border}`}>
-            <div className="flex items-center gap-3 mb-3">
-                <span className="text-3xl">{data.skill?.icon}</span>
-                <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`font-extrabold text-base ${data.skill?.text}`}>{data.skill?.name}</span>
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-600">{data.level?.label}</span>
-                        <span className="flex items-center gap-1 text-[11px] font-extrabold text-amber-600">
-                            <Lightning size={11} weight="fill" className="text-amber-400" /> {data.credits || 12}/h
-                        </span>
+    return (
+        <div>
+            <h2 className="text-lg font-extrabold text-slate-900 mb-5">Xem lại & tạo lịch</h2>
+
+            {/* Skill preview */}
+            {s && (
+                <div className={`rounded-2xl border-2 p-5 mb-4 ${categoryStyle(s.skillCategory).bg} ${categoryStyle(s.skillCategory).border}`}>
+                    <div className="flex items-center gap-3">
+                        <span className="text-3xl">{s.skillIcon || '📘'}</span>
+                        <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`font-extrabold text-base ${categoryStyle(s.skillCategory).text}`}>{s.skillName}</span>
+                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-600">{s.level}</span>
+                                <span className="flex items-center gap-1 text-[11px] font-extrabold text-amber-600">
+                                    <Lightning size={11} weight="fill" className="text-amber-400" /> {s.creditsPerHour}/h
+                                </span>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1">{s.outcomeDesc}</p>
+                        </div>
                     </div>
-                    {data.desc && <p className="text-xs text-slate-500 mt-1">{data.desc.slice(0, 100)}{data.desc.length > 100 ? '...' : ''}</p>}
-                </div>
-            </div>
-            {(data.tags || []).length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                    {data.tags.map(t => (
-                        <span key={t} className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/60 text-slate-600">{t}</span>
-                    ))}
                 </div>
             )}
-        </div>
 
-        {/* Slots summary */}
-        {(data.slots || []).length > 0 && (
+            {/* Schedule preview */}
             <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 mb-4">
-                <p className="text-xs font-bold text-slate-500 mb-2 flex items-center gap-1">
-                    <CalendarBlank size={12} weight="duotone" className="text-violet-500" /> {data.slots.length} slot được tạo
+                <p className="text-xs font-bold text-slate-500 mb-3 flex items-center gap-1">
+                    <CalendarBlank size={12} weight="duotone" className="text-violet-500" />
+                    Slot sẽ được tạo: tối đa <strong className="text-violet-600 ml-1">{slotCount} slot</strong>
                 </p>
                 <div className="flex flex-wrap gap-2">
-                    {data.slots.map((s, i) => (
-                        <span key={i} className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
-                            {s.day} · {s.time}
-                        </span>
+                    {(data.selectedDates ?? []).slice(0, 4).map(d => (
+                        <span key={d} className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">{d}</span>
+                    ))}
+                    {(data.selectedDates ?? []).length > 4 && (
+                        <span className="text-[11px] text-slate-400">+{data.selectedDates.length - 4} ngày nữa</span>
+                    )}
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                    {(data.selectedTimes ?? []).map(t => (
+                        <span key={t} className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">{t}</span>
                     ))}
                 </div>
             </div>
-        )}
 
-        {/* Post-publish info */}
-        <div className="bg-sky-50 border border-sky-200 rounded-xl p-4 mb-6 flex items-start gap-3">
-            <span className="text-xl shrink-0">🚀</span>
-            <div>
-                <p className="text-sm font-bold text-sky-800">Sau khi đăng</p>
-                <p className="text-xs text-sky-600 mt-0.5">Buổi dạy xuất hiện trên trang Khám phá. AI gợi ý cho học viên phù hợp. Học viên gửi yêu cầu → bạn xác nhận → credits chuyển sau khi hoàn thành.</p>
+            {submitError && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4 text-sm text-red-700 font-medium">
+                    ❌ {submitError}
+                </div>
+            )}
+
+            <div className="bg-sky-50 border border-sky-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+                <span className="text-xl shrink-0">🚀</span>
+                <p className="text-xs text-sky-600">
+                    Sau khi tạo, học viên sẽ thấy các slot <strong>Trống</strong> và có thể đặt lịch ngay.
+                </p>
+            </div>
+
+            <div className="flex justify-between">
+                <button onClick={onBack} disabled={submitting}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all">
+                    <ArrowLeft size={15} weight="bold" /> Quay lại
+                </button>
+                <button onClick={onSubmit} disabled={submitting}
+                    className="flex items-center gap-2 px-7 py-2.5 rounded-xl font-bold text-sm bg-violet-600 text-white hover:bg-violet-700 shadow-md shadow-violet-200 active:scale-95 transition-all disabled:opacity-60">
+                    {submitting ? <Spinner size={15} className="animate-spin" /> : <Rocket size={16} weight="duotone" />}
+                    {submitting ? 'Đang tạo…' : `Tạo ${slotCount} slot`}
+                </button>
             </div>
         </div>
+    );
+};
 
-        <div className="flex justify-between">
-            <button onClick={onBack} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all">
-                <ArrowLeft size={15} weight="bold" /> Quay lại
-            </button>
-            <button onClick={onSubmit}
-                className="flex items-center gap-2 px-7 py-2.5 rounded-xl font-bold text-sm bg-violet-600 text-white hover:bg-violet-700 shadow-md shadow-violet-200 active:scale-95 transition-all">
-                <Rocket size={16} weight="duotone" /> Đăng buổi dạy
-            </button>
-        </div>
-    </div>
-);
-
-// ── Success screen ───────────────────────────────
-const SuccessScreen = ({ data, onDone }) => (
+// ── Success screen ────────────────────────────────
+const SuccessScreen = ({ data, createdCount, onDone }) => (
     <div className="text-center py-10">
         <div className="text-6xl mb-4">🎉</div>
-        <h2 className="text-2xl font-extrabold text-slate-900 mb-2">Đã đăng thành công!</h2>
-        <p className="text-slate-500 text-sm mb-6">
-            Buổi dạy <b>{data.skill?.name}</b> của bạn đã xuất hiện trên trang Khám phá.
+        <h2 className="text-2xl font-extrabold text-slate-900 mb-2">Tạo lịch thành công!</h2>
+        <p className="text-slate-500 text-sm mb-4">
+            Đã tạo <strong className="text-violet-600">{createdCount} slot</strong> cho kỹ năng <strong>{data.teachingSkill?.skillName}</strong>.
         </p>
         <div className="bg-violet-50 border border-violet-200 rounded-2xl px-6 py-4 inline-block mb-8 text-left">
             <p className="text-xs font-bold text-violet-700 mb-1">🔔 Bước tiếp theo:</p>
             <ul className="text-xs text-violet-600 space-y-1 list-disc list-inside">
-                <li>Học viên sẽ gửi yêu cầu đặt lịch</li>
-                <li>Bạn xác nhận hoặc từ chối yêu cầu</li>
-                <li>Credits chuyển sau khi hoàn thành buổi</li>
+                <li>Học viên tìm thấy slot trống của bạn trong mục Khám phá</li>
+                <li>Họ đặt lịch → credits tự trừ ngay</li>
+                <li>Đến giờ, cả 2 vào /app/sessions → bấm Tham gia học</li>
             </ul>
         </div>
         <div>
-            <button onClick={onDone} className="px-8 py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 transition-all shadow-md shadow-violet-200">
+            <button onClick={onDone}
+                className="px-8 py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 transition-all shadow-md shadow-violet-200">
                 Xem quản lý buổi dạy
             </button>
         </div>
     </div>
 );
 
-// ── MAIN COMPONENT ───────────────────────────────
+// ── MAIN COMPONENT ────────────────────────────────
 const CreateTeachingSession = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [done, setDone] = useState(false);
-    const [form, setForm] = useState({ credits: 12 });
+    const [form, setForm] = useState({});
+    const [createdCount, setCreatedCount] = useState(0);
 
-    const next = () => setStep(s => Math.min(s + 1, 4));
+    // Load approved teaching skills
+    const [approvedSkills, setApprovedSkills] = useState([]);
+    const [loadingSkills, setLoadingSkills] = useState(true);
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const res = await httpClient.get(TEACHING_SKILLS.GET_MY);
+                const all = res?.result ?? (Array.isArray(res) ? res : []);
+                setApprovedSkills(all.filter(s => s.verificationStatus === 'APPROVED'));
+            } catch (_) {
+                setApprovedSkills([]);
+            } finally {
+                setLoadingSkills(false);
+            }
+        };
+        load();
+    }, []);
+
+    const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState('');
+
+    const handleSubmit = async () => {
+        setSubmitting(true);
+        setSubmitError('');
+        try {
+            const result = await createSlotsBatch(
+                form.teachingSkill.id,
+                form.selectedDates,
+                form.selectedTimes
+            );
+            setCreatedCount(Array.isArray(result) ? result.length : 0);
+            setDone(true);
+        } catch (e) {
+            setSubmitError(e?.response?.data?.message || 'Tạo slot thất bại. Vui lòng thử lại.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const next = () => setStep(s => Math.min(s + 1, 3));
     const back = () => step === 1 ? navigate(-1) : setStep(s => s - 1);
 
     return (
         <div className="max-w-3xl mx-auto font-sans pb-14">
-
-            {/* Title */}
             <div className="mb-6">
                 <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
-                    <Sparkle size={24} weight="duotone" className="text-amber-400" /> Đăng buổi dạy mới
+                    <Sparkle size={24} weight="duotone" className="text-amber-400" /> Tạo lịch dạy mới
                 </h1>
-                <p className="text-sm text-slate-400 mt-1">Chia sẻ kỹ năng và bắt đầu kiếm credits!</p>
+                <p className="text-sm text-slate-400 mt-1">Chọn kỹ năng đã duyệt → chọn ngày/giờ → xác nhận</p>
             </div>
 
-            {/* Step bar */}
             {!done && <StepBar step={step} />}
 
-            {/* Card */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-7">
                 {done ? (
-                    <SuccessScreen data={form} onDone={() => navigate('/app/teaching')} />
+                    <SuccessScreen data={form} createdCount={createdCount} onDone={() => navigate('/app/teaching')} />
                 ) : step === 1 ? (
-                    <Step1 data={form} setData={setForm} onNext={next} />
+                    <Step1
+                        approvedSkills={approvedSkills}
+                        loading={loadingSkills}
+                        data={form}
+                        setData={setForm}
+                        onNext={next}
+                    />
                 ) : step === 2 ? (
                     <Step2 data={form} setData={setForm} onNext={next} onBack={back} />
-                ) : step === 3 ? (
-                    <Step3 data={form} setData={setForm} onNext={next} onBack={back} />
                 ) : (
-                    <Step4 data={form} onBack={back} onSubmit={() => setDone(true)} />
+                    <Step3
+                        data={form}
+                        onBack={back}
+                        onSubmit={handleSubmit}
+                        submitting={submitting}
+                        submitError={submitError}
+                    />
                 )}
             </div>
         </div>

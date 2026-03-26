@@ -19,12 +19,14 @@ export const API_ENDPOINTS = {
         DELETE: (id) => `/api/users/${id}`,
         ME: '/api/users/me',
         UPDATE_AVATAR: '/api/users/me/avatar',
+        UPDATE_BIO: '/api/users/me/bio',
     },
     SKILLS: {
         GET_ALL: '/api/skills',
     },
     TEACHING_SKILLS: {
         GET_MY: '/api/teaching-skills/me',
+        GET_APPROVED: '/api/teaching-skills/approved',
         CREATE: '/api/teaching-skills',
         DELETE: (id) => `/api/teaching-skills/${id}`,
     },
@@ -33,12 +35,21 @@ export const API_ENDPOINTS = {
     },
     ADMIN: {
         SYSTEM_STATS: '/admin/stats',
+        TEACHING_SKILLS: '/api/admin/teaching-skills',
     },
-    COURSES: {
-        GET_ALL: '/courses',
-        GET_BY_ID: (id) => `/courses/${id}`,
+    SLOTS: {
+        BY_SKILL: (skillId) => `/api/teaching-skills/${skillId}/slots`,
+        OPEN_BY_SKILL: (skillId) => `/api/teaching-skills/${skillId}/slots/open`,
+        BATCH_CREATE: (skillId) => `/api/teaching-skills/${skillId}/slots/batch`,
+        DELETE: (skillId, slotId) => `/api/teaching-skills/${skillId}/slots/${slotId}`,
+    },
+    SESSIONS: {
+        BOOK: '/api/sessions/book',
+        MINE: '/api/sessions/mine',
+        ZEGO_TOKEN: (id) => `/api/sessions/${id}/zego-token`,
+        JOIN: (id) => `/api/sessions/${id}/join`,
+        LEAVE: (id) => `/api/sessions/${id}/leave`,
     },
 };
 
 export default API_ENDPOINTS;
-

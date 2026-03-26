@@ -12,12 +12,15 @@
   --color-primary-800: #5b21b6;
   --color-primary-900: #4c1d95;
 
-  --font-sans: "Inter", "system-ui", "sans-serif";
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "sans-serif";
 }
 
 @layer base {
   body {
     @apply bg-slate-50 text-slate-900 font-sans antialiased selection:bg-primary-200 selection:text-primary-900;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 }
 
