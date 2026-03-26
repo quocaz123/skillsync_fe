@@ -7,11 +7,12 @@ import {
 } from '@phosphor-icons/react';
 import { useStore } from '../../store';
 import { logout as logoutApi } from '../../services/authService';
+import MissionWelcomePopup from './MissionWelcomePopup';
 
 const MainLayout = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, credits, logout } = useStore();
+    const { user, credits, logout, showMissionPopup, dismissMissionPopup } = useStore();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
@@ -187,6 +188,7 @@ const MainLayout = () => {
 
     return (
         <div className="flex h-screen bg-slate-50 overflow-hidden">
+            <MissionWelcomePopup />
 
             {/* ── DESKTOP/TABLET SIDEBAR (hidden on mobile) ── */}
             <aside className={`hidden md:flex ${isCollapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200 flex-col transition-all duration-300 relative z-20 shrink-0`}>

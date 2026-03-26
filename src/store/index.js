@@ -27,11 +27,14 @@ export const useStore = create(
     user: null,
     isAuthenticated: false,
     role: 'user',
+    showMissionPopup: false,
+    dismissMissionPopup: () => set({ showMissionPopup: false }),
     login: (userData) => set({ 
         user: userData, 
         isAuthenticated: true, 
         role: userData.role || 'user',
-        credits: userData.creditsBalance !== undefined && userData.creditsBalance !== null ? userData.creditsBalance : 0
+        credits: userData.creditsBalance !== undefined && userData.creditsBalance !== null ? userData.creditsBalance : 0,
+        showMissionPopup: true,
     }),
     logout: () => set({ user: null, isAuthenticated: false, role: 'user', credits: 0, creditHistory: [] }),
 
