@@ -9,6 +9,7 @@ import {
     GraduationCap, FolderOpen, SealCheck,
     CalendarBlank, Clock, ChartBar, CheckCircle, Warning
 } from '@phosphor-icons/react';
+import { trackAction } from '../../services/missionService';
 
 import { mapSkillToMentor } from '../../utils/mapperUtils';
 

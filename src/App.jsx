@@ -27,6 +27,7 @@ import CreateTeachingSession from './pages/user/CreateTeachingSession';
 import CreateLearningPath from './pages/user/CreateLearningPath';
 import Community from './pages/user/Community';
 import VideoCallPage from './pages/user/VideoCallPage';
+import Missions from './pages/user/Missions';
 import { useStore } from './store';
 
 // Mock Pages for now
@@ -73,6 +74,7 @@ function App() {
           <Route path="teaching/create-path" element={<CreateLearningPath />} />
           <Route path="call/:sessionId" element={<VideoCallPage />} />
           <Route path="community" element={<Community />} />
+          <Route path="missions" element={<Missions />} />
         </Route>
 
         {/* Admin Routes (Protected) */}
