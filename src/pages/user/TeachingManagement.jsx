@@ -422,13 +422,12 @@ const CheckCircle = ({ size, className }) => (
 
 // â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TABS = [
-    { id: 'subjects', label: 'Buổi dạy',  icon: ChalkboardTeacher },
     { id: 'schedule', label: 'Lịch rảnh', icon: CalendarBlank },
     { id: 'requests', label: 'Yêu cầu',   icon: BellRinging },
 ];
 
 const TeachingManagement = () => {
-    const [activeTab, setActiveTab] = useState('subjects');
+    const [activeTab, setActiveTab] = useState('schedule');
     const navigate = useNavigate();
     const [skills, setSkills] = useState([]);
     const [loadingSkills, setLoadingSkills] = useState(true);
@@ -493,7 +492,6 @@ const TeachingManagement = () => {
                     </div>
                 ) : (
                     <>
-                        {activeTab === 'subjects' && <TabSubjects skills={skills} onSelectSkill={() => setActiveTab('schedule')} />}
                         {activeTab === 'schedule' && <TabSchedule skills={skills} />}
                         {activeTab === 'requests' && <TabRequests navigate={navigate} />}
                     </>

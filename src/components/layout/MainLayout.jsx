@@ -1,20 +1,55 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     House, Compass, User, BookOpen, Clock, SignOut,
     Question, List, Wallet, Path, Lightning, ChalkboardTeacher, UsersThree,
-    Bell, X
+    Bell, X, Target
 } from '@phosphor-icons/react';
 import { useStore } from '../../store';
 import { logout as logoutApi } from '../../services/authService';
+import SetPasswordModal from '../auth/SetPasswordModal';
+import MissionWelcomePopup from './MissionWelcomePopup';
 
 const MainLayout = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, credits, logout } = useStore();
+    const { user, credits, logout, login: updateUser, showMissionPopup, dismissMissionPopup } = useStore();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
+    const [skippedPasswordModal, setSkippedPasswordModal] = useState(false);
+    const [onlineTime, setOnlineTime] = useState(0);
+
+    // Show the password modal once per session if user hasn't set a password yet
+    const showPasswordModal = user && user.hasPassword === false && !skippedPasswordModal;
+
+    // Bổ sung tracking online time
+    useEffect(() => {
+        if (!user) return;
+        const onlineKey = `onlineTime_${user.id}`;
+        const dateKey = `lastOnlineDate_${user.id}`;
+        // Initialize
+        setOnlineTime(parseInt(localStorage.getItem(onlineKey) || '0', 10));
+
+        const interval = setInterval(() => {
+            const today = new Date().toDateString();
+            const storedDate = localStorage.getItem(dateKey);
+            let time = parseInt(localStorage.getItem(onlineKey) || '0', 10);
+            
+            if (storedDate !== today) {
+                time = 0;
+                localStorage.setItem(dateKey, today);
+            }
+            time += 1; // Cập nhật mỗi 1s
+            localStorage.setItem(onlineKey, time.toString());
+            setOnlineTime(time);
+            
+            // Only fire the event occasionally to not overload other components, or every second is fine too
+            if (time % 5 === 0) window.dispatchEvent(new Event('onlineTimeUpdated'));
+        }, 1000);
+        
+        return () => clearInterval(interval);
+    }, [user]);
 
     const handleLogout = async () => {
         try {
@@ -33,6 +68,7 @@ const MainLayout = () => {
         { path: '/app/teaching', label: 'Quản lý dạy', icon: ChalkboardTeacher },
         { path: '/app/community', label: 'Cộng đồng', icon: UsersThree },
         { path: '/app/learning-path', label: 'Lộ trình học', icon: Path },
+        { path: '/app/missions', label: 'Nhiệm vụ', icon: Target },
         { path: '/app/credits', label: 'Lịch sử credits', icon: Wallet },
         { path: '/app/profile', label: 'Hồ sơ', icon: User },
     ];
@@ -53,6 +89,7 @@ const MainLayout = () => {
         '/app/teaching': 'Quản lý dạy',
         '/app/community': 'Cộng đồng',
         '/app/learning-path': 'Lộ trình học',
+        '/app/missions': 'Nhiệm vụ',
         '/app/credits': 'Lịch sử Credits',
         '/app/profile': 'Hồ sơ',
         '/app/guide': 'Hướng dẫn',
@@ -156,6 +193,7 @@ const MainLayout = () => {
 
     return (
         <div className="flex h-screen bg-slate-50 overflow-hidden">
+            <MissionWelcomePopup />
 
             {/* ── DESKTOP/TABLET SIDEBAR (hidden on mobile) ── */}
             <aside className={`hidden md:flex ${isCollapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200 flex-col transition-all duration-300 relative z-20 shrink-0`}>
@@ -203,6 +241,14 @@ const MainLayout = () => {
                     </div>
 
                     <div className="flex items-center gap-2 md:gap-4">
+                        {user && (
+                            <Link to="/app/missions" className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 transition-colors px-2.5 py-1.5 rounded-full border border-indigo-100" title="Thời gian online (Nhiệm vụ 30p)">
+                                <Clock size={16} weight="duotone" className="text-indigo-600" />
+                                <span className="text-sm font-bold text-indigo-700">
+                                    {Math.floor(onlineTime / 60).toString().padStart(2, '0')}:{(onlineTime % 60).toString().padStart(2, '0')}
+                                </span>
+                            </Link>
+                        )}
                         <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1.5 rounded-full border border-slate-200" title="Số Credit">
                             <Wallet size={16} weight="duotone" className="text-violet-600" />
                             <span className="text-sm font-bold text-slate-700">{credits || 0}</span>
@@ -278,6 +324,16 @@ const MainLayout = () => {
                     );
                 })}
             </nav>
+
+            {/* ── PASSWORD SETUP MODAL for Google users ── */}
+            {showPasswordModal && (
+                <SetPasswordModal
+                    onSuccess={() => {
+                        updateUser({ ...user, hasPassword: true });
+                    }}
+                    onSkip={() => setSkippedPasswordModal(true)}
+                />
+            )}
         </div>
     );
 };

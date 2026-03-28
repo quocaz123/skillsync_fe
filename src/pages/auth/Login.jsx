@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useStore } from '../../store';
-import { login as apiLogin } from '../../services/authService';
+import { login as apiLogin, getCurrentUser } from '../../services/authService';
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 import { Mail, Lock } from 'lucide-react';
 
 const Login = () => {
     const navigate = useNavigate();
     const setSession = useStore((state) => state.login);
+    const syncCredits = useStore((state) => state.syncCredits);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -21,6 +22,11 @@ const Login = () => {
         try {
             const user = await apiLogin(email, password);
             setSession(user);
+            // Fetch lại creditsBalance mới nhất từ DB để đảm bảo đồng bộ
+            try {
+                const freshUser = await getCurrentUser();
+                if (freshUser?.creditsBalance != null) syncCredits(freshUser.creditsBalance);
+            } catch { /* không block login nếu fetch me thất bại */ }
             if (user.role === 'admin') navigate('/admin');
             else navigate('/app');
         } catch (err) {
@@ -34,8 +40,13 @@ const Login = () => {
         }
     };
 
-    const handleGoogleAuthenticated = (user) => {
+    const handleGoogleAuthenticated = async (user) => {
         setSession(user);
+        // Sync credits sau Google login
+        try {
+            const freshUser = await getCurrentUser();
+            if (freshUser?.creditsBalance != null) syncCredits(freshUser.creditsBalance);
+        } catch { /* ignore */ }
         if (user.role === 'admin') navigate('/admin');
         else navigate('/app');
     };

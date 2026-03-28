@@ -25,6 +25,7 @@ import { AddSkillModal } from '../../components/profile/AddSkillModal.jsx';
 import { uploadFile } from '../../services/uploadService.js';
 import { getMyProfile, updateAvatar, updateBio } from '../../services/userService.js';
 import { getMyTeachingSkills, deleteTeachingSkill } from '../../services/skillService.js';
+import { trackAction } from '../../services/missionService.js';
 
 const LEVEL_LABEL = {
     BEGINNER: 'Beginner',

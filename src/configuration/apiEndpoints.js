@@ -20,6 +20,7 @@ export const API_ENDPOINTS = {
         ME: '/api/users/me',
         UPDATE_AVATAR: '/api/users/me/avatar',
         UPDATE_BIO: '/api/users/me/bio',
+        SET_PASSWORD: '/api/users/me/password',
     },
     SKILLS: {
         GET_ALL: '/api/skills',
