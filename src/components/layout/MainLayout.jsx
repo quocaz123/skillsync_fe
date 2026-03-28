@@ -13,19 +13,15 @@ import MissionWelcomePopup from './MissionWelcomePopup';
 const MainLayout = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, credits, logout, login: updateUser } = useStore();
+    const { user, credits, logout, login: updateUser, showMissionPopup, dismissMissionPopup } = useStore();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
     const [skippedPasswordModal, setSkippedPasswordModal] = useState(false);
+    const [onlineTime, setOnlineTime] = useState(0);
 
     // Show the password modal once per session if user hasn't set a password yet
     const showPasswordModal = user && user.hasPassword === false && !skippedPasswordModal;
-    const { user, credits, logout, showMissionPopup, dismissMissionPopup } = useStore();
-    const [isCollapsed, setIsCollapsed] = useState(false);
-    const [mobileOpen, setMobileOpen] = useState(false);
-    const [showNotifications, setShowNotifications] = useState(false);
-    const [onlineTime, setOnlineTime] = useState(0);
 
     // Bổ sung tracking online time
     useEffect(() => {
