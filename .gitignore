@@ -167,3 +167,5 @@ storybook-static/
 # ============================================
 *.tsbuildinfo
 tsconfig.tsbuildinfo
+
+.md

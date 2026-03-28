@@ -8,19 +8,8 @@ import {
 } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 
-// ── Helpers ──────────────────────────────────────
-const getGreeting = () => {
-    const h = new Date().getHours();
-    if (h < 12) return 'Chào buổi sáng ☀️';
-    if (h < 18) return 'Chào buổi chiều 🌤️';
-    return 'Chào buổi tối 🌙';
-};
-
-const getDateString = () => {
-    const d = new Date();
-    const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
-    return `${days[d.getDay()]}, ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-};
+import { getGreeting, getDateString } from '../../utils/formatUtils';
+import { TEACHING_SESSIONS_MOCK, LEARNING_SESSIONS_MOCK, AI_TEACHERS_MOCK } from '../../utils/mockData';
 
 // ── Sub-components ────────────────────────────────
 
@@ -118,21 +107,6 @@ const UserDashboard = () => {
         { icon: Path, bg: 'bg-pink-50', iconColor: 'text-pink-500', title: 'Lộ trình', sub: 'Frontend 40% xong', badge: null },
     ];
 
-    const teachingSessions = [
-        { initials: 'TH', name: 'Thanh Hà', topic: 'React', time: 'T2 10/3 · 14:00', badge: '📅 Đã đặt', badgeCls: 'bg-sky-100 text-sky-600' },
-        { initials: 'DK', name: 'Duy Khang', topic: 'React', time: 'T4 12/3 · 9:00', badge: '⏳ Chờ duyệt', badgeCls: 'bg-amber-100 text-amber-600' },
-    ];
-
-    const learningSessions = [
-        { initials: 'MA', name: 'Minh Anh', topic: 'React Development', time: 'T2 10/3 · 9:00 SA', badge: '🔵 Sắp tới', badgeCls: 'bg-blue-50 text-blue-600' },
-        { initials: 'TL', name: 'Thùy Linh', topic: 'UI/UX Design', time: 'T4 12/3 · 9:00 SA', badge: '🔵 Sắp tới', badgeCls: 'bg-blue-50 text-blue-600' },
-    ];
-
-    const aiTeachers = [
-        { initials: 'MA', name: 'Minh Anh', subject: 'React Development', rating: '4.8', stars: 5, rate: 15, match: 98, highlight: true, avatarGrad: 'from-violet-500 to-fuchsia-500' },
-        { initials: 'TL', name: 'Thùy Linh', subject: 'UI/UX Design', rating: '4.7', stars: 4, rate: 12, match: null, highlight: false, avatarGrad: 'from-purple-500 to-pink-500' },
-        { initials: 'QB', name: 'Quốc Bảo', subject: 'Python & ML', rating: '4.9', stars: 5, rate: 18, match: null, highlight: false, avatarGrad: 'from-teal-500 to-emerald-500' },
-    ];
 
     return (
         <div className="max-w-7xl mx-auto font-sans pb-4 space-y-5 sm:space-y-6">
@@ -224,7 +198,7 @@ const UserDashboard = () => {
                         </Link>
                     </div>
                     <div className="divide-y divide-slate-50">
-                        {teachingSessions.map((s, i) => <SessionRow key={i} {...s} />)}
+                        {TEACHING_SESSIONS_MOCK.map((s, i) => <SessionRow key={i} {...s} />)}
                     </div>
                 </div>
 
@@ -240,7 +214,7 @@ const UserDashboard = () => {
                         </Link>
                     </div>
                     <div className="divide-y divide-slate-50">
-                        {learningSessions.map((s, i) => <SessionRow key={i} {...s} />)}
+                        {LEARNING_SESSIONS_MOCK.map((s, i) => <SessionRow key={i} {...s} />)}
                     </div>
                 </div>
             </div>
@@ -258,7 +232,7 @@ const UserDashboard = () => {
                 </div>
                 <p className="text-[12px] text-slate-400 font-medium mb-5">Dựa trên lộ trình học và kỹ năng bạn đang cần</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {aiTeachers.map((t, i) => <TeacherCard key={i} {...t} />)}
+                    {AI_TEACHERS_MOCK.map((t, i) => <TeacherCard key={i} {...t} />)}
                 </div>
             </div>
 

@@ -37,13 +37,12 @@ const Register = () => {
         setError('');
         setLoading(true);
         try {
-            const user = await apiRegister(email, password, name.trim());
+            await apiRegister(email, password, name.trim());
             setSuccess(true);
-            // Brief success flash then redirect
+            // Show success state briefly, then redirect to login
             setTimeout(() => {
-                setSession(user);
-                navigate('/app');
-            }, 600);
+                navigate('/login');
+            }, 1500);
         } catch (err) {
             const msg =
                 err.response?.data?.message ||

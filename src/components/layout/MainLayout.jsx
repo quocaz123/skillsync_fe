@@ -7,14 +7,19 @@ import {
 } from '@phosphor-icons/react';
 import { useStore } from '../../store';
 import { logout as logoutApi } from '../../services/authService';
+import SetPasswordModal from '../auth/SetPasswordModal';
 
 const MainLayout = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, credits, logout } = useStore();
+    const { user, credits, logout, login: updateUser } = useStore();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
+    const [skippedPasswordModal, setSkippedPasswordModal] = useState(false);
+
+    // Show the password modal once per session if user hasn't set a password yet
+    const showPasswordModal = user && user.hasPassword === false && !skippedPasswordModal;
 
     const handleLogout = async () => {
         try {
@@ -278,6 +283,16 @@ const MainLayout = () => {
                     );
                 })}
             </nav>
+
+            {/* ── PASSWORD SETUP MODAL for Google users ── */}
+            {showPasswordModal && (
+                <SetPasswordModal
+                    onSuccess={() => {
+                        updateUser({ ...user, hasPassword: true });
+                    }}
+                    onSkip={() => setSkippedPasswordModal(true)}
+                />
+            )}
         </div>
     );
 };

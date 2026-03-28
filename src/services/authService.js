@@ -21,6 +21,7 @@ export function mapAuthUser(apiPayload, displayName) {
         role: apiPayload.role === 'ADMIN' ? 'admin' : 'user',
         avatarUrl: apiPayload.avatarUrl || null,
         creditsBalance: apiPayload.creditsBalance ?? null,
+        hasPassword: apiPayload.hasPassword !== false, // default true if not provided
     };
 }
 
@@ -35,6 +36,7 @@ export function mapUserResponse(payload) {
         role: payload.role === 'ADMIN' ? 'admin' : 'user',
         avatarUrl: payload.avatarUrl || null,
         bio: payload.bio || null,
+        hasPassword: payload.hasPassword !== false, // default true if not provided
         // Gamification
         creditsBalance: payload.creditsBalance ?? null,
         trustScore: payload.trustScore ?? null,
