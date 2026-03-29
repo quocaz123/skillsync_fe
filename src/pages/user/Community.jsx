@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   UsersThree,
   ChatCircle,
@@ -23,6 +23,23 @@ import {
   WarningCircle,
 } from "@phosphor-icons/react";
 
+import { useStore } from "../../store";
+import {
+  addForumComment,
+  createForumPost,
+  deleteForumPost,
+  getForumCategories,
+  getForumPostDetail,
+  getForumPosts,
+  getForumSavedPosts,
+  getForumTrendingPosts,
+  getForumUserPosts,
+  toggleForumCommentLike,
+  toggleForumSave,
+  toggleForumVote,
+  updateForumPost,
+} from "../../services/forumService";
+
 // ─── Mock Data ────────────────────────────────────────────
 const CATEGORIES = [
   { id: "all", label: "Tất cả", icon: "🌐" },
@@ -33,232 +50,126 @@ const CATEGORIES = [
   { id: "experience", label: "Chia sẻ", icon: "💬" },
 ];
 
-const POSTS = [
-  {
-    id: "p1",
-    type: "tips",
-    typeLabel: "💡 Mẹo học tập",
-    typeBg: "bg-amber-100 text-amber-700",
-    authorInitials: "MH",
-    authorColor: "bg-violet-500",
-    authorName: "Minh Hiếu",
-    authorRole: "Học viên · React",
-    timeAgo: "2 giờ trước",
-    title: "Cách mình học React hiệu quả trong 3 tháng",
-    content:
-      "Sau 3 tháng học React nghiêm túc, mình đã đủ tự tin làm dự án thực tế. Bí quyết là học qua dự án thật, không học lý thuyết suông. Mình gợi ý mọi người tìm giáo viên có kinh nghiệm build app thực tế trên SkillSync thay vì học từ video dài.",
-    tags: ["React", "Tips", "Frontend"],
-    likes: 47,
-    comments: 12,
-    saves: 8,
-    liked: false,
-    saved: false,
-    comments_preview: [
-      {
-        initials: "TH",
-        color: "bg-teal-500",
-        name: "Thanh Hà",
-        text: "Mình cũng học theo cách này, hiệu quả lắm! Đặc biệt là phần hook.",
-      },
-      {
-        initials: "DK",
-        color: "bg-blue-500",
-        name: "Duy Khang",
-        text: "Bạn học với ai vậy? Giới thiệu mình với!",
-      },
-    ],
-  },
-  {
-    id: "p2",
-    type: "recommend",
-    typeLabel: "⭐ Gợi ý",
-    typeBg: "bg-blue-100 text-blue-700",
-    authorInitials: "LH",
-    authorColor: "bg-emerald-500",
-    authorName: "Lan Hương",
-    authorRole: "Học viên · Python",
-    timeAgo: "5 giờ trước",
-    title: "Ai biết giáo viên Python giỏi về Pandas & Data Analysis không?",
-    content:
-      "Mình đang muốn học sâu về xử lý dữ liệu với Pandas. Đã thử vài khoá video nhưng không hiểu bằng học 1-1. Mọi người có gợi ý giáo viên nào giỏi phần này trên SkillSync không? Mình cần người có thể giải thích DataFrame indexing và groupby rõ ràng.",
-    tags: ["Python", "Pandas", "Data"],
-    likes: 23,
-    comments: 18,
-    saves: 5,
-    liked: true,
-    saved: false,
-    comments_preview: [
-      {
-        initials: "AT",
-        color: "bg-violet-500",
-        name: "Anh Tuấn",
-        text: "Bạn thử tìm anh Minh Đức trên Explore nhé, anh ấy dạy Pandas rất hay!",
-      },
-    ],
-  },
-  {
-    id: "p3",
-    type: "resources",
-    typeLabel: "📚 Tài nguyên",
-    typeBg: "bg-green-100 text-green-700",
-    authorInitials: "BN",
-    authorColor: "bg-rose-500",
-    authorName: "Bảo Nguyên",
-    authorRole: "Giáo viên · Machine Learning",
-    timeAgo: "1 ngày trước",
-    title: "[TỔNG HỢP] Roadmap học Machine Learning từ zero đến dự án",
-    content:
-      "Mình compile lại roadmap học ML sau 2 năm dạy học. Bao gồm: 1) Toán cơ bản (Linear Algebra, Stats), 2) Python fundamentals, 3) Scikit-learn, 4) Deep Learning cơ bản với PyTorch. Kèm theo các tài nguyên miễn phí mình chọn lọc kỹ nhất.",
-    tags: ["Machine Learning", "Roadmap", "AI"],
-    likes: 112,
-    comments: 34,
-    saves: 67,
-    liked: false,
-    saved: true,
-    comments_preview: [
-      {
-        initials: "KN",
-        color: "bg-orange-500",
-        name: "Khánh Ngân",
-        text: "Cảm ơn bạn rất nhiều! Roadmap này chi tiết hơn nhiều cái mình tìm được trên mạng.",
-      },
-      {
-        initials: "QT",
-        color: "bg-cyan-500",
-        name: "Quốc Toản",
-        text: "Phần PyTorch có link học cụ thể không bạn?",
-      },
-    ],
-  },
-  {
-    id: "p4",
-    type: "experience",
-    typeLabel: "💬 Chia sẻ",
-    typeBg: "bg-purple-100 text-purple-700",
-    authorInitials: "PT",
-    authorColor: "bg-amber-500",
-    authorName: "Phương Thy",
-    authorRole: "Học viên · UI/UX Design",
-    timeAgo: "2 ngày trước",
-    title: "Học UI/UX 3 tháng — mình đã thiết kế app đầu tiên!",
-    content:
-      "Hôm nay mình deploy được app đầu tiên. Vui lắm! Không ngờ 3 tháng trước mình còn không biết Figma là gì. Nhờ tìm được giáo viên phù hợp trên SkillSync và kiên trì học mỗi tuần 2 buổi. Cảm ơn cộng đồng đã support mình 🙏",
-    tags: ["UI/UX", "Figma", "Success Story"],
-    likes: 89,
-    comments: 26,
-    saves: 12,
-    liked: false,
-    saved: false,
-    comments_preview: [
-      {
-        initials: "MH",
-        color: "bg-violet-500",
-        name: "Minh Hiếu",
-        text: "Tuyệt vời! Link app đâu bạn ơi? 😍",
-      },
-    ],
-  },
-  {
-    id: "p5",
-    type: "question",
-    typeLabel: "❓ Hỏi đáp",
-    typeBg: "bg-red-100 text-red-700",
-    authorInitials: "QA",
-    authorColor: "bg-slate-500",
-    authorName: "Quang An",
-    authorRole: "Học viên · JavaScript",
-    timeAgo: "3 giờ trước",
-    title: "Async/Await vs Promise — nên dùng cái nào và khi nào?",
-    content:
-      "Mình đang học JavaScript và bị confuse về khi nào nên dùng async/await, khi nào nên dùng Promise trực tiếp. Giáo viên dạy mình giải thích nhưng mình vẫn không thấy rõ use case thực tế. Ai có thể giải thích hoặc gợi ý tài liệu không?",
-    tags: ["JavaScript", "Async", "Hỏi đáp"],
-    likes: 15,
-    comments: 21,
-    saves: 3,
-    liked: false,
-    saved: false,
-    comments_preview: [
-      {
-        initials: "BN",
-        color: "bg-rose-500",
-        name: "Bảo Nguyên",
-        text: "Về cơ bản async/await là syntactic sugar của Promise. Dùng async/await khi muốn code dễ đọc hơn, đặc biệt khi chain nhiều calls.",
-      },
-    ],
-  },
-];
+const UI_POST_TYPE_TO_BACKEND = {
+  tips: "DISCUSSION",
+  recommend: "DISCUSSION",
+  resources: "RESOURCE_SHARE",
+  question: "QUESTION",
+  experience: "DISCUSSION",
+};
 
-const TRENDING = [
-  { title: "Học React - lộ trình mới nhất 2025", comments: 89, hot: true },
-  { title: "So sánh SkillSync với các platform khác", comments: 54 },
-  { title: "Hỏi: Có nên học TypeScript ngay từ đầu?", comments: 47 },
-  { title: "Share: Tài nguyên học Python miễn phí tốt nhất", comments: 38 },
-  { title: "Tips: Cách đặt câu hỏi hiệu quả với giáo viên", comments: 31 },
-];
+const BACKEND_POST_TYPE_TO_UI = {
+  DISCUSSION: "tips",
+  QUESTION: "question",
+  RESOURCE_SHARE: "resources",
+};
 
-// ─── Current User Posts (for My Posts section) ────────────────────
-const MY_POSTS = [
-  {
-    id: "my_p1",
-    type: "tips",
-    typeLabel: "💡 Mẹo học tập",
-    typeBg: "bg-amber-100 text-amber-700",
-    authorInitials: "U",
-    authorColor: "bg-violet-500",
-    authorName: "Bạn",
-    authorRole: "Học viên · React",
-    timeAgo: "2 giờ trước",
-    title: "Cách mình học React hiệu quả trong 3 tháng",
-    content:
-      "Sau 3 tháng học React nghiêm túc, mình đã đủ tự tin làm dự án thực tế. Bí quyết là học qua dự án thật, không học lý thuyết suông. Mình gợi ý mọi người tìm giáo viên có kinh nghiệm build app thực tế trên SkillSync thay vì học từ video dài.",
-    tags: ["React", "Tips", "Frontend"],
-    likes: 47,
-    comments: 12,
-    saves: 8,
-    liked: false,
-    saved: false,
-  },
-  {
-    id: "my_p2",
-    type: "question",
-    typeLabel: "❓ Hỏi đáp",
-    typeBg: "bg-red-100 text-red-700",
-    authorInitials: "U",
-    authorColor: "bg-violet-500",
-    authorName: "Bạn",
-    authorRole: "Học viên · React",
-    timeAgo: "1 ngày trước",
-    title: "Cách optimize performance trong React?",
-    content:
-      "Mình đang build một ứng dụng React khá phức tạp nhưng performance chưa tốt lắm. Có ai có kinh nghiệm optimize không? Mình đã thử memo và lazy loading rồi nhưng vẫn chưa hài lòng.",
-    tags: ["React", "Performance"],
-    likes: 15,
-    comments: 8,
-    saves: 3,
-    liked: false,
-    saved: false,
-  },
-  {
-    id: "my_p3",
-    type: "resources",
-    typeLabel: "📚 Tài nguyên",
-    typeBg: "bg-green-100 text-green-700",
-    authorInitials: "U",
-    authorColor: "bg-violet-500",
-    authorName: "Bạn",
-    authorRole: "Học viên · React",
-    timeAgo: "3 ngày trước",
-    title: "Tổng hợp tài nguyên học React Hooks miễn phí",
-    content:
-      "Tôi đã compile lại một số tài nguyên tốt nhất để học React Hooks. Bao gồm docs chính thức, ví dụ thực tế, và một số bài viết hay từ cộng đồng.",
-    tags: ["React", "Hooks", "Resources"],
-    likes: 23,
-    comments: 5,
-    saves: 12,
-    liked: false,
-    saved: true,
-  },
-];
+const mapUiPostTypeToBackend = (uiType) =>
+  UI_POST_TYPE_TO_BACKEND[uiType] || "DISCUSSION";
+const mapBackendPostTypeToUi = (backendPostType) =>
+  BACKEND_POST_TYPE_TO_UI[backendPostType] || "tips";
+
+const formatRelativeTimeLabel = (input) => {
+  if (!input) return "";
+  const createdAt = new Date(input);
+  if (Number.isNaN(createdAt.getTime())) return "";
+
+  const diffInSeconds = Math.floor((Date.now() - createdAt.getTime()) / 1000);
+  if (diffInSeconds < 60) return `${Math.max(diffInSeconds, 1)} giây trước`;
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours} giờ trước`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 7) return `${diffInDays} ngày trước`;
+  return createdAt.toLocaleDateString("vi-VN");
+};
+
+const CommentItem = ({ comment, depth = 0, onLike, onReply, timeOverride }) => {
+  const [showReplyBox, setShowReplyBox] = useState(false);
+  const [replyText, setReplyText] = useState("");
+
+  const handleSendReply = () => {
+    if (!replyText.trim()) return;
+    onReply(comment.id, replyText.trim());
+    setReplyText("");
+    setShowReplyBox(false);
+  };
+
+  return (
+    <div className={depth > 0 ? "ml-10 pl-4 border-l border-slate-200" : ""}>
+      <div className="flex gap-3">
+        <div
+          className={`w-10 h-10 rounded-full ${comment.authorColor} text-white flex items-center justify-center font-bold text-sm shrink-0`}
+        >
+          {comment.authorInitials}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="bg-white border border-slate-100 rounded-2xl rounded-tl-none p-3 shadow-sm inline-block max-w-full">
+            <p className="font-bold text-sm text-slate-900 mb-0.5">
+              {comment.authorName}
+            </p>
+            <p className="text-sm text-slate-600 whitespace-pre-wrap">
+              {comment.content}
+            </p>
+          </div>
+          <div className="flex items-center gap-3 mt-1.5 ml-1 text-xs font-medium text-slate-500 flex-wrap">
+            <span>
+              {timeOverride ||
+                comment.timeAgo ||
+                formatRelativeTimeLabel(comment.createdAt)}
+            </span>
+            <button
+              onClick={() => onLike(comment.id)}
+              className={`hover:text-violet-600 ${comment.liked ? "text-violet-600 font-bold" : ""}`}
+            >
+              {comment.likeCount || 0} {comment.liked ? "Đã thích" : "Thích"}
+            </button>
+            <button
+              onClick={() => setShowReplyBox((value) => !value)}
+              className="hover:text-violet-600"
+            >
+              Phản hồi
+            </button>
+          </div>
+
+          {showReplyBox && (
+            <div className="mt-3 flex gap-2">
+              <input
+                type="text"
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                placeholder="Viết phản hồi..."
+                className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-violet-400 bg-white"
+              />
+              <button
+                onClick={handleSendReply}
+                disabled={!replyText.trim()}
+                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${replyText.trim() ? "bg-violet-600 text-white hover:bg-violet-700" : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
+              >
+                Gửi
+              </button>
+            </div>
+          )}
+
+          {Array.isArray(comment.replies) && comment.replies.length > 0 && (
+            <div className="mt-4 space-y-4">
+              {comment.replies.map((reply) => (
+                <CommentItem
+                  key={reply.id}
+                  comment={reply}
+                  depth={depth + 1}
+                  onLike={onLike}
+                  onReply={onReply}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ─── MyPostCard ───────────────────────────────────────────
 const MyPostCard = ({ post, onEdit, onDelete, onOpen }) => (
@@ -352,12 +263,20 @@ const MyPostCard = ({ post, onEdit, onDelete, onOpen }) => (
 );
 
 // ─── EditPostModal ────────────────────────────────────────
-const EditPostModal = ({ post, onClose, onSave }) => {
+const EditPostModal = ({ post, categories, onClose, onSave }) => {
   const [title, setTitle] = useState(post?.title || "");
   const [content, setContent] = useState(post?.content || "");
-  const [category, setCategory] = useState(post?.type || "tips");
+  const [selectedCategoryId, setSelectedCategoryId] = useState(
+    post?.categoryId || categories?.[0]?.id || "",
+  );
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState(post?.tags || []);
+
+  useEffect(() => {
+    if (!selectedCategoryId && (post?.categoryId || categories?.[0]?.id)) {
+      setSelectedCategoryId(post?.categoryId || categories?.[0]?.id || "");
+    }
+  }, [categories, post?.categoryId, selectedCategoryId]);
 
   const addTag = () => {
     const t = tagInput.trim();
@@ -367,11 +286,19 @@ const EditPostModal = ({ post, onClose, onSave }) => {
 
   const handleSave = () => {
     if (title.trim() && content.trim()) {
+      const selectedCategory = categories.find(
+        (categoryItem) => categoryItem.id === selectedCategoryId,
+      );
+      const selectedUiType =
+        CATEGORY_UI_TYPE_BY_NAME[selectedCategory?.name] ||
+        mapBackendPostTypeToUi(post?.postType);
+
       onSave({
         ...post,
         title: title.trim(),
         content: content.trim(),
-        type: category,
+        categoryId: selectedCategoryId || post?.categoryId,
+        postType: mapUiPostTypeToBackend(selectedUiType),
         tags: tags,
       });
       onClose();
@@ -404,13 +331,13 @@ const EditPostModal = ({ post, onClose, onSave }) => {
               Loại bài viết
             </label>
             <div className="flex flex-wrap gap-2">
-              {CATEGORIES.slice(1).map((c) => (
+              {categories.map((c) => (
                 <button
                   key={c.id}
-                  onClick={() => setCategory(c.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${category === c.id ? "bg-violet-600 text-white border-violet-600" : "border-slate-200 text-slate-600 hover:border-violet-300"}`}
+                  onClick={() => setSelectedCategoryId(c.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${selectedCategoryId === c.id ? "bg-violet-600 text-white border-violet-600" : "border-slate-200 text-slate-600 hover:border-violet-300"}`}
                 >
-                  {c.icon} {c.label}
+                  {c.icon} {c.name}
                 </button>
               ))}
             </div>
@@ -662,17 +589,51 @@ const PostCard = ({ post, onToggleLike, onToggleSave, onOpen }) => (
 );
 
 // ─── New Post Modal ───────────────────────────────────────
-const NewPostModal = ({ onClose }) => {
+const CATEGORY_UI_TYPE_BY_NAME = {
+  "Mẹo học tập": "tips",
+  "Gợi ý giáo viên": "recommend",
+  "Tài nguyên": "resources",
+  "Hỏi đáp": "question",
+  "Chia sẻ": "experience",
+};
+
+const NewPostModal = ({ onClose, onSave, categories, defaultCategoryId }) => {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [category, setCategory] = useState("tips");
+  const [selectedCategoryId, setSelectedCategoryId] = useState(
+    defaultCategoryId || categories?.[0]?.id || "",
+  );
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState([]);
+
+  useEffect(() => {
+    if (!selectedCategoryId && (defaultCategoryId || categories?.[0]?.id)) {
+      setSelectedCategoryId(defaultCategoryId || categories?.[0]?.id || "");
+    }
+  }, [categories, defaultCategoryId, selectedCategoryId]);
 
   const addTag = () => {
     const t = tagInput.trim();
     if (t && tags.length < 5 && !tags.includes(t)) setTags((ts) => [...ts, t]);
     setTagInput("");
+  };
+
+  const handleSave = () => {
+    if (!title.trim() || !content.trim()) return;
+
+    const selectedCategory = categories.find(
+      (categoryItem) => categoryItem.id === selectedCategoryId,
+    );
+    const selectedUiType =
+      CATEGORY_UI_TYPE_BY_NAME[selectedCategory?.name] || "tips";
+
+    onSave({
+      title: title.trim(),
+      content: content.trim(),
+      categoryId: selectedCategoryId || defaultCategoryId,
+      postType: mapUiPostTypeToBackend(selectedUiType),
+      tags,
+    });
   };
 
   return (
@@ -699,13 +660,13 @@ const NewPostModal = ({ onClose }) => {
               Loại bài viết
             </label>
             <div className="flex flex-wrap gap-2">
-              {CATEGORIES.slice(1).map((c) => (
+              {categories.map((c) => (
                 <button
                   key={c.id}
-                  onClick={() => setCategory(c.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${category === c.id ? "bg-violet-600 text-white border-violet-600" : "border-slate-200 text-slate-600 hover:border-violet-300"}`}
+                  onClick={() => setSelectedCategoryId(c.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${selectedCategoryId === c.id ? "bg-violet-600 text-white border-violet-600" : "border-slate-200 text-slate-600 hover:border-violet-300"}`}
                 >
-                  {c.icon} {c.label}
+                  {c.icon} {c.name}
                 </button>
               ))}
             </div>
@@ -788,6 +749,7 @@ const NewPostModal = ({ onClose }) => {
               Huỷ
             </button>
             <button
+              onClick={handleSave}
               disabled={!title.trim() || !content.trim()}
               className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all ${title.trim() && content.trim() ? "bg-violet-600 text-white hover:bg-violet-700 shadow-sm" : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
             >
@@ -801,8 +763,20 @@ const NewPostModal = ({ onClose }) => {
 };
 
 // ─── Post Detail Modal ────────────────────────────────────
-const PostDetailModal = ({ post, onClose, onToggleLike, onToggleSave }) => {
+const PostDetailModal = ({
+  post,
+  onClose,
+  onToggleLike,
+  onToggleSave,
+  onAddComment,
+  onToggleCommentLike,
+  onReplyComment,
+  commentTimeOverrides,
+}) => {
   const [comment, setComment] = useState("");
+  const comments = Array.isArray(post.comments_detail)
+    ? post.comments_detail
+    : [];
 
   if (!post) return null;
 
@@ -923,6 +897,11 @@ const PostDetailModal = ({ post, onClose, onToggleLike, onToggleSave }) => {
                     className="w-full border border-slate-200 rounded-xl pl-4 pr-12 py-2.5 text-sm outline-none focus:border-violet-400 focus:bg-white transition-all bg-white placeholder-slate-400"
                   />
                   <button
+                    onClick={() => {
+                      if (!comment.trim()) return;
+                      onAddComment(post.id, comment.trim());
+                      setComment("");
+                    }}
                     disabled={!comment.trim()}
                     className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-colors ${comment.trim() ? "text-violet-600 bg-violet-50 hover:bg-violet-100" : "text-slate-300"}`}
                   >
@@ -931,32 +910,27 @@ const PostDetailModal = ({ post, onClose, onToggleLike, onToggleSave }) => {
                 </div>
               </div>
 
-              {/* Default preview comments for static data */}
+              {/* Nested comments from backend */}
               <div className="space-y-4">
-                {post.comments_preview.map((c, i) => (
-                  <div key={i} className="flex gap-3">
-                    <div
-                      className={`w-10 h-10 rounded-full ${c.color} text-white flex items-center justify-center font-bold text-sm shrink-0`}
-                    >
-                      {c.initials}
-                    </div>
-                    <div className="flex-1">
-                      <div className="bg-white border border-slate-100 rounded-2xl rounded-tl-none p-3 shadow-sm inline-block max-w-full">
-                        <p className="font-bold text-sm text-slate-900 mb-0.5">
-                          {c.name}
-                        </p>
-                        <p className="text-sm text-slate-600">{c.text}</p>
-                      </div>
-                      <div className="flex items-center gap-3 mt-1.5 ml-1 text-xs font-medium text-slate-500">
-                        <span>1 giờ trước</span>
-                        <button className="hover:text-violet-600">Thích</button>
-                        <button className="hover:text-violet-600">
-                          Phản hồi
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                {comments.length > 0 ? (
+                  comments.map((commentItem) => (
+                    <CommentItem
+                      key={commentItem.id}
+                      comment={commentItem}
+                      onLike={(commentId) =>
+                        onToggleCommentLike(post.id, commentId)
+                      }
+                      onReply={(parentCommentId, replyContent) =>
+                        onReplyComment(post.id, parentCommentId, replyContent)
+                      }
+                      timeOverride={commentTimeOverrides?.[commentItem.id]}
+                    />
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-500 text-center py-6">
+                    Chưa có bình luận nào.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -968,7 +942,8 @@ const PostDetailModal = ({ post, onClose, onToggleLike, onToggleSave }) => {
 
 // ─── MAIN ─────────────────────────────────────────────────
 const Community = () => {
-  const [activeTab, setActiveTab] = useState("community"); // or "my-posts"
+  const { user } = useStore();
+  const [activeTab, setActiveTab] = useState("community");
   const [activeCategory, setActiveCategory] = useState("all");
   const [sortBy, setSortBy] = useState("hot");
   const [search, setSearch] = useState("");
@@ -976,51 +951,400 @@ const Community = () => {
   const [activePost, setActivePost] = useState(null);
   const [editingPost, setEditingPost] = useState(null);
   const [deletingPostId, setDeletingPostId] = useState(null);
-  const [posts, setPosts] = useState(POSTS);
-  const [myPosts, setMyPosts] = useState(MY_POSTS);
+  const [categories, setCategories] = useState([]);
+  const [posts, setPosts] = useState([]);
+  const [trendingPosts, setTrendingPosts] = useState([]);
+  const [myPosts, setMyPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [defaultPostCategoryId, setDefaultPostCategoryId] = useState("");
+  const [commentTimeOverrides, setCommentTimeOverrides] = useState({});
+  const [feedMeta, setFeedMeta] = useState({ page: 0, size: 50 });
 
-  const toggleLike = (id) =>
-    setPosts((ps) =>
-      ps.map((p) =>
-        p.id === id
-          ? {
-              ...p,
-              liked: !p.liked,
-              likes: p.liked ? p.likes - 1 : p.likes + 1,
-            }
-          : p,
-      ),
-    );
-  const toggleSave = (id) =>
-    setPosts((ps) =>
-      ps.map((p) => (p.id === id ? { ...p, saved: !p.saved } : p)),
-    );
+  const currentCategoryId = defaultPostCategoryId || categories?.[0]?.id || "";
 
-  const handleEditPost = (updatedPost) => {
-    setMyPosts((ps) =>
-      ps.map((p) => (p.id === updatedPost.id ? updatedPost : p)),
+  const hydrateCollections = async () => {
+    const [categoryList, feedPage, trendingList, userPostsPage] =
+      await Promise.all([
+        getForumCategories(),
+        getForumPosts({ page: 0, size: 50 }),
+        getForumTrendingPosts(5),
+        user?.id
+          ? getForumUserPosts(user.id, { page: 0, size: 50 })
+          : Promise.resolve({ content: [] }),
+      ]);
+
+    setCategories(categoryList);
+    setPosts(feedPage?.content || []);
+    setTrendingPosts(trendingList || []);
+    setMyPosts(userPostsPage?.content || []);
+
+    if (!defaultPostCategoryId) {
+      setDefaultPostCategoryId(categoryList?.[0]?.id || "");
+    }
+  };
+
+  const loadFeedByMode = async (mode, shouldManageLoading = true) => {
+    if (shouldManageLoading) {
+      setLoading(true);
+    }
+    setError("");
+
+    try {
+      if (mode === "saved") {
+        const [savedPage, categoryList] = await Promise.all([
+          getForumSavedPosts({ page: feedMeta.page, size: feedMeta.size }),
+          categories.length > 0
+            ? Promise.resolve(categories)
+            : getForumCategories(),
+        ]);
+        setPosts(savedPage?.content || []);
+        if (categories.length === 0) {
+          setCategories(categoryList || []);
+        }
+      } else if (mode === "hot") {
+        const [trendingList, categoryList] = await Promise.all([
+          getForumTrendingPosts(10),
+          categories.length > 0
+            ? Promise.resolve(categories)
+            : getForumCategories(),
+        ]);
+        setPosts(trendingList || []);
+        if (categories.length === 0) {
+          setCategories(categoryList || []);
+        }
+      } else {
+        const [page, categoryList] = await Promise.all([
+          getForumPosts({ page: feedMeta.page, size: feedMeta.size }),
+          categories.length > 0
+            ? Promise.resolve(categories)
+            : getForumCategories(),
+        ]);
+        setPosts(page?.content || []);
+        if (categories.length === 0) {
+          setCategories(categoryList || []);
+        }
+      }
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Không tải được dữ liệu forum.",
+      );
+    } finally {
+      if (shouldManageLoading) {
+        setLoading(false);
+      }
+    }
+  };
+
+  const refreshPost = async (postId) => {
+    const updatedPost = await getForumPostDetail(postId);
+    if (!updatedPost) return;
+
+    setPosts((current) =>
+      current.map((post) => (post.id === postId ? updatedPost : post)),
+    );
+    setMyPosts((current) =>
+      current.map((post) => (post.id === postId ? updatedPost : post)),
+    );
+    setActivePost((current) =>
+      current?.id === postId ? updatedPost : current,
     );
   };
 
-  const handleDeletePost = (id) => {
-    setMyPosts((ps) => ps.filter((p) => p.id !== id));
+  const handleOpenPost = async (post) => {
+    try {
+      const detail = await getForumPostDetail(post.id);
+      setActivePost(detail || post);
+    } catch {
+      setActivePost(post);
+    }
   };
 
-  const filtered = posts.filter((p) => {
-    const matchCat = activeCategory === "all" || p.type === activeCategory;
+  const loadForumData = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      await hydrateCollections();
+      await loadFeedByMode(sortBy, false);
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Không tải được dữ liệu forum.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadForumData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (categories.length === 0) return;
+    loadFeedByMode(sortBy);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortBy]);
+
+  const toggleLike = async (id) => {
+    try {
+      await toggleForumVote(id, "UPVOTE");
+      await refreshPost(id);
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Không thể cập nhật lượt thích.",
+      );
+    }
+  };
+
+  const toggleSave = async (id) => {
+    try {
+      await toggleForumSave(id);
+      if (sortBy === "saved") {
+        await loadFeedByMode("saved");
+        return;
+      }
+      await refreshPost(id);
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Không thể cập nhật trạng thái lưu.",
+      );
+    }
+  };
+
+  const handleCreatePost = async (payload) => {
+    try {
+      setSaving(true);
+      const categoryId = payload.categoryId || currentCategoryId;
+      if (!categoryId) {
+        setError("Chưa có danh mục forum hợp lệ để tạo bài viết.");
+        return;
+      }
+      await createForumPost({
+        categoryId,
+        title: payload.title,
+        content: payload.content,
+        postType: payload.postType,
+        tags: payload.tags,
+      });
+      setShowNewPost(false);
+      await loadForumData();
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Không thể tạo bài viết.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEditPost = async (updatedPost) => {
+    try {
+      setSaving(true);
+      await updateForumPost(updatedPost.id, {
+        title: updatedPost.title,
+        content: updatedPost.content,
+        postType: updatedPost.postType,
+        tags: updatedPost.tags,
+        solved: updatedPost.solved,
+      });
+      setEditingPost(null);
+      await loadForumData();
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Không thể cập nhật bài viết.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeletePost = async (id) => {
+    try {
+      setSaving(true);
+      await deleteForumPost(id);
+      setDeletingPostId(null);
+      await loadForumData();
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Không thể xóa bài viết.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddComment = async (postId, content, parentCommentId = null) => {
+    try {
+      setSaving(true);
+      const createdComment = await addForumComment(postId, {
+        content,
+        parentCommentId,
+      });
+      if (createdComment?.id) {
+        setCommentTimeOverrides((current) => ({
+          ...current,
+          [createdComment.id]: "vừa xong",
+        }));
+      }
+      await refreshPost(postId);
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Không thể gửi bình luận.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReplyComment = async (postId, parentCommentId, content) => {
+    await handleAddComment(postId, content, parentCommentId);
+  };
+
+  const handleToggleCommentLike = async (postId, commentId) => {
+    try {
+      setSaving(true);
+      await toggleForumCommentLike(commentId);
+      await refreshPost(postId);
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Không thể thích bình luận.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const visibleCategories = [
+    { id: "all", label: "Tất cả", icon: "🌐" },
+    ...categories,
+  ];
+
+  const filtered = posts.filter((post) => {
+    const matchCat =
+      activeCategory === "all" || post.categoryId === activeCategory;
+    const searchText = search.trim().toLowerCase();
     const matchSearch =
-      !search ||
-      p.title.toLowerCase().includes(search.toLowerCase()) ||
-      p.content.toLowerCase().includes(search.toLowerCase());
+      !searchText ||
+      post.title.toLowerCase().includes(searchText) ||
+      post.content.toLowerCase().includes(searchText) ||
+      post.categoryName.toLowerCase().includes(searchText);
     return matchCat && matchSearch;
   });
 
-  const sorted = [...filtered].sort((a, b) =>
-    sortBy === "hot" ? b.likes + b.comments - (a.likes + a.comments) : 0,
-  );
+  const sorted = [...filtered];
+
+  const communityStats = [
+    {
+      icon: UsersThree,
+      label: "Thành viên",
+      value: String(new Set(posts.map((post) => post.authorId)).size || 0),
+      color: "text-violet-600",
+      bg: "bg-violet-50",
+    },
+    {
+      icon: ChatCircle,
+      label: "Bài viết tháng này",
+      value: String(
+        posts.filter((post) => {
+          if (!post.createdAt) return false;
+          const createdAt = new Date(post.createdAt);
+          const now = new Date();
+          return (
+            createdAt.getMonth() === now.getMonth() &&
+            createdAt.getFullYear() === now.getFullYear()
+          );
+        }).length,
+      ),
+      color: "text-sky-600",
+      bg: "bg-sky-50",
+    },
+    {
+      icon: Lightbulb,
+      label: "Gợi ý hữu ích",
+      value: String(
+        posts.filter(
+          (post) => post.postType === "RESOURCE_SHARE" || post.saves > 0,
+        ).length,
+      ),
+      color: "text-amber-500",
+      bg: "bg-amber-50",
+    },
+    {
+      icon: ThumbsUp,
+      label: "Lượt thích hôm nay",
+      value: String(
+        posts.reduce((sum, post) => sum + Number(post.likes || 0), 0),
+      ),
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+    },
+  ];
+
+  const myStats = [
+    {
+      icon: ChatCircle,
+      label: "Tổng bài viết",
+      value: myPosts.length.toString(),
+      color: "text-violet-600",
+      bg: "bg-violet-50",
+    },
+    {
+      icon: Heart,
+      label: "Tổng lượt thích",
+      value: myPosts
+        .reduce((sum, post) => sum + Number(post.likes || 0), 0)
+        .toString(),
+      color: "text-red-600",
+      bg: "bg-red-50",
+    },
+    {
+      icon: ChatCircle,
+      label: "Tổng bình luận",
+      value: myPosts
+        .reduce((sum, post) => sum + Number(post.comments || 0), 0)
+        .toString(),
+      color: "text-sky-600",
+      bg: "bg-sky-50",
+    },
+    {
+      icon: BookmarkSimple,
+      label: "Tổng lần lưu",
+      value: myPosts
+        .reduce((sum, post) => sum + Number(post.saves || 0), 0)
+        .toString(),
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+    },
+  ];
 
   return (
     <div className="max-w-6xl mx-auto font-sans pb-14 space-y-6">
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+          {error}
+        </div>
+      )}
+
       {/* ─── HEADER WITH TABS ─── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4 flex-1">
@@ -1093,36 +1417,7 @@ const Community = () => {
         <>
           {/* ─── STATS STRIP ─── */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              {
-                icon: UsersThree,
-                label: "Thành viên",
-                value: "1,284",
-                color: "text-violet-600",
-                bg: "bg-violet-50",
-              },
-              {
-                icon: ChatCircle,
-                label: "Bài viết tháng này",
-                value: "342",
-                color: "text-sky-600",
-                bg: "bg-sky-50",
-              },
-              {
-                icon: Lightbulb,
-                label: "Gợi ý hữu ích",
-                value: "89",
-                color: "text-amber-500",
-                bg: "bg-amber-50",
-              },
-              {
-                icon: ThumbsUp,
-                label: "Lượt thích hôm nay",
-                value: "1.2K",
-                color: "text-emerald-600",
-                bg: "bg-emerald-50",
-              },
-            ].map((s, i) => (
+            {communityStats.map((s, i) => (
               <div
                 key={i}
                 className="bg-white rounded-xl border border-slate-100 shadow-sm px-4 py-4 flex items-center gap-3"
@@ -1180,7 +1475,7 @@ const Community = () => {
 
               {/* Category chips */}
               <div className="flex gap-2 flex-wrap">
-                {CATEGORIES.map((c) => (
+                {visibleCategories.map((c) => (
                   <button
                     key={c.id}
                     onClick={() => setActiveCategory(c.id)}
@@ -1192,7 +1487,11 @@ const Community = () => {
               </div>
 
               {/* Post list */}
-              {sorted.length === 0 ? (
+              {loading ? (
+                <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center text-slate-500">
+                  Đang tải bài viết...
+                </div>
+              ) : sorted.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
                   <p className="text-3xl mb-3">🔍</p>
                   <p className="font-bold text-slate-700">
@@ -1209,7 +1508,7 @@ const Community = () => {
                     post={post}
                     onToggleLike={toggleLike}
                     onToggleSave={toggleSave}
-                    onOpen={setActivePost}
+                    onOpen={() => handleOpenPost(post)}
                   />
                 ))
               )}
@@ -1228,7 +1527,7 @@ const Community = () => {
                   Đang thảo luận nhiều
                 </h3>
                 <div className="space-y-3">
-                  {TRENDING.map((t, i) => (
+                  {trendingPosts.map((t, i) => (
                     <button key={i} className="w-full text-left group">
                       <div className="flex items-start gap-2.5">
                         <span
@@ -1258,7 +1557,7 @@ const Community = () => {
               </div>
 
               {/* Quick suggest */}
-              <div className="bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-2xl p-5 text-white">
+              <div className="bg-linear-to-br from-violet-600 to-fuchsia-600 rounded-2xl p-5 text-white">
                 <h3 className="font-extrabold text-base mb-1 flex items-center gap-2">
                   <Star size={16} weight="duotone" /> Gợi ý cho bạn
                 </h3>
@@ -1365,42 +1664,7 @@ const Community = () => {
                   📊 Thống kê của bạn
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {[
-                    {
-                      icon: ChatCircle,
-                      label: "Tổng bài viết",
-                      value: myPosts.length.toString(),
-                      color: "text-violet-600",
-                      bg: "bg-violet-50",
-                    },
-                    {
-                      icon: Heart,
-                      label: "Tổng lượt thích",
-                      value: myPosts
-                        .reduce((sum, p) => sum + p.likes, 0)
-                        .toString(),
-                      color: "text-red-600",
-                      bg: "bg-red-50",
-                    },
-                    {
-                      icon: ChatCircle,
-                      label: "Tổng bình luận",
-                      value: myPosts
-                        .reduce((sum, p) => sum + p.comments, 0)
-                        .toString(),
-                      color: "text-sky-600",
-                      bg: "bg-sky-50",
-                    },
-                    {
-                      icon: BookmarkSimple,
-                      label: "Tổng lần lưu",
-                      value: myPosts
-                        .reduce((sum, p) => sum + p.saves, 0)
-                        .toString(),
-                      color: "text-emerald-600",
-                      bg: "bg-emerald-50",
-                    },
-                  ].map((s, i) => (
+                  {myStats.map((s, i) => (
                     <div
                       key={i}
                       className="bg-slate-50 rounded-xl border border-slate-100 px-3 py-3 flex items-center gap-2"
@@ -1453,7 +1717,7 @@ const Community = () => {
                     post={post}
                     onEdit={setEditingPost}
                     onDelete={setDeletingPostId}
-                    onOpen={setActivePost}
+                    onOpen={() => handleOpenPost(post)}
                   />
                 ))}
               </div>
@@ -1462,18 +1726,30 @@ const Community = () => {
         </div>
       )}
 
-      {showNewPost && <NewPostModal onClose={() => setShowNewPost(false)} />}
+      {showNewPost && (
+        <NewPostModal
+          onClose={() => setShowNewPost(false)}
+          onSave={handleCreatePost}
+          categories={categories}
+          defaultCategoryId={currentCategoryId}
+        />
+      )}
       {activePost && (
         <PostDetailModal
           post={activePost}
           onClose={() => setActivePost(null)}
           onToggleLike={toggleLike}
           onToggleSave={toggleSave}
+          onAddComment={handleAddComment}
+          onToggleCommentLike={handleToggleCommentLike}
+          onReplyComment={handleReplyComment}
+          commentTimeOverrides={commentTimeOverrides}
         />
       )}
       {editingPost && (
         <EditPostModal
           post={editingPost}
+          categories={categories}
           onClose={() => setEditingPost(null)}
           onSave={handleEditPost}
         />
