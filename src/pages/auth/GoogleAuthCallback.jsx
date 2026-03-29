@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
-import { exchangeGoogleAuthCode } from '../../services/authService';
+import { exchangeGoogleAuthCode, getCurrentUser } from '../../services/authService';
 
 export default function GoogleAuthCallback() {
     const navigate = useNavigate();
     const setSession = useStore((state) => state.login);
+    const syncCredits = useStore((state) => state.syncCredits);
     const handledRef = useRef(false);
     const [error, setError] = useState('');
 
@@ -20,6 +21,11 @@ export default function GoogleAuthCallback() {
                 const state = params.get('state');
                 const user = await exchangeGoogleAuthCode(code, state);
                 setSession(user);
+                // Sync credits mới nhất từ DB
+                try {
+                    const freshUser = await getCurrentUser();
+                    if (freshUser?.creditsBalance != null) syncCredits(freshUser.creditsBalance);
+                } catch { /* ignore */ }
                 if (user.role === 'admin') navigate('/admin', { replace: true });
                 else navigate('/app', { replace: true });
             } catch (err) {

@@ -16,10 +16,12 @@ export function mapAuthUser(apiPayload, displayName) {
     return {
         id: apiPayload.userId || apiPayload.id,
         name,
+        fullName: apiPayload.fullName || name,
         email,
         role: apiPayload.role === 'ADMIN' ? 'admin' : 'user',
         avatarUrl: apiPayload.avatarUrl || null,
         creditsBalance: apiPayload.creditsBalance ?? null,
+        hasPassword: apiPayload.hasPassword !== false, // default true if not provided
     };
 }
 
@@ -29,10 +31,25 @@ export function mapUserResponse(payload) {
     return {
         id: payload.id,
         name: payload.fullName || payload.email?.split('@')[0] || 'User',
+        fullName: payload.fullName || null,
         email: payload.email,
         role: payload.role === 'ADMIN' ? 'admin' : 'user',
         avatarUrl: payload.avatarUrl || null,
+        bio: payload.bio || null,
+        hasPassword: payload.hasPassword !== false, // default true if not provided
+        // Gamification
         creditsBalance: payload.creditsBalance ?? null,
+        trustScore: payload.trustScore ?? null,
+        // Stats
+        totalTeachingSessions: payload.totalTeachingSessions ?? 0,
+        totalLearningSessions: payload.totalLearningSessions ?? 0,
+        averageRating: payload.averageRating ?? null,
+        totalReviews: payload.totalReviews ?? 0,
+        totalTeachingSkills: payload.totalTeachingSkills ?? 0,
+        // Learning interests
+        learningInterests: Array.isArray(payload.learningInterests) ? payload.learningInterests : [],
+        // Meta
+        createdAt: payload.createdAt || null,
     };
 }
 
@@ -69,7 +86,7 @@ export const login = async (email, password) => {
  * Đăng ký — backend chỉ nhận email + password (AuthenticationRequest)
  */
 export const register = async (email, password, displayName) => {
-    const res = await httpClient.post(AUTH.REGISTER, { email, password });
+    const res = await httpClient.post(AUTH.REGISTER, { email, password, fullName: displayName || '' });
     return mapAuthUser(unwrapData(res), displayName);
 };
 
