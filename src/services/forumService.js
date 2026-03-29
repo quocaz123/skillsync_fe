@@ -129,28 +129,6 @@ function normalizeCommentPreview(comment) {
   };
 }
 
-function getFeaturedScore(post) {
-  const likes = Number(post?.likes ?? post?.upvotes ?? 0);
-  const comments = Number(post?.comments ?? post?.commentCount ?? 0);
-  const saves = Number(post?.saves ?? post?.saveCount ?? 0);
-  return likes * 3 + comments * 2 + saves * 2;
-}
-
-function sortFeaturedPosts(posts) {
-  return [...posts].sort((left, right) => {
-    const scoreCompare = getFeaturedScore(right) - getFeaturedScore(left);
-    if (scoreCompare !== 0) return scoreCompare;
-
-    const rightCreatedAt = right?.createdAt
-      ? new Date(right.createdAt).getTime()
-      : 0;
-    const leftCreatedAt = left?.createdAt
-      ? new Date(left.createdAt).getTime()
-      : 0;
-    return rightCreatedAt - leftCreatedAt;
-  });
-}
-
 export function mapForumCategory(category) {
   if (!category) return null;
   return {
@@ -187,7 +165,7 @@ export function mapForumPost(post) {
     authorName,
     authorRole: post.authorRole || "USER",
     authorAvatar: post.authorAvatar || null,
-    timeAgo: formatRelativeTime(post.createdAt),
+    timeAgo: formatRelativeTime(post.updatedAt || post.createdAt),
     title: post.title || "",
     content: post.content || "",
     tags: Array.isArray(post.tags) ? post.tags : [],
@@ -234,21 +212,6 @@ function normalizePage(page) {
   };
 }
 
-async function hydratePosts(posts) {
-  const hydrated = await Promise.all(
-    posts.map(async (post) => {
-      try {
-        const detail = await getForumPostDetail(post.id);
-        return detail || mapForumPost(post);
-      } catch {
-        return mapForumPost(post);
-      }
-    }),
-  );
-
-  return hydrated.filter(Boolean);
-}
-
 export async function getForumCategories() {
   const res = await httpClient.get(FORUM.CATEGORIES);
   return (unwrap(res) || []).map(mapForumCategory).filter(Boolean);
@@ -257,15 +220,17 @@ export async function getForumCategories() {
 export async function getForumPosts(params = {}) {
   const res = await httpClient.get(FORUM.POSTS, { params });
   const page = normalizePage(unwrap(res));
-  const content = await hydratePosts(page.content);
-  return { ...page, content };
+  return {
+    ...page,
+    content: (page.content || []).map(mapForumPost).filter(Boolean),
+  };
 }
 
 export async function getForumTrendingPosts(limit = 10) {
   const res = await httpClient.get(FORUM.TRENDING, { params: { limit } });
   const page = normalizePage(unwrap(res));
-  const content = await hydratePosts(page.content);
-  return sortFeaturedPosts(content).slice(0, limit);
+  const content = (page.content || []).map(mapForumPost).filter(Boolean);
+  return content.slice(0, limit);
 }
 
 export async function getForumPostDetail(postId) {
@@ -276,15 +241,19 @@ export async function getForumPostDetail(postId) {
 export async function getForumUserPosts(userId, params = {}) {
   const res = await httpClient.get(FORUM.USER_POSTS(userId), { params });
   const page = normalizePage(unwrap(res));
-  const content = await hydratePosts(page.content);
-  return { ...page, content };
+  return {
+    ...page,
+    content: (page.content || []).map(mapForumPost).filter(Boolean),
+  };
 }
 
 export async function getForumSavedPosts(params = {}) {
   const res = await httpClient.get(FORUM.SAVED_POSTS, { params });
   const page = normalizePage(unwrap(res));
-  const content = await hydratePosts(page.content);
-  return { ...page, content };
+  return {
+    ...page,
+    content: (page.content || []).map(mapForumPost).filter(Boolean),
+  };
 }
 
 export async function createForumPost(payload) {

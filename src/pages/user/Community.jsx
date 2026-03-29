@@ -69,6 +69,15 @@ const mapUiPostTypeToBackend = (uiType) =>
 const mapBackendPostTypeToUi = (backendPostType) =>
   BACKEND_POST_TYPE_TO_UI[backendPostType] || "tips";
 
+const SUGGESTION_ICON_POOL = [BookOpen, ChalkboardTeacher, Lightbulb, Star];
+
+const normalizeKeyword = (value) =>
+  String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
 const formatRelativeTimeLabel = (input) => {
   if (!input) return "";
   const createdAt = new Date(input);
@@ -169,6 +178,97 @@ const CommentItem = ({ comment, depth = 0, onLike, onReply, timeOverride }) => {
       </div>
     </div>
   );
+};
+
+const buildSuggestedPosts = (user, mySkills, posts, trendingPosts) => {
+  const interests = Array.isArray(user?.learningInterests)
+    ? user.learningInterests
+        .map((interest) => ({
+          name: interest.skillName,
+          iconEmoji: interest.skillIcon || null,
+          desiredLevel: interest.desiredLevel || "",
+          learningGoal: interest.learningGoal || "",
+        }))
+        .filter((interest) => Boolean(interest.name))
+    : [];
+
+  const fallbackTopics =
+    interests.length > 0
+      ? interests
+      : (Array.isArray(mySkills) ? mySkills : [])
+          .filter((skill) => skill?.type === "learn" && skill?.name)
+          .map((skill) => ({
+            name: skill.name,
+            iconEmoji: null,
+            desiredLevel: skill.level || "",
+            learningGoal: "Học tốt hơn",
+          }));
+
+  const uniqueTopics = fallbackTopics.filter((topic, index, list) => {
+    const topicKey = normalizeKeyword(topic.name);
+    return (
+      topicKey &&
+      index ===
+        list.findIndex((item) => normalizeKeyword(item.name) === topicKey)
+    );
+  });
+
+  const sourcePosts = Array.from(
+    new Map(
+      [
+        ...(Array.isArray(posts) ? posts : []),
+        ...(Array.isArray(trendingPosts) ? trendingPosts : []),
+      ].map((post) => [post.id, post]),
+    ).values(),
+  );
+
+  const topTrendingPosts = (Array.isArray(trendingPosts) ? trendingPosts : [])
+    .slice(0, 3)
+    .sort((left, right) => {
+      const leftScore =
+        Number(left.comments || 0) * 2 + Number(left.likes || 0);
+      const rightScore =
+        Number(right.comments || 0) * 2 + Number(right.likes || 0);
+      return rightScore - leftScore;
+    });
+
+  const relevanceScore = (post) => {
+    const haystack = normalizeKeyword(
+      [
+        post.title,
+        post.content,
+        post.categoryName,
+        ...(Array.isArray(post.tags) ? post.tags : []),
+      ].join(" "),
+    );
+
+    return uniqueTopics.reduce((score, topic) => {
+      const keyword = normalizeKeyword(topic.name);
+      if (!keyword || !haystack.includes(keyword)) return score;
+      return score + 10 + Math.min(keyword.length, 8);
+    }, 0);
+  };
+
+  const relatedPosts = sourcePosts
+    .map((post) => ({ ...post, suggestionScore: relevanceScore(post) }))
+    .filter((post) => post.suggestionScore > 0)
+    .sort((left, right) => {
+      const scoreCompare = right.suggestionScore - left.suggestionScore;
+      if (scoreCompare !== 0) return scoreCompare;
+
+      const leftCount =
+        Number(left.comments || 0) * 2 + Number(left.likes || 0);
+      const rightCount =
+        Number(right.comments || 0) * 2 + Number(right.likes || 0);
+      return rightCount - leftCount;
+    })
+    .slice(0, 3);
+
+  const fallbackTrending = topTrendingPosts
+    .filter((post) => !relatedPosts.some((item) => item.id === post.id))
+    .slice(0, 3 - relatedPosts.length);
+
+  return [...relatedPosts, ...fallbackTrending].slice(0, 3);
 };
 
 // ─── MyPostCard ───────────────────────────────────────────
@@ -534,30 +634,6 @@ const PostCard = ({ post, onToggleLike, onToggleSave, onOpen }) => (
         </span>
       ))}
     </div>
-
-    {/* Preview comments */}
-    {post.comments_preview.length > 0 && (
-      <div className="mx-4 mb-3 bg-slate-50 rounded-xl p-3 space-y-2">
-        {post.comments_preview.slice(0, 1).map((c, i) => (
-          <div key={i} className="flex items-start gap-2">
-            <div
-              className={`w-6 h-6 rounded-lg ${c.color} text-white flex items-center justify-center font-bold text-[9px] shrink-0 mt-0.5`}
-            >
-              {c.initials}
-            </div>
-            <div className="text-xs text-slate-600">
-              <span className="font-bold text-slate-700">{c.name}: </span>
-              {c.text}
-            </div>
-          </div>
-        ))}
-        {post.comments_preview.length > 1 && (
-          <p className="text-[11px] text-violet-500 font-semibold pl-8 cursor-pointer">
-            + {post.comments_preview.length - 1} bình luận khác...
-          </p>
-        )}
-      </div>
-    )}
 
     {/* Actions */}
     <div className="px-5 py-3 border-t border-slate-50 flex items-center justify-between">
@@ -942,7 +1018,7 @@ const PostDetailModal = ({
 
 // ─── MAIN ─────────────────────────────────────────────────
 const Community = () => {
-  const { user } = useStore();
+  const { user, mySkills } = useStore();
   const [activeTab, setActiveTab] = useState("community");
   const [activeCategory, setActiveCategory] = useState("all");
   const [sortBy, setSortBy] = useState("hot");
@@ -960,32 +1036,16 @@ const Community = () => {
   const [error, setError] = useState("");
   const [defaultPostCategoryId, setDefaultPostCategoryId] = useState("");
   const [commentTimeOverrides, setCommentTimeOverrides] = useState({});
+  const [myPostsLoaded, setMyPostsLoaded] = useState(false);
   const [feedMeta, setFeedMeta] = useState({ page: 0, size: 50 });
 
   const currentCategoryId = defaultPostCategoryId || categories?.[0]?.id || "";
 
-  const hydrateCollections = async () => {
-    const [categoryList, feedPage, trendingList, userPostsPage] =
-      await Promise.all([
-        getForumCategories(),
-        getForumPosts({ page: 0, size: 50 }),
-        getForumTrendingPosts(5),
-        user?.id
-          ? getForumUserPosts(user.id, { page: 0, size: 50 })
-          : Promise.resolve({ content: [] }),
-      ]);
-
-    setCategories(categoryList);
-    setPosts(feedPage?.content || []);
-    setTrendingPosts(trendingList || []);
-    setMyPosts(userPostsPage?.content || []);
-
-    if (!defaultPostCategoryId) {
-      setDefaultPostCategoryId(categoryList?.[0]?.id || "");
-    }
-  };
-
-  const loadFeedByMode = async (mode, shouldManageLoading = true) => {
+  const loadFeedByMode = async (
+    mode,
+    shouldManageLoading = true,
+    knownCategories = categories,
+  ) => {
     if (shouldManageLoading) {
       setLoading(true);
     }
@@ -995,34 +1055,35 @@ const Community = () => {
       if (mode === "saved") {
         const [savedPage, categoryList] = await Promise.all([
           getForumSavedPosts({ page: feedMeta.page, size: feedMeta.size }),
-          categories.length > 0
-            ? Promise.resolve(categories)
+          knownCategories.length > 0
+            ? Promise.resolve(knownCategories)
             : getForumCategories(),
         ]);
         setPosts(savedPage?.content || []);
-        if (categories.length === 0) {
+        if (knownCategories.length === 0) {
           setCategories(categoryList || []);
         }
       } else if (mode === "hot") {
         const [trendingList, categoryList] = await Promise.all([
           getForumTrendingPosts(10),
-          categories.length > 0
-            ? Promise.resolve(categories)
+          knownCategories.length > 0
+            ? Promise.resolve(knownCategories)
             : getForumCategories(),
         ]);
         setPosts(trendingList || []);
-        if (categories.length === 0) {
+        setTrendingPosts((trendingList || []).slice(0, 5));
+        if (knownCategories.length === 0) {
           setCategories(categoryList || []);
         }
       } else {
         const [page, categoryList] = await Promise.all([
           getForumPosts({ page: feedMeta.page, size: feedMeta.size }),
-          categories.length > 0
-            ? Promise.resolve(categories)
+          knownCategories.length > 0
+            ? Promise.resolve(knownCategories)
             : getForumCategories(),
         ]);
         setPosts(page?.content || []);
-        if (categories.length === 0) {
+        if (knownCategories.length === 0) {
           setCategories(categoryList || []);
         }
       }
@@ -1031,6 +1092,34 @@ const Community = () => {
         err?.response?.data?.message ||
           err?.message ||
           "Không tải được dữ liệu forum.",
+      );
+    } finally {
+      if (shouldManageLoading) {
+        setLoading(false);
+      }
+    }
+  };
+
+  const loadMyPosts = async (shouldManageLoading = true) => {
+    if (!user?.id) return;
+
+    if (shouldManageLoading) {
+      setLoading(true);
+    }
+    setError("");
+
+    try {
+      const userPostsPage = await getForumUserPosts(user.id, {
+        page: 0,
+        size: 50,
+      });
+      setMyPosts(userPostsPage?.content || []);
+      setMyPostsLoaded(true);
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Không tải được bài viết của tôi.",
       );
     } finally {
       if (shouldManageLoading) {
@@ -1067,8 +1156,45 @@ const Community = () => {
     setLoading(true);
     setError("");
     try {
-      await hydrateCollections();
-      await loadFeedByMode(sortBy, false);
+      const categoryPromise =
+        categories.length > 0
+          ? Promise.resolve(categories)
+          : getForumCategories();
+
+      const feedPromise = (async () => {
+        if (sortBy === "saved") {
+          const savedPage = await getForumSavedPosts({
+            page: feedMeta.page,
+            size: feedMeta.size,
+          });
+          return savedPage?.content || [];
+        }
+        if (sortBy === "new") {
+          const page = await getForumPosts({
+            page: feedMeta.page,
+            size: feedMeta.size,
+          });
+          return page?.content || [];
+        }
+        const trendingList = await getForumTrendingPosts(10);
+        return trendingList || [];
+      })();
+
+      const trendingSidebarPromise =
+        sortBy === "hot" ? feedPromise : getForumTrendingPosts(5);
+
+      const [categoryList, initialFeed, trendingList] = await Promise.all([
+        categoryPromise,
+        feedPromise,
+        trendingSidebarPromise,
+      ]);
+
+      setPosts(initialFeed || []);
+      setTrendingPosts((trendingList || []).slice(0, 5));
+      setCategories(categoryList || []);
+      if (!defaultPostCategoryId) {
+        setDefaultPostCategoryId(categoryList?.[0]?.id || "");
+      }
     } catch (err) {
       setError(
         err?.response?.data?.message ||
@@ -1087,9 +1213,15 @@ const Community = () => {
 
   useEffect(() => {
     if (categories.length === 0) return;
-    loadFeedByMode(sortBy);
+    loadFeedByMode(sortBy, true, categories);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortBy]);
+
+  useEffect(() => {
+    if (activeTab !== "my-posts" || myPostsLoaded) return;
+    loadMyPosts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const toggleLike = async (id) => {
     try {
@@ -1138,6 +1270,7 @@ const Community = () => {
       });
       setShowNewPost(false);
       await loadForumData();
+      setMyPostsLoaded(false);
     } catch (err) {
       setError(
         err?.response?.data?.message ||
@@ -1152,15 +1285,29 @@ const Community = () => {
   const handleEditPost = async (updatedPost) => {
     try {
       setSaving(true);
-      await updateForumPost(updatedPost.id, {
+      const savedPost = await updateForumPost(updatedPost.id, {
         title: updatedPost.title,
         content: updatedPost.content,
         postType: updatedPost.postType,
         tags: updatedPost.tags,
         solved: updatedPost.solved,
       });
+
+      setPosts((current) =>
+        current.map((post) =>
+          post.id === updatedPost.id ? { ...post, ...savedPost } : post,
+        ),
+      );
+      setMyPosts((current) =>
+        current.map((post) =>
+          post.id === updatedPost.id ? { ...post, ...savedPost } : post,
+        ),
+      );
+      setActivePost((current) =>
+        current?.id === updatedPost.id ? { ...current, ...savedPost } : current,
+      );
+
       setEditingPost(null);
-      await loadForumData();
     } catch (err) {
       setError(
         err?.response?.data?.message ||
@@ -1178,6 +1325,7 @@ const Community = () => {
       await deleteForumPost(id);
       setDeletingPostId(null);
       await loadForumData();
+      setMyPostsLoaded(false);
     } catch (err) {
       setError(
         err?.response?.data?.message ||
@@ -1253,52 +1401,25 @@ const Community = () => {
 
   const sorted = [...filtered];
 
-  const communityStats = [
-    {
-      icon: UsersThree,
-      label: "Thành viên",
-      value: String(new Set(posts.map((post) => post.authorId)).size || 0),
-      color: "text-violet-600",
-      bg: "bg-violet-50",
-    },
-    {
-      icon: ChatCircle,
-      label: "Bài viết tháng này",
-      value: String(
-        posts.filter((post) => {
-          if (!post.createdAt) return false;
-          const createdAt = new Date(post.createdAt);
-          const now = new Date();
-          return (
-            createdAt.getMonth() === now.getMonth() &&
-            createdAt.getFullYear() === now.getFullYear()
-          );
-        }).length,
-      ),
-      color: "text-sky-600",
-      bg: "bg-sky-50",
-    },
-    {
-      icon: Lightbulb,
-      label: "Gợi ý hữu ích",
-      value: String(
-        posts.filter(
-          (post) => post.postType === "RESOURCE_SHARE" || post.saves > 0,
-        ).length,
-      ),
-      color: "text-amber-500",
-      bg: "bg-amber-50",
-    },
-    {
-      icon: ThumbsUp,
-      label: "Lượt thích hôm nay",
-      value: String(
-        posts.reduce((sum, post) => sum + Number(post.likes || 0), 0),
-      ),
-      color: "text-emerald-600",
-      bg: "bg-emerald-50",
-    },
-  ];
+  const suggestedPosts = buildSuggestedPosts(
+    user,
+    mySkills,
+    posts,
+    trendingPosts,
+  );
+
+  const handleSuggestionClick = async (post) => {
+    setActiveTab("community");
+    setActiveCategory("all");
+    setSearch("");
+
+    try {
+      const detail = await getForumPostDetail(post.id);
+      setActivePost(detail || post);
+    } catch {
+      setActivePost(post);
+    }
+  };
 
   const myStats = [
     {
@@ -1415,28 +1536,6 @@ const Community = () => {
       {/* ─── CONTENT ─── */}
       {activeTab === "community" ? (
         <>
-          {/* ─── STATS STRIP ─── */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {communityStats.map((s, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-xl border border-slate-100 shadow-sm px-4 py-4 flex items-center gap-3"
-              >
-                <div
-                  className={`w-10 h-10 ${s.bg} rounded-xl flex items-center justify-center shrink-0`}
-                >
-                  <s.icon size={18} weight="duotone" className={s.color} />
-                </div>
-                <div>
-                  <p className="text-lg font-extrabold text-slate-900">
-                    {s.value}
-                  </p>
-                  <p className="text-[11px] text-slate-400">{s.label}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
           <div className="flex flex-col lg:flex-row gap-6">
             {/* ─── MAIN FEED ─── */}
             <div className="flex-1 space-y-4">
@@ -1557,50 +1656,60 @@ const Community = () => {
               </div>
 
               {/* Quick suggest */}
-              <div className="bg-linear-to-br from-violet-600 to-fuchsia-600 rounded-2xl p-5 text-white">
-                <h3 className="font-extrabold text-base mb-1 flex items-center gap-2">
-                  <Star size={16} weight="duotone" /> Gợi ý cho bạn
-                </h3>
-                <p className="text-xs text-white/70 mb-4">
-                  Dựa trên skills bạn đang học
-                </p>
-                {[
-                  {
-                    icon: BookOpen,
-                    label: "React nâng cao",
-                    sub: "3 giáo viên phù hợp",
-                  },
-                  {
-                    icon: ChalkboardTeacher,
-                    label: "Lập trình Python",
-                    sub: "5 giáo viên phù hợp",
-                  },
-                ].map((s, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-3 mb-3 last:mb-0"
-                  >
-                    <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
-                      <s.icon
-                        size={15}
-                        weight="duotone"
-                        className="text-white"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold">{s.label}</p>
-                      <p className="text-[11px] text-white/60">{s.sub}</p>
-                    </div>
-                    <ArrowRight
-                      size={14}
-                      weight="bold"
-                      className="text-white/60 shrink-0"
-                    />
-                  </div>
-                ))}
-                <button className="w-full mt-3 bg-white/20 hover:bg-white/30 text-white font-bold text-xs py-2.5 rounded-xl transition-all">
-                  Khám phá tất cả →
-                </button>
+              <div className="bg-linear-to-br from-violet-600 to-fuchsia-600 rounded-2xl p-5 text-white shadow-lg shadow-violet-200/40">
+                <div className="mb-1">
+                  <h3 className="font-extrabold text-base flex items-center gap-2">
+                    <Star size={16} weight="duotone" /> Gợi ý cho bạn
+                  </h3>
+                  <p className="text-xs text-white/70 mt-1">
+                    Dựa trên hồ sơ của bạn và các bài đang có trong cộng đồng
+                  </p>
+                </div>
+
+                <div className="mt-4 space-y-2.5">
+                  {suggestedPosts.length > 0 ? (
+                    suggestedPosts.map((post, index) => (
+                      <button
+                        key={post.id}
+                        type="button"
+                        className="w-full text-left rounded-2xl p-3 bg-white/10 hover:bg-white/15 transition-all"
+                        onClick={() => handleSuggestionClick(post)}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0 font-bold text-xs">
+                            {index + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="text-sm font-bold leading-snug line-clamp-2">
+                                {post.title}
+                              </p>
+                              <ArrowRight
+                                size={14}
+                                weight="bold"
+                                className="text-white/60 shrink-0 mt-0.5"
+                              />
+                            </div>
+                            <p className="text-[11px] text-white/70 mt-1 flex items-center gap-1.5 flex-wrap">
+                              <span>{post.categoryName || "Community"}</span>
+                              <span>·</span>
+                              <ChatCircle size={10} />
+                              <span>
+                                {post.comments > 0
+                                  ? `${post.comments} bình luận`
+                                  : "chưa có bình luận"}
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="text-sm text-white/70 bg-white/10 rounded-2xl p-3">
+                      Chưa tìm thấy bài viết gợi ý phù hợp.
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Rules */}
