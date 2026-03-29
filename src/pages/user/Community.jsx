@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   UsersThree,
   ChatCircle,
@@ -34,21 +34,12 @@ import {
   getForumSavedPosts,
   getForumTrendingPosts,
   getForumUserPosts,
+  openForumEventStream,
   toggleForumCommentLike,
   toggleForumSave,
   toggleForumVote,
   updateForumPost,
 } from "../../services/forumService";
-
-// ─── Mock Data ────────────────────────────────────────────
-const CATEGORIES = [
-  { id: "all", label: "Tất cả", icon: "🌐" },
-  { id: "tips", label: "Mẹo học tập", icon: "💡" },
-  { id: "recommend", label: "Gợi ý giáo viên", icon: "⭐" },
-  { id: "resources", label: "Tài nguyên", icon: "📚" },
-  { id: "question", label: "Hỏi đáp", icon: "❓" },
-  { id: "experience", label: "Chia sẻ", icon: "💬" },
-];
 
 const UI_POST_TYPE_TO_BACKEND = {
   tips: "DISCUSSION",
@@ -68,6 +59,50 @@ const mapUiPostTypeToBackend = (uiType) =>
   UI_POST_TYPE_TO_BACKEND[uiType] || "DISCUSSION";
 const mapBackendPostTypeToUi = (backendPostType) =>
   BACKEND_POST_TYPE_TO_UI[backendPostType] || "tips";
+
+const FALLBACK_CATEGORIES = [
+  {
+    id: "fallback-tips",
+    label: "Mẹo học tập",
+    name: "Mẹo học tập",
+    icon: "💡",
+  },
+  {
+    id: "fallback-recommend",
+    label: "Gợi ý giáo viên",
+    name: "Gợi ý giáo viên",
+    icon: "⭐",
+  },
+  {
+    id: "fallback-resources",
+    label: "Tài nguyên",
+    name: "Tài nguyên",
+    icon: "📚",
+  },
+  { id: "fallback-question", label: "Hỏi đáp", name: "Hỏi đáp", icon: "❓" },
+  { id: "fallback-share", label: "Chia sẻ", name: "Chia sẻ", icon: "💬" },
+];
+
+const POST_STATUS_META = {
+  PENDING: {
+    label: "Chờ duyệt",
+    bg: "bg-amber-50",
+    text: "text-amber-700",
+    border: "border-amber-100",
+  },
+  APPROVED: {
+    label: "Đã duyệt",
+    bg: "bg-emerald-50",
+    text: "text-emerald-700",
+    border: "border-emerald-100",
+  },
+  REJECTED: {
+    label: "Từ chối",
+    bg: "bg-rose-50",
+    text: "text-rose-700",
+    border: "border-rose-100",
+  },
+};
 
 const SUGGESTION_ICON_POOL = [BookOpen, ChalkboardTeacher, Lightbulb, Star];
 
@@ -298,6 +333,25 @@ const MyPostCard = ({ post, onEdit, onDelete, onOpen }) => (
             >
               {post.typeLabel}
             </span>
+            {post.status && post.status !== "APPROVED" && (
+              <span
+                className={`mt-1 ml-2 inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full ${post.status === "PENDING" ? "bg-amber-50 text-amber-700 border border-amber-100" : "bg-rose-50 text-rose-700 border border-rose-100"}`}
+              >
+                {post.status === "PENDING" ? "Chờ duyệt" : "Từ chối"}
+              </span>
+            )}
+            {post.status === "REJECTED" && post.rejectionReason && (
+              <p className="mt-2 text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 leading-relaxed">
+                <span className="font-bold">Lý do từ chối:</span>{" "}
+                {post.rejectionReason}
+              </p>
+            )}
+            {post.status === "PENDING" && (
+              <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 leading-relaxed">
+                Bài viết đang chờ admin duyệt. Bạn sẽ thấy cập nhật ngay khi
+                trạng thái thay đổi.
+              </p>
+            )}
           </div>
         </div>
         {/* Action buttons */}
@@ -879,6 +933,38 @@ const PostDetailModal = ({
 
         <div className="flex-1 overflow-y-auto bg-slate-50/30">
           <div className="p-6">
+            {post.status && (
+              <div
+                className={`mb-5 rounded-2xl border px-4 py-3 ${POST_STATUS_META[post.status]?.bg || "bg-slate-50"} ${POST_STATUS_META[post.status]?.text || "text-slate-600"} ${POST_STATUS_META[post.status]?.border || "border-slate-100"}`}
+              >
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider">
+                      Trạng thái bài viết
+                    </p>
+                    <p className="text-sm font-semibold mt-0.5">
+                      {POST_STATUS_META[post.status]?.label || post.status}
+                    </p>
+                  </div>
+                  {post.status === "REJECTED" && post.rejectionReason && (
+                    <div className="text-sm font-medium max-w-full sm:max-w-[70%] text-right sm:text-left">
+                      <span className="font-bold">Lý do:</span>{" "}
+                      {post.rejectionReason}
+                    </div>
+                  )}
+                  {post.status === "PENDING" && (
+                    <p className="text-sm font-medium">
+                      Bài viết đang được admin xem xét.
+                    </p>
+                  )}
+                  {post.status === "APPROVED" && (
+                    <p className="text-sm font-medium">
+                      Bài viết đã được hiển thị công khai.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
             {/* Author Info */}
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
@@ -1038,8 +1124,19 @@ const Community = () => {
   const [commentTimeOverrides, setCommentTimeOverrides] = useState({});
   const [myPostsLoaded, setMyPostsLoaded] = useState(false);
   const [feedMeta, setFeedMeta] = useState({ page: 0, size: 50 });
+  const [notice, setNotice] = useState(null);
+  const noticeTimerRef = useRef(null);
+  const lastMyPostsRef = useRef([]);
 
   const currentCategoryId = defaultPostCategoryId || categories?.[0]?.id || "";
+
+  const pushNotice = (message, type = "info") => {
+    if (noticeTimerRef.current) {
+      clearTimeout(noticeTimerRef.current);
+    }
+    setNotice({ message, type });
+    noticeTimerRef.current = setTimeout(() => setNotice(null), 4500);
+  };
 
   const loadFeedByMode = async (
     mode,
@@ -1064,17 +1161,18 @@ const Community = () => {
           setCategories(categoryList || []);
         }
       } else if (mode === "hot") {
-        const [trendingList, categoryList] = await Promise.all([
-          getForumTrendingPosts(10),
-          knownCategories.length > 0
-            ? Promise.resolve(knownCategories)
-            : getForumCategories(),
-        ]);
+        let trendingList = [];
+        try {
+          trendingList = await getForumTrendingPosts(10);
+        } catch {
+          const fallbackPage = await getForumPosts({
+            page: feedMeta.page,
+            size: feedMeta.size,
+          });
+          trendingList = fallbackPage?.content || [];
+        }
         setPosts(trendingList || []);
         setTrendingPosts((trendingList || []).slice(0, 5));
-        if (knownCategories.length === 0) {
-          setCategories(categoryList || []);
-        }
       } else {
         const [page, categoryList] = await Promise.all([
           getForumPosts({ page: feedMeta.page, size: feedMeta.size }),
@@ -1100,7 +1198,8 @@ const Community = () => {
     }
   };
 
-  const loadMyPosts = async (shouldManageLoading = true) => {
+  const loadMyPosts = async (shouldManageLoading = true, options = {}) => {
+    const { notifyChanges = true } = options;
     if (!user?.id) return;
 
     if (shouldManageLoading) {
@@ -1113,7 +1212,33 @@ const Community = () => {
         page: 0,
         size: 50,
       });
-      setMyPosts(userPostsPage?.content || []);
+      const nextPosts = userPostsPage?.content || [];
+      if (notifyChanges && lastMyPostsRef.current.length > 0) {
+        const previousById = new Map(
+          lastMyPostsRef.current.map((post) => [post.id, post.status]),
+        );
+        const changedPost = nextPosts.find((post) => {
+          const previousStatus = previousById.get(post.id);
+          return previousStatus && previousStatus !== post.status;
+        });
+
+        if (changedPost) {
+          if (changedPost.status === "APPROVED") {
+            pushNotice(
+              `Bài viết \"${changedPost.title}\" đã được duyệt và hiển thị công khai.`,
+              "success",
+            );
+          } else if (changedPost.status === "REJECTED") {
+            pushNotice(
+              `Bài viết \"${changedPost.title}\" đã bị từ chối${changedPost.rejectionReason ? `: ${changedPost.rejectionReason}` : ""}`,
+              "error",
+            );
+          }
+        }
+      }
+
+      setMyPosts(nextPosts);
+      lastMyPostsRef.current = nextPosts;
       setMyPostsLoaded(true);
     } catch (err) {
       setError(
@@ -1156,51 +1281,56 @@ const Community = () => {
     setLoading(true);
     setError("");
     try {
-      const categoryPromise =
-        categories.length > 0
-          ? Promise.resolve(categories)
-          : getForumCategories();
-
       const feedPromise = (async () => {
         if (sortBy === "saved") {
-          const savedPage = await getForumSavedPosts({
-            page: feedMeta.page,
-            size: feedMeta.size,
-          });
-          return savedPage?.content || [];
+          try {
+            const savedPage = await getForumSavedPosts({
+              page: feedMeta.page,
+              size: feedMeta.size,
+            });
+            return savedPage?.content || [];
+          } catch {
+            return [];
+          }
         }
         if (sortBy === "new") {
-          const page = await getForumPosts({
+          try {
+            const page = await getForumPosts({
+              page: feedMeta.page,
+              size: feedMeta.size,
+            });
+            return page?.content || [];
+          } catch {
+            return [];
+          }
+        }
+        try {
+          const trendingList = await getForumTrendingPosts(10);
+          return trendingList || [];
+        } catch {
+          const fallbackPage = await getForumPosts({
             page: feedMeta.page,
             size: feedMeta.size,
           });
-          return page?.content || [];
+          return fallbackPage?.content || [];
         }
-        const trendingList = await getForumTrendingPosts(10);
-        return trendingList || [];
       })();
 
       const trendingSidebarPromise =
-        sortBy === "hot" ? feedPromise : getForumTrendingPosts(5);
+        sortBy === "hot"
+          ? feedPromise
+          : getForumTrendingPosts(5).catch(() => []);
 
-      const [categoryList, initialFeed, trendingList] = await Promise.all([
-        categoryPromise,
+      const [initialFeed, trendingList] = await Promise.all([
         feedPromise,
         trendingSidebarPromise,
       ]);
 
       setPosts(initialFeed || []);
       setTrendingPosts((trendingList || []).slice(0, 5));
-      setCategories(categoryList || []);
-      if (!defaultPostCategoryId) {
-        setDefaultPostCategoryId(categoryList?.[0]?.id || "");
-      }
     } catch (err) {
-      setError(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Không tải được dữ liệu forum.",
-      );
+      setPosts([]);
+      setTrendingPosts([]);
     } finally {
       setLoading(false);
     }
@@ -1208,6 +1338,27 @@ const Community = () => {
 
   useEffect(() => {
     loadForumData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const categoryList = await getForumCategories();
+        setCategories(categoryList || []);
+        if (!defaultPostCategoryId) {
+          setDefaultPostCategoryId(categoryList?.[0]?.id || "");
+        }
+      } catch (err) {
+        const fallbackCategories = FALLBACK_CATEGORIES;
+        setCategories(fallbackCategories);
+        if (!defaultPostCategoryId) {
+          setDefaultPostCategoryId(fallbackCategories[0]?.id || "");
+        }
+      }
+    };
+
+    loadCategories();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
@@ -1222,6 +1373,97 @@ const Community = () => {
     loadMyPosts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const intervalMs = activeTab === "my-posts" ? 7000 : 15000;
+    const timer = setInterval(() => {
+      if (activeTab === "my-posts") {
+        loadMyPosts(false);
+      } else if (activeTab === "community") {
+        loadFeedByMode(sortBy, false, categories);
+      }
+    }, intervalMs);
+
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, sortBy, user?.id, categories, feedMeta.page, feedMeta.size]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const eventSource = openForumEventStream();
+
+    const handlePostChangeEvent = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (!payload?.postId) return;
+
+        if (payload.action === "CREATE") {
+          pushNotice(`Bài viết "${payload.title || ""}" đã được tạo.`, "info");
+        } else if (payload.action === "UPDATE") {
+          pushNotice(
+            `Bài viết "${payload.title || ""}" đã được cập nhật.`,
+            "info",
+          );
+        } else if (payload.action === "DELETE") {
+          pushNotice(
+            "Một bài viết vừa bị xóa và danh sách đã được cập nhật.",
+            "info",
+          );
+        } else if (payload.status === "APPROVED") {
+          pushNotice(
+            `Bài viết "${payload.title || ""}" đã được duyệt và hiển thị công khai.`,
+            "success",
+          );
+        } else if (payload.status === "REJECTED") {
+          pushNotice(
+            `Bài viết "${payload.title || ""}" đã bị từ chối${payload.rejectionReason ? `: ${payload.rejectionReason}` : ""}`,
+            "error",
+          );
+        }
+
+        setActivePost((current) =>
+          current?.id === payload.postId
+            ? {
+                ...current,
+                status: payload.status,
+                rejectionReason: payload.rejectionReason || null,
+                reviewedAt: payload.reviewedAt || null,
+                reviewedByEmail: payload.reviewedByEmail || null,
+              }
+            : current,
+        );
+
+        loadMyPosts(false);
+        if (activeTab === "community") {
+          loadForumData();
+        }
+      } catch {
+        // ignore malformed event payloads
+      }
+    };
+
+    eventSource.addEventListener("forum-post-changed", handlePostChangeEvent);
+
+    return () => {
+      eventSource.removeEventListener(
+        "forum-post-changed",
+        handlePostChangeEvent,
+      );
+      eventSource.close();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, user?.id, sortBy, categories, feedMeta.page, feedMeta.size]);
+
+  useEffect(() => {
+    return () => {
+      if (noticeTimerRef.current) {
+        clearTimeout(noticeTimerRef.current);
+      }
+    };
+  }, []);
 
   const toggleLike = async (id) => {
     try {
@@ -1257,8 +1499,8 @@ const Community = () => {
     try {
       setSaving(true);
       const categoryId = payload.categoryId || currentCategoryId;
-      if (!categoryId) {
-        setError("Chưa có danh mục forum hợp lệ để tạo bài viết.");
+      if (!categoryId || String(categoryId).startsWith("fallback-")) {
+        setError("Danh mục forum chưa tải được. Vui lòng thử lại sau.");
         return;
       }
       const createdPost = await createForumPost({
@@ -1269,19 +1511,21 @@ const Community = () => {
         tags: payload.tags,
       });
       setShowNewPost(false);
-      if (activeTab === "my-posts") {
-        setMyPosts((current) => {
-          const nextPosts = [
-            createdPost,
-            ...current.filter((post) => post.id !== createdPost.id),
-          ];
-          return nextPosts;
-        });
-        setMyPostsLoaded(true);
-        setActiveTab("my-posts");
-      } else {
+      setMyPosts((current) => [
+        createdPost,
+        ...current.filter((post) => post.id !== createdPost.id),
+      ]);
+      lastMyPostsRef.current = [
+        createdPost,
+        ...lastMyPostsRef.current.filter((post) => post.id !== createdPost.id),
+      ];
+      setMyPostsLoaded(true);
+      pushNotice(
+        `Bài viết \"${createdPost.title}\" đã được gửi duyệt.`,
+        "info",
+      );
+      if (activeTab !== "my-posts") {
         await loadForumData();
-        setMyPostsLoaded(false);
       }
     } catch (err) {
       setError(
@@ -1306,17 +1550,29 @@ const Community = () => {
       });
 
       setPosts((current) =>
-        current.map((post) =>
-          post.id === updatedPost.id ? { ...post, ...savedPost } : post,
-        ),
+        savedPost.status === "APPROVED"
+          ? current.map((post) =>
+              post.id === updatedPost.id ? { ...post, ...savedPost } : post,
+            )
+          : current.filter((post) => post.id !== updatedPost.id),
       );
       setMyPosts((current) =>
         current.map((post) =>
           post.id === updatedPost.id ? { ...post, ...savedPost } : post,
         ),
       );
+      lastMyPostsRef.current = lastMyPostsRef.current.map((post) =>
+        post.id === updatedPost.id ? { ...post, ...savedPost } : post,
+      );
       setActivePost((current) =>
         current?.id === updatedPost.id ? { ...current, ...savedPost } : current,
+      );
+
+      pushNotice(
+        savedPost.status === "APPROVED"
+          ? `Bài viết \"${savedPost.title}\" đã được duyệt và hiển thị công khai.`
+          : `Bài viết \"${savedPost.title}\" đã được gửi lại để admin duyệt.`,
+        savedPost.status === "APPROVED" ? "success" : "info",
       );
 
       setEditingPost(null);
@@ -1338,7 +1594,11 @@ const Community = () => {
       setDeletingPostId(null);
       setPosts((current) => current.filter((post) => post.id !== id));
       setMyPosts((current) => current.filter((post) => post.id !== id));
+      lastMyPostsRef.current = lastMyPostsRef.current.filter(
+        (post) => post.id !== id,
+      );
       setActivePost((current) => (current?.id === id ? null : current));
+      pushNotice("Bài viết đã được xóa thành công.", "success");
     } catch (err) {
       setError(
         err?.response?.data?.message ||
@@ -1348,6 +1608,34 @@ const Community = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const mergeCommentIntoTree = (comments, newComment) => {
+    if (!Array.isArray(comments) || !newComment) return comments || [];
+
+    if (!newComment.parentCommentId) {
+      return [
+        ...comments,
+        { ...newComment, replies: newComment.replies || [] },
+      ];
+    }
+
+    return comments.map((comment) => {
+      if (comment.id === newComment.parentCommentId) {
+        return {
+          ...comment,
+          replies: [
+            ...(Array.isArray(comment.replies) ? comment.replies : []),
+            { ...newComment, replies: newComment.replies || [] },
+          ],
+        };
+      }
+
+      return {
+        ...comment,
+        replies: mergeCommentIntoTree(comment.replies || [], newComment),
+      };
+    });
   };
 
   const handleAddComment = async (postId, content, parentCommentId = null) => {
@@ -1363,7 +1651,25 @@ const Community = () => {
           [createdComment.id]: "vừa xong",
         }));
       }
-      await refreshPost(postId);
+
+      const applyCommentUpdate = (post) => {
+        if (post.id !== postId) return post;
+
+        return {
+          ...post,
+          comments: Number(post.comments || 0) + 1,
+          comments_detail: mergeCommentIntoTree(
+            Array.isArray(post.comments_detail) ? post.comments_detail : [],
+            createdComment,
+          ),
+        };
+      };
+
+      setPosts((current) => current.map(applyCommentUpdate));
+      setMyPosts((current) => current.map(applyCommentUpdate));
+      setActivePost((current) =>
+        current?.id === postId ? applyCommentUpdate(current) : current,
+      );
     } catch (err) {
       setError(
         err?.response?.data?.message ||
@@ -1476,6 +1782,13 @@ const Community = () => {
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
           {error}
+        </div>
+      )}
+      {notice && (
+        <div
+          className={`border text-sm rounded-xl px-4 py-3 ${notice.type === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-700" : notice.type === "error" ? "bg-rose-50 border-rose-200 text-rose-700" : "bg-sky-50 border-sky-200 text-sky-700"}`}
+        >
+          {notice.message}
         </div>
       )}
 

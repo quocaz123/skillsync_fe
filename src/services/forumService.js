@@ -2,6 +2,8 @@ import httpClient from "../configuration/axiosClient";
 import { API_ENDPOINTS } from "../configuration/apiEndpoints";
 
 const { FORUM } = API_ENDPOINTS;
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/skillsync";
 
 const POST_TYPE_META = {
   DISCUSSION: {
@@ -176,6 +178,10 @@ export function mapForumPost(post) {
     liked: Boolean(post.liked),
     saved: Boolean(post.saved),
     solved: Boolean(post.solved),
+    status: post.status || "APPROVED",
+    rejectionReason: post.rejectionReason || null,
+    reviewedAt: post.reviewedAt || null,
+    reviewedByEmail: post.reviewedByEmail || null,
     comments_preview: previewComments,
     comments_detail: comments,
     categoryId: post.categoryId || null,
@@ -292,6 +298,12 @@ export async function addForumComment(postId, payload) {
 export async function toggleForumCommentLike(commentId) {
   const res = await httpClient.post(FORUM.TOGGLE_COMMENT_VOTE(commentId));
   return normalizeComment(unwrap(res));
+}
+
+export function openForumEventStream() {
+  return new EventSource(`${API_BASE_URL}${FORUM.EVENTS}`, {
+    withCredentials: true,
+  });
 }
 
 export async function updateForumComment(commentId, payload) {

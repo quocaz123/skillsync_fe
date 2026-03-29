@@ -28,6 +28,7 @@ export const API_ENDPOINTS = {
   FORUM: {
     POSTS: "/api/forum",
     TRENDING: "/api/forum/trending",
+    EVENTS: "/api/forum/events",
     POST_DETAIL: (postId) => `/api/forum/${postId}`,
     USER_POSTS: (userId) => `/api/forum/user/${userId}`,
     CATEGORIES: "/api/forum/categories",
@@ -55,6 +56,7 @@ export const API_ENDPOINTS = {
   ADMIN: {
     SYSTEM_STATS: "/admin/stats",
     TEACHING_SKILLS: "/api/admin/teaching-skills",
+    FORUM_POSTS: "/api/admin/forum-posts",
   },
   SLOTS: {
     BY_SKILL: (skillId) => `/api/teaching-skills/${skillId}/slots`,
