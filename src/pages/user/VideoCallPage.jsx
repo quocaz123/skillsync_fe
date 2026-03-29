@@ -61,35 +61,39 @@ const VideoCallPage = () => {
         }, 1000);
     }, [stopTimer]);
 
-    const safeDestroyZego = useCallback(() => {
-        try {
-            if (zegoRef.current) {
-                zegoRef.current.destroy();
-                zegoRef.current = null;
+    // Defer destroy so ZEGOCLOUD SDK can finish its own cleanup first
+    const safeDestroyZego = useCallback((delayMs = 0) => {
+        const doDestroy = () => {
+            try {
+                if (zegoRef.current) {
+                    zegoRef.current.destroy();
+                    zegoRef.current = null;
+                }
+            } catch (e) {
+                console.warn('ZEGO destroy failed', e);
             }
-        } catch (e) {
-            console.warn('ZEGO destroy failed', e);
-        }
+        };
+        if (delayMs > 0) setTimeout(doDestroy, delayMs);
+        else doDestroy();
     }, []);
 
-    const endCall = useCallback(async () => {
+    /**
+     * Called by our custom "Kết thúc" button.
+     * Asks ZEGOCLOUD SDK to leave first — this triggers onLeaveRoom which handles the rest.
+     */
+    const endCall = useCallback(() => {
         if (leavingRef.current) return;
-        leavingRef.current = true;
-
         stopTimer();
-
         try {
-            safeDestroyZego();
-            if (joinedRef.current) {
-                await markLeave(sessionId);
-            }
+            // leaveRoom triggers onLeaveRoom callback, which does backend notify + navigate
+            zegoRef.current?.leaveRoom?.();
         } catch (e) {
-            console.warn('markLeave failed', e);
+            // If leaveRoom fails, fall back to destroy
+            safeDestroyZego();
+            setStatus('ended');
+            setTimeout(() => navigate('/app/sessions'), 1500);
         }
-
-        setStatus('ended');
-        setTimeout(() => navigate('/app/sessions'), 1500);
-    }, [navigate, safeDestroyZego, sessionId, stopTimer]);
+    }, [navigate, safeDestroyZego, stopTimer]);
 
     const toggleMic = useCallback(() => {
         if (!zegoRef.current) return;
@@ -161,8 +165,16 @@ const VideoCallPage = () => {
                     tokenPrefix: tokenData.token?.substring(0, 10)
                 });
 
-                // Pass the server-generated Token04 directly to create()
-                const zp = ZegoUIKitPrebuilt.create(tokenData.token);
+                // Assemble a proper kitToken from the server-issued Token04 before calling create()
+                const kitToken = ZegoUIKitPrebuilt.generateKitTokenForProduction(
+                    Number(tokenData.appId),
+                    tokenData.token,
+                    tokenData.roomId,
+                    tokenData.userId,
+                    tokenData.userName,
+                );
+
+                const zp = ZegoUIKitPrebuilt.create(kitToken);
                 zegoRef.current = zp;
 
                 zp.joinRoom({
@@ -198,8 +210,27 @@ const VideoCallPage = () => {
                         }
                     },
 
-                    onLeaveRoom: () => {
-                        endCall();
+                    onLeaveRoom: async () => {
+                        // SDK has already left the room — do NOT call destroy() here
+                        // or ZEGOCLOUD's internal createSpan cleanup will crash.
+                        if (leavingRef.current) return;
+                        leavingRef.current = true;
+
+                        stopTimer();
+
+                        // Defer destroy to let SDK finish its own post-leave cleanup
+                        safeDestroyZego(300);
+
+                        try {
+                            if (joinedRef.current) {
+                                await markLeave(sessionId);
+                            }
+                        } catch (e) {
+                            console.warn('markLeave failed', e);
+                        }
+
+                        setStatus('ended');
+                        setTimeout(() => navigate('/app/sessions'), 1500);
                     },
                 });
             } catch (err) {

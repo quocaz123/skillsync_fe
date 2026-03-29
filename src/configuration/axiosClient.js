@@ -30,7 +30,14 @@ const processQueue = (error) => {
 // Response interceptor
 axiosClient.interceptors.response.use(
     (response) => {
-        if (response && response.data) return response.data;
+        if (response && response.data) {
+            const apiRes = response.data;
+            // Tự động bóc tách dữ liệu nếu backend trả về cấu trúc ApiResponse { code, message, data }
+            if (apiRes.code !== undefined && apiRes.message !== undefined && Object.prototype.hasOwnProperty.call(apiRes, 'data')) {
+                return apiRes.data;
+            }
+            return response.data;
+        }
         return response;
     },
     async (error) => {

@@ -27,8 +27,22 @@ export const useStore = create(
     user: null,
     isAuthenticated: false,
     role: 'user',
-    login: (userData) => set({ user: userData, isAuthenticated: true, role: userData.role || 'user' }),
-    logout: () => set({ user: null, isAuthenticated: false, role: 'user' }),
+    showMissionPopup: false,
+    dismissMissionPopup: () => set({ showMissionPopup: false }),
+    login: (userData) => set((state) => ({ 
+        user: userData, 
+        isAuthenticated: true, 
+        role: userData.role || 'user',
+        // Chỉ update credits nếu backend trả về giá trị hợp lệ (không null/undefined)
+        // Tránh overwrite credits về 0 khi creditsBalance bị thiếu trong response
+        credits: (userData.creditsBalance !== undefined && userData.creditsBalance !== null)
+            ? userData.creditsBalance
+            : state.credits,
+        showMissionPopup: true,
+    })),
+    // Sync credits từ server (gọi sau khi login hoặc khi cần đồng bộ)
+    syncCredits: (balance) => set({ credits: balance }),
+    logout: () => set({ user: null, isAuthenticated: false, role: 'user', creditHistory: [] }),
 
     // CREDIT & PROFILE STATE
     credits: 180, // 200 welcome - 20 spent = 180 after initial tx
@@ -163,7 +177,9 @@ export const useStore = create(
             partialize: (state) => ({
                 user: state.user,
                 isAuthenticated: state.isAuthenticated,
-                role: state.role
+                role: state.role,
+                credits: state.credits,
+                creditHistory: state.creditHistory
             }),
         }
     )

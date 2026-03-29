@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../../store';
 import * as sessionService from '../../services/sessionService';
+import { getAllSkills } from '../../services/skillService';
 import {
     MagnifyingGlass, Star, Sparkle, ArrowLeft, ChatCircle,
     Shield, Check, CalendarCheck, Lightning,
@@ -8,46 +9,9 @@ import {
     GraduationCap, FolderOpen, SealCheck,
     CalendarBlank, Clock, ChartBar, CheckCircle, Warning
 } from '@phosphor-icons/react';
+import { trackAction } from '../../services/missionService';
 
-// ─── API Mapping ───────────────────────────────────────────────────────────
-const mapSkillToMentor = (ts) => {
-    // Generate an avatar badge from name if no image
-    const name = ts.teacherName || 'Unknown';
-    const parts = name.split(' ');
-    const initials = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : name.substring(0, 2).toUpperCase();
-    const colors = ['bg-red-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-violet-500', 'bg-teal-500'];
-    const color = colors[name.length % colors.length];
-
-    return {
-        id: ts.id, // ID của TeachingSkill
-        teacherId: ts.teacherId,
-        name: name,
-        avatar: initials,
-        avatarBg: color,
-        avatarUrl: ts.teacherAvatar || null, // ảnh thật từ S3
-        skill: ts.skillName,
-        subSkills: [ts.skillCategory, ts.level], // Tạm dùng map category và level
-        level: ts.level,
-        rating: 5.0, // Mock rating
-        totalReviews: 0,
-        totalSessions: 0,
-        responseTime: '<1h',
-        price: ts.creditsPerHour,
-        match: 95,
-        slots: 0, // Sẽ fill sau từ API /slots/open hoặc pass 0
-        trustScore: 90,
-        isTopRated: false,
-        bio: ts.teacherBio || ts.experienceDesc, // Ưu tiên Bio user, fallback bằng experience
-        bioFull: ts.teacherBio || ts.experienceDesc,
-        teachingStyle: ts.experienceDesc,
-        outcomes: ts.outcomeDesc ? ts.outcomeDesc.split('\n').filter(Boolean) : ['Đạt được mục tiêu mong muốn'],
-        certs: [], // Mock list cho evidence type cert
-        evidences: [{ type: 'veteran', label: 'Verified Teacher', verified: true }],
-        portfolio: [],
-        reviews: [],
-        availableSlots: [], // Sẽ load khi click
-    };
-};
+import { mapSkillToMentor } from '../../utils/mapperUtils';
 
 const DATES = ['T2 10/3', 'T3 11/3', 'T4 12/3', 'T5 13/3', 'T6 14/3'];
 const TIMES = ['8:00 SA', '9:00 SA', '10:00 SA', '14:00 CH', '15:00 CH', '16:00 CH', '19:00 CH', '20:00 CH'];
@@ -346,6 +310,11 @@ const Explore = () => {
     const [mentors, setMentors] = useState([]);
     const [loadingMentors, setLoadingMentors] = useState(true);
 
+    const [availableSkills, setAvailableSkills] = useState([]);
+    const [activeSkillId, setActiveSkillId] = useState('all');
+    const [sortBy, setSortBy] = useState('experience');
+    const [showSortDropdown, setShowSortDropdown] = useState(false);
+
     const [selectedMentor, setSelectedMentor] = useState(null);
     const [activeTab, setActiveTab] = useState('intro');
     const [bookingStep, setBookingStep] = useState(0);
@@ -377,6 +346,18 @@ const Explore = () => {
         load();
     }, []);
 
+    useEffect(() => {
+        const loadSkills = async () => {
+            try {
+                const data = await getAllSkills();
+                setAvailableSkills(Array.isArray(data) ? data : []);
+            } catch (err) {
+                console.error('Lỗi lấy danh sách skills:', err);
+            }
+        };
+        loadSkills();
+    }, []);
+
     // Fetch lịch trống khi click vào mentor
     useEffect(() => {
         if (!selectedMentor) return;
@@ -406,13 +387,23 @@ const Explore = () => {
 
     const learningInterests = mySkills.filter(s => s.type === 'learn').map(s => s.name.toLowerCase());
 
-    const filteredMentors = mentors.filter(m =>
-        m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.skill.toLowerCase().includes(searchTerm.toLowerCase())
-    ).sort((a, b) => {
-        const aBoost = learningInterests.includes(a.skill.toLowerCase()) ? 20 : 0;
-        const bBoost = learningInterests.includes(b.skill.toLowerCase()) ? 20 : 0;
-        return (b.match + bBoost) - (a.match + aBoost);
+    const activeSkillName = activeSkillId === 'all' ? null : availableSkills.find(s => s.id === activeSkillId)?.name;
+
+    const filteredMentors = mentors.filter(m => {
+        const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase()) || m.skill.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSkill = activeSkillId === 'all' || m.skill === activeSkillName;
+        return matchesSearch && matchesSkill;
+    }).sort((a, b) => {
+        if (sortBy === 'match') {
+            const aBoost = learningInterests.includes(a.skill.toLowerCase()) ? 20 : 0;
+            const bBoost = learningInterests.includes(b.skill.toLowerCase()) ? 20 : 0;
+            return (b.match + bBoost) - (a.match + aBoost);
+        }
+        if (sortBy === 'experience') return b.totalSessions - a.totalSessions;
+        if (sortBy === 'rating') return b.rating - a.rating;
+        if (sortBy === 'price_asc') return a.price - b.price;
+        if (sortBy === 'price_desc') return b.price - a.price;
+        return 0;
     });
 
     const resetAll = () => {
@@ -765,9 +756,8 @@ const Explore = () => {
     // ─── EXPLORE LIST VIEW ──────────────────────────────────────────────
     return (
         <div className="max-w-6xl mx-auto font-sans pb-12 space-y-8">
-            {/* Quick Filter Section */}
             <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-4">
                     <div className="flex-1 relative">
                         <MagnifyingGlass size={18} weight="bold" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
@@ -778,40 +768,74 @@ const Explore = () => {
                             className="w-full pl-11 pr-5 py-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-900 placeholder-slate-400 outline-none focus:border-violet-300 focus:bg-white transition-all font-semibold"
                         />
                     </div>
-                    <button className="px-5 py-3 flex items-center justify-between gap-3 bg-white border border-slate-200 rounded-xl text-slate-700 font-extrabold text-sm hover:border-slate-300 transition-colors shrink-0 min-w-[200px]">
-                        <span className="flex items-center gap-2">
-                            <span className="relative flex shrink-0 h-4 w-4">
-                                <span className="absolute top-0 right-0 w-2 h-2 bg-pink-400 rounded-sm"></span>
-                                <span className="absolute top-0 left-0 w-2 h-2 bg-emerald-400 rounded-sm"></span>
-                                <span className="absolute bottom-0 right-0 w-2 h-2 bg-sky-400 rounded-sm"></span>
-                                <span className="absolute bottom-0 left-0 w-2 h-2 bg-violet-400 rounded-sm"></span>
+                    <div className="relative shrink-0 sm:min-w-[200px]">
+                        <button
+                            onClick={() => setShowSortDropdown(!showSortDropdown)}
+                            className="w-full px-5 py-3 flex items-center justify-between gap-3 bg-white border border-slate-200 rounded-xl text-slate-700 font-extrabold text-sm hover:border-slate-300 transition-colors"
+                        >
+                            <span className="flex items-center gap-2">
+                                <span className="relative flex shrink-0 h-4 w-4">
+                                    <span className="absolute top-0 right-0 w-2 h-2 bg-pink-400 rounded-sm"></span>
+                                    <span className="absolute top-0 left-0 w-2 h-2 bg-emerald-400 rounded-sm"></span>
+                                    <span className="absolute bottom-0 right-0 w-2 h-2 bg-sky-400 rounded-sm"></span>
+                                    <span className="absolute bottom-0 left-0 w-2 h-2 bg-violet-400 rounded-sm"></span>
+                                </span>
+                                {sortBy === 'match' && 'Phù hợp nhất'}
+                                {sortBy === 'experience' && 'Nhiều kinh nghiệm'}
+                                {sortBy === 'rating' && 'Đánh giá cao'}
+                                {sortBy === 'price_asc' && 'Giá thấp nhất'}
+                                {sortBy === 'price_desc' && 'Giá cao nhất'}
                             </span>
-                            Nhiều kinh nghiệm
-                        </span>
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                    </button>
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" className={`transition-transform duration-200 ${showSortDropdown ? 'rotate-180' : ''}`}>
+                                <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        </button>
+
+                        {showSortDropdown && (
+                            <>
+                                <div className="fixed inset-0 z-10" onClick={() => setShowSortDropdown(false)}></div>
+                                <div className="absolute right-0 top-full mt-2 w-full bg-white rounded-xl border border-slate-100 shadow-lg py-2 z-20 animate-in fade-in slide-in-from-top-2">
+                                    {[
+                                        { id: 'match', label: 'Phù hợp nhất' },
+                                        { id: 'experience', label: 'Nhiều kinh nghiệm' },
+                                        { id: 'rating', label: 'Đánh giá cao' },
+                                        { id: 'price_asc', label: 'Giá thấp nhất' },
+                                        { id: 'price_desc', label: 'Giá cao nhất' },
+                                    ].map(option => (
+                                        <button
+                                            key={option.id}
+                                            onClick={() => { setSortBy(option.id); setShowSortDropdown(false); }}
+                                            className={`w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-slate-50 transition-colors ${sortBy === option.id ? 'text-violet-600 bg-violet-50' : 'text-slate-600'}`}
+                                        >
+                                            {option.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2.5">
-                    {[
-                        { id: 'all', label: 'Tất cả' },
-                        { id: 'tech', label: 'Công nghệ' },
-                        { id: 'design', label: 'Thiết kế' },
-                        { id: 'soft_skills', label: 'Kỹ năng mềm' },
-                        { id: 'creative', label: 'Sáng tạo' },
-                        { id: 'business', label: 'Kinh doanh' },
-                        { id: 'languages', label: 'Ngôn ngữ' }
-                    ].map(cat => (
+                <div className="flex overflow-x-auto gap-2.5 pb-3 pt-1 -mx-2 px-2 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 transition-colors">
+                    <button
+                        onClick={() => setActiveSkillId('all')}
+                        className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition-all ${activeSkillId === 'all'
+                            ? 'bg-indigo-50/50 text-indigo-600 border-indigo-200 shadow-sm'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-sm'
+                            }`}
+                    >
+                        Tất cả
+                    </button>
+                    {availableSkills.map(skill => (
                         <button
-                            key={cat.id}
-                            className={`px-4 py-2 rounded-full text-sm font-bold border transition-all ${cat.id === 'all'
-                                ? 'bg-indigo-50/50 text-indigo-600 border-indigo-200'
-                                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                            key={skill.id}
+                            onClick={() => setActiveSkillId(skill.id)}
+                            className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold border transition-all ${activeSkillId === skill.id
+                                ? 'bg-indigo-50/50 text-indigo-600 border-indigo-200 shadow-sm'
+                                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-sm'
                                 }`}
                         >
-                            {cat.label}
+                            {skill.name}
                         </button>
                     ))}
                 </div>

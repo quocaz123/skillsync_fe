@@ -5,101 +5,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const myPaths = [
-    {
-        id: 'p1',
-        title: 'React từ Zero đến Production',
-        emoji: '⚛️',
-        mentor: {
-            name: 'Minh Anh',
-            role: 'Senior Frontend Engineer @ Shopee',
-            avatarText: 'MA',
-            verified: true,
-            rating: 4.9,
-            students: 128
-        },
-        duration: '10 tuần',
-        level: 'Intermediate',
-        totalCredits: 120,
-        progress: 20,
-        description: 'Lộ trình 10 tuần học React thực chiến — xây dựng 3 dự án thật, không chỉ đọc docs. Kết thúc có portfolio xịn để đi phỏng vấn.',
-        currentModule: 2,
-        modules: [
-            { id: 'm1', title: 'JavaScript Foundations', status: 'completed', completedDate: '15/01', criteria: '3/3' },
-            { id: 'm2', title: 'React Core Concepts', status: 'ongoing', progress: 17, criteria: '0/4', sessionsNeeded: 4, sessionsBooked: 2 },
-            { id: 'm3', title: 'Hooks & Side Effects', status: 'locked', sessionsNeeded: 3, sessionsBooked: 0 },
-            { id: 'm4', title: 'React Router & State Management', status: 'locked', sessionsNeeded: 3, sessionsBooked: 0 },
-            { id: 'm5', title: 'Capstone Project', status: 'locked', sessionsNeeded: 4, sessionsBooked: 0 }
-        ]
-    }
-];
-
-const explorePaths = [
-    {
-        id: 'e1',
-        title: 'React từ Zero đến Production',
-        enrolled: true,
-        logoBg: 'bg-indigo-100',
-        logoText: 'text-indigo-600',
-        emoji: '⚛️',
-        mentor: {
-            name: 'Minh Anh',
-            role: 'Senior Frontend Engineer @ Shopee',
-            avatarText: 'MA',
-            verified: true,
-            rating: 4.9,
-            students: 128,
-            graduates: 8,
-            costPerSession: 15,
-            totalSessions: 17
-        },
-        duration: '10 tuần',
-        level: 'Intermediate',
-        totalCredits: 120,
-        students: 34,
-        category: 'Công nghệ',
-        description: 'Lộ trình 10 tuần học React thực chiến — xây dựng 3 dự án thật, không chỉ đọc docs. Kết thúc có portfolio xịn để đi phỏng vấn.',
-        modules: [
-            { id: 'm1', title: 'JavaScript Foundations', desc: '3 buổi • Mini project: To-do app thuần JS' },
-            { id: 'm2', title: 'React Core Concepts', desc: '4 buổi • Xây dựng UI component library nhỏ' },
-            { id: 'm3', title: 'Hooks & Side Effects', desc: '3 buổi • Custom hook: useLocalStorage, useFetch' },
-            { id: 'm4', title: 'React Router & State Management', desc: '3 buổi • SPA với authentication flow hoàn chỉnh' },
-            { id: 'm5', title: 'Capstone Project', desc: '4 buổi • Production-ready app trong portfolio' }
-        ]
-    },
-    {
-        id: 'e2',
-        title: 'UX Design: Từ Tư Duy đến Portfolio',
-        enrolled: false,
-        logoBg: 'bg-pink-100',
-        logoText: 'text-pink-600',
-        emoji: '🎨',
-        mentor: {
-            name: 'Thùy Linh',
-            role: 'Product Designer @ Grab',
-            avatarText: 'TL',
-            verified: true,
-            rating: 5.0,
-            students: 86,
-            graduates: 12,
-            costPerSession: 12,
-            totalSessions: 12
-        },
-        duration: '12 tuần',
-        level: 'Beginner',
-        totalCredits: 144,
-        students: 22,
-        category: 'Thiết kế',
-        description: '12 tuần học UX thực chiến — empathy, research, wireframe, prototype, usability test. Ra trường với 3 case study portfolio-ready.',
-        modules: [
-            { id: 'm1', title: 'Design Thinking & Empathy', desc: '2 buổi • Thấu hiểu người dùng qua phỏng vấn' },
-            { id: 'm2', title: 'User Research & Personas', desc: '3 buổi • Phân tích dữ liệu, tạo chân dung Users' },
-            { id: 'm3', title: 'Information Architecture', desc: '2 buổi • Sơ đồ luồng, User Journey' },
-            { id: 'm4', title: 'Wireframing & Prototyping', desc: '3 buổi • Figma cơ bản đến nâng cao' },
-            { id: 'm5', title: 'Usability Testing & Portfolio', desc: '2 buổi • Đánh giá thiết kế và làm Case Study' }
-        ]
-    }
-];
+import { MY_PATHS_MOCK as myPaths, EXPLORE_PATHS_MOCK as explorePaths } from '../../utils/mockData';
 
 const LearningPath = () => {
     const [activeTab, setActiveTab] = useState('my_paths'); // 'my_paths' | 'explore'
@@ -166,7 +72,7 @@ const LearningPath = () => {
                     {/* Right Content: Active Path Detail */}
                     <div className="xl:col-span-3 space-y-6">
                         {myPaths.map(path => (
-                            <div>
+                            <div key={path.id}>
                                 {/* BIG BANNER */}
                                 <div className="bg-[#6B72FF] rounded-3xl p-5 lg:p-6 text-white relative overflow-hidden shadow-xl shadow-indigo-900/20 mb-5">
                                     <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-[60px] -translate-y-10 translate-x-20 pointer-events-none"></div>
