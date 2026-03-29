@@ -1261,7 +1261,7 @@ const Community = () => {
         setError("Chưa có danh mục forum hợp lệ để tạo bài viết.");
         return;
       }
-      await createForumPost({
+      const createdPost = await createForumPost({
         categoryId,
         title: payload.title,
         content: payload.content,
@@ -1269,8 +1269,20 @@ const Community = () => {
         tags: payload.tags,
       });
       setShowNewPost(false);
-      await loadForumData();
-      setMyPostsLoaded(false);
+      if (activeTab === "my-posts") {
+        setMyPosts((current) => {
+          const nextPosts = [
+            createdPost,
+            ...current.filter((post) => post.id !== createdPost.id),
+          ];
+          return nextPosts;
+        });
+        setMyPostsLoaded(true);
+        setActiveTab("my-posts");
+      } else {
+        await loadForumData();
+        setMyPostsLoaded(false);
+      }
     } catch (err) {
       setError(
         err?.response?.data?.message ||
@@ -1324,8 +1336,9 @@ const Community = () => {
       setSaving(true);
       await deleteForumPost(id);
       setDeletingPostId(null);
-      await loadForumData();
-      setMyPostsLoaded(false);
+      setPosts((current) => current.filter((post) => post.id !== id));
+      setMyPosts((current) => current.filter((post) => post.id !== id));
+      setActivePost((current) => (current?.id === id ? null : current));
     } catch (err) {
       setError(
         err?.response?.data?.message ||
@@ -1757,7 +1770,6 @@ const Community = () => {
               </div>
               <button
                 onClick={() => {
-                  setActiveTab("community");
                   setShowNewPost(true);
                 }}
                 className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white font-bold text-sm rounded-xl shadow-md shadow-violet-200 active:scale-95 transition-all"
