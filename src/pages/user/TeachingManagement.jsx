@@ -159,7 +159,7 @@ const TabSchedule = ({ skills }) => {
                         className={`w-full text-left p-4 rounded-2xl border-2 transition-all ${selectedSkill?.id === s.id ? 'border-violet-400 bg-violet-50' : 'border-slate-100 bg-white hover:border-slate-200'}`}
                     >
                         <div className="flex items-center gap-2 mb-1">
-                            <span className="text-base">{s.skillIcon || 'ðŸ“˜'}</span>
+                            <span className="text-base">{s.skillIcon || '📘'}</span>
                             <span className={`font-bold text-sm ${selectedSkill?.id === s.id ? 'text-violet-700' : 'text-slate-700'}`}>{s.skillName}</span>
                         </div>
                         <p className="text-[11px] text-slate-400">
@@ -212,9 +212,9 @@ const TabSchedule = ({ skills }) => {
                     <div className="space-y-2 mb-4">
                         {/* Header labels */}
                         <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1">
-                            <span>NgÃ y dáº¡y</span>
-                            <span>Báº¯t Ä‘áº§u</span>
-                            <span>Káº¿t thÃºc</span>
+                            <span>Ngày dạy</span>
+                            <span>Bắt đầu</span>
+                            <span>Kết thúc</span>
                             <span></span>
                         </div>
 
@@ -295,7 +295,7 @@ const TabSubjects = ({ skills, onSelectSkill }) => {
                 <div key={skill.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                     <div className="p-6 pb-4 flex flex-col md:flex-row md:items-start gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-violet-100 flex items-center justify-center text-2xl shrink-0">
-                            {skill.skillIcon || 'ðŸ“˜'}
+                            {skill.skillIcon || '📘'}
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -380,8 +380,8 @@ const TabRequests = ({ navigate }) => {
                                 <div className="flex-1">
                                     <div className="flex flex-wrap items-center gap-2 mb-1.5">
                                         <span className="font-extrabold text-slate-900 text-sm">{session.learnerName}</span>
-                                        <span className="text-[11px] text-slate-400">muá»‘n há»c</span>
-                                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-600">ðŸ“˜ {session.skillName}</span>
+                                        <span className="text-[11px] text-slate-400">muốn học</span>
+                                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-600">📘 {session.skillName}</span>
                                     </div>
                                     <div className="flex flex-wrap gap-3 text-xs text-slate-500 font-medium">
                                         <span className="flex items-center gap-1"><CalendarCheck size={12} weight="duotone" className="text-violet-400" />

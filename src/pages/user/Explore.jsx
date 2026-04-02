@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useStore } from '../../store';
 import * as sessionService from '../../services/sessionService';
 import { getAllSkills } from '../../services/skillService';
+import { getMyProfile } from '../../services/userService';
 import {
     MagnifyingGlass, Star, Sparkle, ArrowLeft, ChatCircle,
     Shield, Check, CalendarCheck, Lightning,
@@ -304,7 +305,7 @@ const DETAIL_TABS = [
 // ─── Main Explore Component ──────────────────────────────────────────────
 
 const Explore = () => {
-    const { credits, mySkills, user } = useStore();
+    const { credits, mySkills, user, syncCredits } = useStore();
     const currentUserId = user?.id ?? null;
     const [searchTerm, setSearchTerm] = useState('');
     const [mentors, setMentors] = useState([]);
@@ -421,6 +422,13 @@ const Explore = () => {
         try {
             await sessionService.bookSession(selectedSlotId, note);
             setBookingStep(3);
+            // Sync updated credits from server
+            try {
+                const freshUser = await getMyProfile();
+                if (freshUser?.creditsBalance != null) syncCredits(freshUser.creditsBalance);
+            } catch (err) {
+                console.error('Lỗi sync credits sau booking:', err);
+            }
         } catch (error) {
             console.error('Lỗi khi book session:', error);
             alert(error.response?.data?.message || error.message || 'Lỗi đặt lịch. Vui lòng thử lại.');

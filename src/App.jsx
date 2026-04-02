@@ -15,8 +15,8 @@ import AdminPaths from './pages/admin/AdminPaths';
 import AdminSystem from './pages/admin/AdminSystem';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminTeachingSkills from './pages/admin/AdminTeachingSkills';
+import AdminEscrow from './pages/admin/AdminEscrow';
 import Explore from './pages/user/Explore';
-import Skills from './pages/user/Skills';
 import Sessions from './pages/user/Sessions';
 import JoinSessionGuidePage from './pages/user/JoinSessionGuide';
 import Profile from './pages/user/Profile';
@@ -63,7 +63,6 @@ function App() {
         <Route path="/app" element={<ProtectedUserRoute><MainLayout /></ProtectedUserRoute>}>
           <Route index element={<UserDashboard />} />
           <Route path="explore" element={<Explore />} />
-          <Route path="skills" element={<Skills />} />
           <Route path="sessions" element={<Sessions />} />
           <Route path="guide" element={<JoinSessionGuidePage />} />
           <Route path="profile" element={<Profile />} />
@@ -82,6 +81,7 @@ function App() {
           <Route index element={<AdminDash />} />
           <Route path="reports" element={<AdminReports />} />
           <Route path="sessions" element={<AdminSessions />} />
+          <Route path="escrow" element={<AdminEscrow />} />
           <Route path="credits" element={<AdminCredits />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="teaching-skills" element={<AdminTeachingSkills />} />

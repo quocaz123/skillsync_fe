@@ -50,7 +50,21 @@ export const API_ENDPOINTS = {
         ZEGO_TOKEN: (id) => `/api/sessions/${id}/zego-token`,
         JOIN: (id) => `/api/sessions/${id}/join`,
         LEAVE: (id) => `/api/sessions/${id}/leave`,
+        CONFIRM: (id) => `/api/sessions/${id}/confirm`,
     },
+    REPORTS: {
+        CREATE_SESSION_REPORT: (sessionId) => `/api/reports/session/${sessionId}`,
+        PENDING: '/api/reports/pending',
+    },
+    CREDITS: {
+        HISTORY: '/api/credits/history',
+    },
+    REVIEWS: {
+        CREATE: '/api/reviews',
+    },
+    ADMIN_ESCROW: '/api/admin/escrow',
+    ADMIN_USERS: '/api/admin/users',
+    ADMIN_REPORTS: '/api/admin/reports',
 };
 
 export default API_ENDPOINTS;

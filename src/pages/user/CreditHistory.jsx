@@ -1,18 +1,40 @@
+import { useState, useEffect } from 'react';
 import { useStore } from '../../store';
-import { Zap, TrendingUp, TrendingDown, Clock, BookOpen, Award, Gift, ArrowUpRight, ArrowDownRight, Wallet } from 'lucide-react';
+import { Zap, TrendingUp, TrendingDown, Clock, BookOpen, Award, Gift, ArrowUpRight, ArrowDownRight, Wallet, Loader2 } from 'lucide-react';
+import { getMyCreditHistory } from '../../services/creditService';
+import { getMyProfile } from '../../services/userService';
 
 const TX_CONFIG = {
-    session_booked: { icon: BookOpen, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', label: 'Đặt lịch học', sign: '-' },
-    session_completed: { icon: Award, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', label: 'Nhận từ buổi dạy', sign: '+' },
-    welcome: { icon: Gift, color: 'text-[#5A63F6]', bg: 'bg-indigo-50', border: 'border-indigo-100', label: 'Welcome / Nhiệm vụ', sign: '+' },
-    bonus: { icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', label: 'Thưởng cộng đồng', sign: '+' },
+    SPEND_SESSION: { icon: BookOpen, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', label: 'Đặt lịch học', sign: '-' },
+    EARN_SESSION: { icon: Award, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', label: 'Nhận từ buổi dạy', sign: '+' },
+    WELCOME_BONUS: { icon: Gift, color: 'text-[#5A63F6]', bg: 'bg-indigo-50', border: 'border-indigo-100', label: 'Welcome / Nhiệm vụ', sign: '+' },
+    REFUND: { icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', label: 'Hoàn tiền', sign: '+' },
 };
 
 const CreditHistory = () => {
-    const { credits, creditHistory } = useStore();
+    const { credits, syncCredits } = useStore();
+    const [history, setHistory] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const totalEarned = creditHistory.filter(tx => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0);
-    const totalSpent = creditHistory.filter(tx => tx.amount < 0).reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+    useEffect(() => {
+        const fetchHistory = async () => {
+            try {
+                const data = await getMyCreditHistory();
+                setHistory(Array.isArray(data) ? data : []);
+                // Sync fresh credits from server
+                const freshUser = await getMyProfile();
+                if (freshUser?.creditsBalance != null) syncCredits(freshUser.creditsBalance);
+            } catch (error) {
+                console.error('Failed to fetch credit history:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchHistory();
+    }, [syncCredits]);
+
+    const totalEarned = history.filter(tx => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0);
+    const totalSpent = history.filter(tx => tx.amount < 0).reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
 
     return (
         <div className="max-w-4xl mx-auto font-sans pb-4 space-y-5 sm:space-y-8">
@@ -74,18 +96,22 @@ const CreditHistory = () => {
                     <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
                         <Clock size={20} className="text-[#5A63F6]" /> Lịch sử giao dịch
                     </h2>
-                    <span className="text-sm font-bold text-slate-400">{creditHistory.length} giao dịch</span>
+                    <span className="text-sm font-bold text-slate-400">{history.length} giao dịch</span>
                 </div>
 
-                {creditHistory.length === 0 ? (
+                {loading ? (
+                    <div className="flex items-center justify-center p-16 text-slate-400">
+                        <Loader2 className="animate-spin mr-2" /> Đang tải dữ liệu...
+                    </div>
+                ) : history.length === 0 ? (
                     <div className="p-16 text-center">
                         <div className="text-5xl mb-4">💳</div>
                         <p className="text-slate-500 font-medium">Chưa có giao dịch nào</p>
                     </div>
                 ) : (
                     <div className="divide-y divide-slate-50">
-                        {creditHistory.map((tx, idx) => {
-                            const config = TX_CONFIG[tx.type] || TX_CONFIG['welcome'];
+                        {history.map((tx, idx) => {
+                            const config = TX_CONFIG[tx.transactionType] || TX_CONFIG['WELCOME_BONUS'];
                             const Icon = config.icon;
                             const isPositive = tx.amount > 0;
                             return (
@@ -102,7 +128,7 @@ const CreditHistory = () => {
                                                 {config.label}
                                             </span>
                                             <span className="text-xs text-slate-400 font-medium">
-                                                {new Date(tx.date).toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                {new Date(tx.createdAt).toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </div>
                                     </div>
@@ -124,10 +150,10 @@ const CreditHistory = () => {
                 <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div>
                         <h3 className="text-xl font-extrabold mb-2 flex items-center gap-2"><Zap size={20} fill="currentColor" className="text-amber-300" /> Kiếm thêm Credits</h3>
-                        <p className="text-white/80 text-sm font-medium max-w-md">Dạy kỹ năng của bạn cho người khác và nhận credits. Credits = phần thưởng cho đóng góp cộng đồng!</p>
+                        <p className="text-white/80 text-sm font-medium max-w-md">Hoàn thành nhiệm vụ hàng ngày và tích cực tham gia hoạt động cộng đồng để nhận ngay credits thưởng!</p>
                     </div>
-                    <a href="/app/skills" className="shrink-0 px-6 py-3 bg-white text-[#5A63F6] font-bold rounded-xl hover:bg-white/90 transition-colors active:scale-95">
-                        Thêm kỹ năng dạy →
+                    <a href="/app/missions" className="shrink-0 px-6 py-3 bg-white text-[#5A63F6] font-bold rounded-xl hover:bg-white/90 transition-colors active:scale-95">
+                        Làm nhiệm vụ ngay →
                     </a>
                 </div>
             </div>

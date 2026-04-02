@@ -75,3 +75,12 @@ export const markJoin = async (sessionId) => {
 export const markLeave = async (sessionId) => {
     await httpClient.post(SESSIONS.LEAVE(sessionId));
 };
+
+/**
+ * Learner confirms session completion to release funds
+ * @param {string} sessionId
+ */
+export const confirmSession = async (sessionId) => {
+    const res = await httpClient.post(SESSIONS.CONFIRM(sessionId));
+    return unwrap(res);
+};

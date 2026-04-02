@@ -26,6 +26,7 @@ import { uploadFile } from '../../services/uploadService.js';
 import { getMyProfile, updateAvatar, updateBio } from '../../services/userService.js';
 import { getMyTeachingSkills, deleteTeachingSkill } from '../../services/skillService.js';
 import { trackAction } from '../../services/missionService.js';
+import { getReviewsByUserId } from '../../services/reviewService.js';
 
 const LEVEL_LABEL = {
     BEGINNER: 'Beginner',
@@ -53,6 +54,10 @@ const Profile = () => {
     // Teaching skills state
     const [teachingSkills, setTeachingSkills] = useState([]);
     const [loadingSkills, setLoadingSkills] = useState(false);
+
+    // Reviews state
+    const [reviews, setReviews] = useState([]);
+    const [loadingReviews, setLoadingReviews] = useState(false);
 
     // Load profile + teaching skills on mount
     useEffect(() => {
@@ -278,6 +283,12 @@ const Profile = () => {
                     >
                         <Users size={18} /> Giảng viên
                     </button>
+                    <button
+                        onClick={() => setActiveTab('reviews')}
+                        className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold transition-all duration-300 ${activeTab === 'reviews' ? 'bg-white text-amber-600 shadow-sm shadow-slate-200/50 scale-100' : 'text-slate-500 hover:text-slate-700 scale-95 hover:scale-100'}`}
+                    >
+                        <Star size={18} /> Đánh giá
+                    </button>
                 </div>
             </div>
 
@@ -328,34 +339,74 @@ const Profile = () => {
                                         </div>
                                     ))
                                 )
-                            ) : loadingSkills ? (
-                                <div className="flex items-center gap-2 text-slate-400">
-                                    <Loader2 size={18} className="animate-spin" />
-                                    <span className="text-sm">Đang tải...</span>
-                                </div>
-                            ) : teachingSkills.length === 0 ? (
-                                <p className="text-slate-400 text-sm">Bạn chưa có kỹ năng dạy nào. Thêm ngay!</p>
-                            ) : (
-                                teachingSkills.map((ts) => (
-                                    <div key={ts.id} className="group flex items-center gap-2 px-4 py-2.5 rounded-xl border font-semibold text-sm bg-purple-50/50 border-purple-200 text-purple-700 hover:shadow-purple-200 hover:-translate-y-1 transition-all shadow-sm">
-                                        <span>{ts.skillIcon}</span>
-                                        <span>{ts.skillName}</span>
-                                        <span className="text-[10px] bg-purple-100 px-1.5 py-0.5 rounded font-bold">{ts.level}</span>
-                                        <button
-                                            onClick={() => handleDeleteSkill(ts.id)}
-                                            className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all ml-1"
-                                            title="Xóa"
-                                        >
-                                            <X size={14} />
-                                        </button>
+                            ) : activeTab === 'mentor' ? (
+                                loadingSkills ? (
+                                    <div className="flex items-center gap-2 text-slate-400">
+                                        <Loader2 size={18} className="animate-spin" />
+                                        <span className="text-sm">Đang tải...</span>
                                     </div>
-                                ))
+                                ) : teachingSkills.length === 0 ? (
+                                    <p className="text-slate-400 text-sm">Bạn chưa có kỹ năng dạy nào. Thêm ngay!</p>
+                                ) : (
+                                    teachingSkills.map((ts) => (
+                                        <div key={ts.id} className="group flex items-center gap-2 px-4 py-2.5 rounded-xl border font-semibold text-sm bg-purple-50/50 border-purple-200 text-purple-700 hover:shadow-purple-200 hover:-translate-y-1 transition-all shadow-sm">
+                                            <span>{ts.skillIcon}</span>
+                                            <span>{ts.skillName}</span>
+                                            <span className="text-[10px] bg-purple-100 px-1.5 py-0.5 rounded font-bold">{ts.level}</span>
+                                            <button
+                                                onClick={() => handleDeleteSkill(ts.id)}
+                                                className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all ml-1"
+                                                title="Xóa"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    ))
+                                )
+                            ) : (
+                                <div className="w-full flex flex-col gap-4">
+                                    {loadingReviews ? (
+                                        <div className="flex items-center gap-2 text-slate-400">
+                                            <Loader2 size={18} className="animate-spin" />
+                                            <span className="text-sm">Đang tải đánh giá...</span>
+                                        </div>
+                                    ) : reviews.length === 0 ? (
+                                        <p className="text-slate-400 text-sm">Chưa có đánh giá nào từ học viên.</p>
+                                    ) : (
+                                        reviews.map((r) => (
+                                            <div key={r.id} className="bg-amber-50/50 border border-amber-100 rounded-2xl p-5 shadow-sm">
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center font-bold text-amber-600 shadow-sm shrink-0 overflow-hidden">
+                                                            {r.reviewerAvatar ? <img src={r.reviewerAvatar} alt="avatar" className="w-full h-full object-cover"/> : r.reviewerName?.charAt(0)}
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-bold text-slate-800 text-sm">{r.reviewerName}</div>
+                                                            <div className="text-xs text-slate-500 flex items-center gap-1">
+                                                                Thuộc khóa: <span className="font-semibold text-slate-600">{r.skillName}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-0.5 bg-white px-2 py-1 rounded-full border border-amber-100 shadow-sm">
+                                                        {[...Array(5)].map((_, i) => (
+                                                            <Star key={i} size={12} className={i < r.rating ? 'fill-amber-400 text-amber-400' : 'fill-slate-200 text-slate-200'} />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <p className="text-slate-700 text-sm italic font-medium bg-white/50 p-3 rounded-xl">"{r.comment}"</p>
+                                                <div className="text-[10px] text-slate-400 font-medium text-right mt-2">
+                                                    {new Date(r.createdAt).toLocaleDateString('vi-VN')}
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
                             )}
 
                             {activeTab === 'mentor' && (
                                 <button
                                     onClick={() => setShowAddSkillModal(true)}
-                                    className="px-5 py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-semibold text-sm hover:bg-slate-50 hover:border-slate-400 hover:text-slate-700 transition-colors flex items-center gap-2"
+                                    className="col-span-1 min-w-[120px] px-5 py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-semibold text-sm hover:bg-slate-50 hover:border-slate-400 hover:text-slate-700 transition-colors flex items-center justify-center gap-2"
                                 >
                                     + Thêm mới
                                 </button>

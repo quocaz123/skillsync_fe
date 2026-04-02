@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useStore } from '../../store';
-import { login as apiLogin, getCurrentUser } from '../../services/authService';
+import { login as apiLogin } from '../../services/authService';
+import { getMyProfile } from '../../services/userService';
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 import { Mail, Lock } from 'lucide-react';
 
@@ -24,7 +25,7 @@ const Login = () => {
             setSession(user);
             // Fetch lại creditsBalance mới nhất từ DB để đảm bảo đồng bộ
             try {
-                const freshUser = await getCurrentUser();
+                const freshUser = await getMyProfile();
                 if (freshUser?.creditsBalance != null) syncCredits(freshUser.creditsBalance);
             } catch { /* không block login nếu fetch me thất bại */ }
             if (user.role === 'admin') navigate('/admin');
@@ -44,7 +45,7 @@ const Login = () => {
         setSession(user);
         // Sync credits sau Google login
         try {
-            const freshUser = await getCurrentUser();
+            const freshUser = await getMyProfile();
             if (freshUser?.creditsBalance != null) syncCredits(freshUser.creditsBalance);
         } catch { /* ignore */ }
         if (user.role === 'admin') navigate('/admin');
