@@ -56,7 +56,7 @@ const SidebarContent = ({ onLinkClick, isCollapsed, location, user, credits, han
                                 className={`flex items-center ${isCollapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5'} rounded-xl transition-all duration-200 group ${isActive
                                     ? 'bg-violet-100 text-violet-700 font-semibold'
                                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                                }`}
+                                    }`}
                             >
                                 <Icon size={22} weight={isActive ? 'duotone' : 'regular'}
                                     className={`shrink-0 ${isActive ? 'text-violet-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
@@ -142,7 +142,7 @@ const MainLayout = () => {
             const today = new Date().toDateString();
             const storedDate = localStorage.getItem(dateKey);
             let time = parseInt(localStorage.getItem(onlineKey) || '0', 10);
-            
+
             if (storedDate !== today) {
                 time = 0;
                 localStorage.setItem(dateKey, today);
@@ -150,18 +150,18 @@ const MainLayout = () => {
             time += 1; // Cập nhật mỗi 1s
             localStorage.setItem(onlineKey, time.toString());
             setOnlineTime(time);
-            
+
             // Only fire the event occasionally to not overload other components, or every second is fine too
             if (time % 5 === 0) window.dispatchEvent(new Event('onlineTimeUpdated'));
         }, 1000);
-        
+
         return () => clearInterval(interval);
     }, [user]);
 
     // Sync credits every 30 seconds to ensure sidebar/topbar always show latest balance
     useEffect(() => {
         if (!user) return;
-        
+
         const syncCreditsFromServer = async () => {
             try {
                 const freshUser = await getMyProfile();
@@ -234,13 +234,13 @@ const MainLayout = () => {
             <MissionWelcomePopup />
 
             <aside className={`hidden md:flex ${isCollapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200 flex-col transition-all duration-300 relative z-20 shrink-0`}>
-                <SidebarContent 
-                    onLinkClick={undefined} 
-                    isCollapsed={isCollapsed} 
-                    location={location} 
-                    user={user} 
-                    credits={credits} 
-                    handleLogout={handleLogout} 
+                <SidebarContent
+                    onLinkClick={undefined}
+                    isCollapsed={isCollapsed}
+                    location={location}
+                    user={user}
+                    credits={credits}
+                    handleLogout={handleLogout}
                 />
             </aside>
 
@@ -259,13 +259,13 @@ const MainLayout = () => {
                 >
                     <X size={18} />
                 </button>
-                <SidebarContent 
-                    onLinkClick={() => setMobileOpen(false)} 
-                    isCollapsed={isCollapsed} 
-                    location={location} 
-                    user={user} 
-                    credits={credits} 
-                    handleLogout={handleLogout} 
+                <SidebarContent
+                    onLinkClick={() => setMobileOpen(false)}
+                    isCollapsed={isCollapsed}
+                    location={location}
+                    user={user}
+                    credits={credits}
+                    handleLogout={handleLogout}
                 />
             </aside>
 
