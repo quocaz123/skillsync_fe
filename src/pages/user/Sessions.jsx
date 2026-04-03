@@ -19,6 +19,22 @@ const StarRating = ({ rating, setRating }) => (
     </div>
 );
 
+// ─── Join-time guard ────────────────────────────────────────────────────────
+// Returns: { state: 'no-time' | 'too-early' | 'ready' | 'ended', minutesLeft, label }
+const getJoinStatus = (session) => {
+    if (!session.slotDate || !session.slotTime) return { state: 'no-time' };
+    const slotDt = new Date(`${session.slotDate}T${session.slotTime}`);
+    const now = new Date();
+    const diffMs = slotDt - now;
+    const diffMin = Math.ceil(diffMs / 60000);
+    // Allow join 15 minutes before start
+    if (diffMin > 15) return { state: 'too-early', minutesLeft: diffMin };
+    // Allow up to 24h after start (backend enforces this too)
+    const afterMs = now - slotDt;
+    if (afterMs > 24 * 60 * 60 * 1000) return { state: 'ended' };
+    return { state: 'ready' };
+};
+
 const Sessions = () => {
     const navigate = useNavigate();
     const { user } = useStore();
@@ -33,6 +49,13 @@ const Sessions = () => {
     const [reportModal, setReportModal] = useState(null);
     const [reportReason, setReportReason] = useState('POOR_QUALITY');
     const [reportDesc, setReportDesc] = useState('');
+    const [now, setNow] = useState(new Date());
+
+    // Tick every 30s to refresh countdown labels without full re-fetch
+    useEffect(() => {
+        const tick = setInterval(() => setNow(new Date()), 30000);
+        return () => clearInterval(tick);
+    }, []);
 
     useEffect(() => {
         const load = async () => {
@@ -221,12 +244,41 @@ const Sessions = () => {
 
                                         {/* Action buttons */}
                                         <div className="flex flex-col gap-3 shrink-0 w-full md:w-48">
-                                            <button
-                                                onClick={() => navigate(`/app/call/${session.id}`)}
-                                                className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/40 hover:-translate-y-0.5 active:translate-y-0"
-                                            >
-                                                <Play size={18} fill="currentColor" /> Tham gia học
-                                            </button>
+                                            {(() => {
+                                                const js = getJoinStatus(session);
+                                                if (js.state === 'no-time') return (
+                                                    <div className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-slate-100 text-slate-400 font-bold rounded-xl text-sm cursor-not-allowed select-none">
+                                                        <Clock size={16} /> Chờ xác nhận giờ
+                                                    </div>
+                                                );
+                                                if (js.state === 'too-early') {
+                                                    const h = Math.floor(js.minutesLeft / 60);
+                                                    const m = js.minutesLeft % 60;
+                                                    const label = h > 0 ? `${h}g${m > 0 ? m + 'p' : ''} nữa` : `${m} phút nữa`;
+                                                    return (
+                                                        <div className="w-full flex flex-col items-center justify-center gap-1 px-5 py-3.5 bg-amber-50 border-2 border-amber-200 text-amber-700 font-bold rounded-xl text-sm cursor-not-allowed select-none">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Clock size={15} className="text-amber-500" /> Mở sau {label}
+                                                            </div>
+                                                            <span className="text-[11px] font-semibold text-amber-500 opacity-80">Vào phòng sớm nhất 15 phút trước</span>
+                                                        </div>
+                                                    );
+                                                }
+                                                if (js.state === 'ended') return (
+                                                    <div className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-slate-100 text-slate-400 font-bold rounded-xl text-sm cursor-not-allowed select-none">
+                                                        <Clock size={16} /> Đã hết giờ
+                                                    </div>
+                                                );
+                                                // state === 'ready'
+                                                return (
+                                                    <button
+                                                        onClick={() => navigate(`/app/call/${session.id}`)}
+                                                        className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/40 hover:-translate-y-0.5 active:translate-y-0"
+                                                    >
+                                                        <Play size={18} fill="currentColor" /> Tham gia học
+                                                    </button>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 </div>

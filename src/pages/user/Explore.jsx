@@ -78,30 +78,42 @@ const TabIntro = ({ mentor }) => (
     <div className="space-y-6">
         <div className="bg-white rounded-2xl border border-slate-100 p-6">
             <h3 className="font-extrabold text-slate-900 text-base mb-3">Về tôi</h3>
-            <p className="text-sm text-slate-500 leading-relaxed">{mentor.bioFull}</p>
+            <p className="text-sm text-slate-500 leading-relaxed">
+                {mentor.bioFull || <span className="italic text-slate-300">Chưa có mô tả giới thiệu.</span>}
+            </p>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-100 p-6">
             <h3 className="font-extrabold text-slate-900 text-base mb-4 flex items-center gap-2">
                 Tôi sẽ dạy bạn
             </h3>
-            <div className="space-y-2.5">
-                {mentor.outcomes.map((o, i) => (
-                    <div key={i} className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
-                        <CheckCircle size={16} weight="fill" className="text-violet-500 shrink-0" />
-                        <span className="text-sm text-slate-700 font-medium">{o}</span>
-                    </div>
-                ))}
-            </div>
+            {mentor.outcomes.length > 0 ? (
+                <div className="space-y-2.5">
+                    {mentor.outcomes.map((o, i) => (
+                        <div key={i} className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
+                            <CheckCircle size={16} weight="fill" className="text-violet-500 shrink-0" />
+                            <span className="text-sm text-slate-700 font-medium">{o}</span>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <p className="text-sm text-slate-300 italic">Người dạy chưa điền mục tiêu học.</p>
+            )}
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-100 p-6">
             <h3 className="font-extrabold text-slate-900 text-base mb-3 flex items-center gap-2">
                 🌀 Phong cách dạy
             </h3>
-            <p className="text-sm text-slate-500 leading-relaxed bg-slate-50 rounded-xl p-4 border border-slate-100 italic">
-                {mentor.teachingStyle}
-            </p>
+            {mentor.teachingStyle ? (
+                <p className="text-sm text-slate-500 leading-relaxed bg-slate-50 rounded-xl p-4 border border-slate-100 italic">
+                    {mentor.teachingStyle}
+                </p>
+            ) : (
+                <p className="text-sm text-slate-300 italic bg-slate-50 rounded-xl p-4 border border-slate-100">
+                    Người dạy chưa mô tả phong cách giảng dạy.
+                </p>
+            )}
         </div>
     </div>
 );
@@ -206,10 +218,13 @@ const TabSchedule = ({ mentor, onBook }) => (
                     {mentor.availableSlots.map((sl, i) => (
                         <div key={i} className="min-w-[120px] rounded-xl border-2 border-teal-200 bg-teal-50 px-4 py-4 text-center">
                             <p className="font-extrabold text-slate-800 text-sm mb-0.5">{sl.day}</p>
-                            <p className="text-xs text-slate-500 mb-2 flex items-center justify-center gap-1">
+                            <p className="text-xs text-slate-500 mb-1 flex items-center justify-center gap-1">
                                 <Clock size={11} weight="regular" /> {sl.time}
                             </p>
-                            <span className="text-[11px] font-bold text-emerald-600">● Trống</span>
+                            <span className="text-[11px] font-bold text-emerald-600 mb-2 block">● Trống</span>
+                            <div className="text-[11px] font-extrabold text-amber-600 flex items-center justify-center gap-1 bg-white rounded-lg py-1 border border-teal-100 mt-auto">
+                                <Lightning size={11} weight="fill" className="text-amber-400" /> {sl.creditCost ?? mentor.price} credits
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -322,6 +337,7 @@ const Explore = () => {
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedTime, setSelectedTime] = useState('');
     const [selectedSlotId, setSelectedSlotId] = useState('');
+    const [selectedSlotCost, setSelectedSlotCost] = useState(0);
     const [note, setNote] = useState('');
     const [bookingLoading, setBookingLoading] = useState(false);
 
@@ -374,6 +390,7 @@ const Explore = () => {
                         id: s.id,
                         day: `${days[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`,
                         time: s.slotTime.slice(0, 5),
+                        creditCost: s.creditCost ?? selectedMentor?.price ?? 0,
                         status: 'open',
                         rawDate: s.slotDate
                     };
@@ -413,11 +430,14 @@ const Explore = () => {
         setActiveTab('intro');
         setSelectedDate('');
         setSelectedTime('');
+        setSelectedSlotId('');
+        setSelectedSlotCost(0);
         setNote('');
     };
 
     const handleConfirmBooking = async () => {
-        if (credits < selectedMentor.price) return;
+        const slotPrice = selectedSlotCost || selectedMentor.price || 0;
+        if (credits < slotPrice) return;
         setBookingLoading(true);
         try {
             await sessionService.bookSession(selectedSlotId, note);
@@ -590,9 +610,9 @@ const Explore = () => {
                         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
                             <div className="flex items-center gap-2 mb-2">
                                 <Shield size={16} weight="duotone" className="text-emerald-500" />
-                                <p className="text-xs font-bold text-slate-700">Cam kết chất lượng</p>
+                                <p className="text-xs font-bold text-slate-700">Thanh toán an toàn (Tạm giữ)</p>
                             </div>
-                            <p className="text-[11px] text-slate-500 leading-relaxed">Không hài lòng buổi đầu → hoàn 100% credits trong 24h.</p>
+                            <p className="text-[11px] text-slate-500 leading-relaxed">Credits được giữ an toàn. Chỉ chuyển cho mentor khi bạn bấm "Hoàn thành buổi học".</p>
                         </div>
                     </div>
                 </div>
@@ -641,11 +661,14 @@ const Explore = () => {
                             {m.availableSlots.length > 0 ? (
                                 <div className="flex flex-wrap gap-3 mb-8">
                                     {m.availableSlots.map(sl => (
-                                        <button key={sl.id} onClick={() => { setSelectedDate(sl.day); setSelectedTime(sl.time); setSelectedSlotId(sl.id); }}
+                                        <button key={sl.id} onClick={() => { setSelectedDate(sl.day); setSelectedTime(sl.time); setSelectedSlotId(sl.id); setSelectedSlotCost(sl.creditCost ?? m.price ?? 0); }}
                                             className={`px-5 py-3.5 rounded-xl text-sm font-bold border-2 transition-all active:scale-95 text-left ${selectedSlotId === sl.id ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-slate-100 text-slate-600 hover:border-slate-200'}`}>
                                             <p className="font-extrabold text-base mb-1">{sl.day}</p>
                                             <p className="flex items-center gap-1 text-xs opacity-90 font-semibold mt-1">
                                                 <Clock size={13} weight="bold" /> {sl.time}
+                                            </p>
+                                            <p className="flex items-center gap-1 text-[11px] font-extrabold text-amber-600 mt-1.5">
+                                                <Lightning size={11} weight="fill" className="text-amber-400" /> {sl.creditCost ?? m.price} credits
                                             </p>
                                         </button>
                                     ))}
@@ -680,15 +703,15 @@ const Explore = () => {
                                 <div className="space-y-2.5 text-sm">
                                     <div className="flex justify-between"><span className="text-slate-500">Ngày</span><span className={`font-bold ${selectedDate ? 'text-slate-800' : 'text-slate-300'}`}>{selectedDate || 'Chưa chọn'}</span></div>
                                     <div className="flex justify-between"><span className="text-slate-500">Giờ</span><span className={`font-bold ${selectedTime ? 'text-slate-800' : 'text-slate-300'}`}>{selectedTime || 'Chưa chọn'}</span></div>
-                                    <div className="flex justify-between"><span className="text-slate-500">Chi phí</span><span className="font-extrabold text-amber-500">⚡ {m.price} credits</span></div>
+                                    <div className="flex justify-between"><span className="text-slate-500">Tạm giữ</span><span className="font-extrabold text-amber-500">⚡ {selectedSlotCost || '—'} credits</span></div>
                                 </div>
                                 <div className="flex justify-between text-sm pt-3 border-t border-slate-100">
-                                    <span className="text-slate-500">Số dư sau</span>
-                                    <span className={`font-extrabold ${credits >= m.price ? 'text-emerald-600' : 'text-red-500'}`}>⚡ {credits - m.price}</span>
+                                    <span className="text-slate-500">Dự kiến số dư</span>
+                                    <span className={`font-extrabold ${selectedSlotCost ? (credits >= selectedSlotCost ? 'text-emerald-600' : 'text-red-500') : 'text-slate-400'}`}>⚡ {selectedSlotCost ? credits - selectedSlotCost : '—'}</span>
                                 </div>
-                                <button disabled={!selectedDate || !selectedTime}
+                                <button disabled={!selectedDate || !selectedTime || !selectedSlotId}
                                     onClick={() => setBookingStep(2)}
-                                    className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${selectedDate && selectedTime ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>
+                                    className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${selectedDate && selectedTime && selectedSlotId ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>
                                     Tiếp theo →
                                 </button>
                             </div>
@@ -717,19 +740,19 @@ const Explore = () => {
                         </div>
                         <div className="space-y-3 mb-6 text-sm">
                             <div className="flex justify-between"><span className="text-slate-500">Credits hiện tại</span><span className="font-bold">⚡ {credits}</span></div>
-                            <div className="flex justify-between"><span className="text-slate-500">Chi phí</span><span className="font-bold text-red-500">- ⚡ {m.price}</span></div>
+                            <div className="flex justify-between"><span className="text-slate-500">Sẽ đưa vào tạm giữ</span><span className="font-bold text-red-500">- ⚡ {selectedSlotCost}</span></div>
                             <div className="flex justify-between pt-3 border-t border-slate-100 text-base">
-                                <span className="font-bold text-slate-700">Còn lại</span>
-                                <span className={`font-extrabold ${credits >= m.price ? 'text-emerald-600' : 'text-red-500'}`}>⚡ {credits - m.price}</span>
+                                <span className="font-bold text-slate-700">Dự kiến còn lại</span>
+                                <span className={`font-extrabold ${credits >= selectedSlotCost ? 'text-emerald-600' : 'text-red-500'}`}>⚡ {credits - selectedSlotCost}</span>
                             </div>
                         </div>
-                        {credits < m.price && (
+                        {credits < selectedSlotCost && (
                             <div className="p-3 mb-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-sm text-red-700">
                                 <Warning size={16} weight="duotone" className="shrink-0" /> Không đủ credits để đặt lịch này.
                             </div>
                         )}
-                        <button disabled={credits < m.price || bookingLoading} onClick={handleConfirmBooking}
-                            className={`w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-base ${credits >= m.price && !bookingLoading ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-md shadow-violet-200 active:scale-95' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>
+                        <button disabled={credits < selectedSlotCost || bookingLoading} onClick={handleConfirmBooking}
+                            className={`w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-base ${credits >= selectedSlotCost && !bookingLoading ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-md shadow-violet-200 active:scale-95' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>
                             {bookingLoading ? (
                                 <span className="flex items-center gap-2"><svg className="animate-spin h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Đang đặt lịch...</span>
                             ) : (

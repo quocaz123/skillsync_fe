@@ -47,6 +47,8 @@ export const API_ENDPOINTS = {
     SESSIONS: {
         BOOK: '/api/sessions/book',
         MINE: '/api/sessions/mine',
+        APPROVE: (id) => `/api/sessions/${id}/approve`,
+        REJECT: (id) => `/api/sessions/${id}/reject`,
         ZEGO_TOKEN: (id) => `/api/sessions/${id}/zego-token`,
         JOIN: (id) => `/api/sessions/${id}/join`,
         LEAVE: (id) => `/api/sessions/${id}/leave`,
@@ -61,6 +63,12 @@ export const API_ENDPOINTS = {
     },
     REVIEWS: {
         CREATE: '/api/reviews',
+    },
+    NOTIFICATIONS: {
+        MINE: '/api/notifications',
+        UNREAD_COUNT: '/api/notifications/unread-count',
+        MARK_READ: (id) => `/api/notifications/${id}/read`,
+        MARK_ALL_READ: '/api/notifications/read-all',
     },
     ADMIN_ESCROW: '/api/admin/escrow',
     ADMIN_USERS: '/api/admin/users',

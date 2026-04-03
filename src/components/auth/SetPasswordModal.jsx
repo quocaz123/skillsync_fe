@@ -90,6 +90,7 @@ const SetPasswordModal = ({ onSuccess, onSkip }) => {
                                     value={password}
                                     onChange={e => setPassword(e.target.value)}
                                     placeholder="Tối thiểu 8 ký tự"
+                                    autoComplete="new-password"
                                     className="w-full pl-10 pr-11 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none placeholder:text-slate-400 bg-white text-sm"
                                 />
                                 <button type="button" onClick={() => setShowPw(v => !v)}

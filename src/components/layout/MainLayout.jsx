@@ -3,13 +3,14 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     House, Compass, User, BookOpen, Clock, SignOut,
     Question, List, Wallet, Path, Lightning, ChalkboardTeacher, UsersThree,
-    Bell, X, Target
+    Bell, X, Target, LockKey
 } from '@phosphor-icons/react';
 import { useStore } from '../../store';
 import { logout as logoutApi } from '../../services/authService';
 import { getMyProfile } from '../../services/userService';
 import SetPasswordModal from '../auth/SetPasswordModal';
 import MissionWelcomePopup from './MissionWelcomePopup';
+import NotificationDropdown from './NotificationDropdown';
 
 const SidebarContent = ({ onLinkClick, isCollapsed, location, user, credits, handleLogout }) => (
     <>
@@ -120,10 +121,9 @@ const SidebarContent = ({ onLinkClick, isCollapsed, location, user, credits, han
 const MainLayout = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, credits, logout, login: updateUser, showMissionPopup, dismissMissionPopup, syncCredits } = useStore();
+    const { user, credits, pendingLearnerCredits, pendingTeacherCredits, logout, login: updateUser, showMissionPopup, dismissMissionPopup, syncCredits } = useStore();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
-    const [showNotifications, setShowNotifications] = useState(false);
     const [skippedPasswordModal, setSkippedPasswordModal] = useState(false);
     const [onlineTime, setOnlineTime] = useState(0);
 
@@ -166,7 +166,7 @@ const MainLayout = () => {
             try {
                 const freshUser = await getMyProfile();
                 if (freshUser?.creditsBalance != null) {
-                    syncCredits(freshUser.creditsBalance);
+                    syncCredits(freshUser.creditsBalance, freshUser.pendingLearnerCredits || 0, freshUser.pendingTeacherCredits || 0);
                 }
             } catch (err) {
                 // Silent fail - don't interrupt user experience
@@ -300,52 +300,26 @@ const MainLayout = () => {
                                 </span>
                             </Link>
                         )}
-                        <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1.5 rounded-full border border-slate-200" title="Số Credit">
+                        <Link to="/app/credits" className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 transition-colors px-2.5 py-1.5 rounded-full border border-slate-200 cursor-pointer" title="Số dư hiện có">
                             <Wallet size={16} weight="duotone" className="text-violet-600" />
                             <span className="text-sm font-bold text-slate-700">{credits || 0}</span>
-                        </div>
-                        <div className="relative">
-                            <button
-                                onClick={() => setShowNotifications(!showNotifications)}
-                                className={`p-2 rounded-full border border-slate-200 transition-colors relative ${showNotifications ? 'bg-violet-50 text-violet-600 border-violet-200' : 'bg-white hover:bg-slate-50 text-slate-500'}`}
-                                title="Thông báo"
-                            >
-                                <Bell size={18} weight={showNotifications ? 'fill' : 'duotone'} />
-                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-                            </button>
-
-                            {showNotifications && (
-                                <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden z-50 animate-in slide-in-from-top-2 duration-200">
-                                    <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-                                        <h3 className="font-semibold text-slate-800">Thông báo</h3>
-                                        <button className="text-xs text-violet-600 hover:text-violet-700 font-medium">Đánh dấu đã đọc</button>
-                                    </div>
-                                    <div className="max-h-72 overflow-y-auto">
-                                        {[
-                                            { Icon: Clock, color: 'blue', label: 'Buổi học sắp tới', desc: 'Có buổi học ReactJS trong 30 phút nữa.', time: 'Vừa xong' },
-                                            { Icon: Wallet, color: 'green', label: 'Nhận 50 Credits', desc: 'Hoàn thành buổi dạy, nhận 50 credits.', time: '2 giờ trước' },
-                                            { Icon: User, color: 'violet', label: 'Người theo dõi mới', desc: 'Trần Thị B vừa bắt đầu theo dõi bạn.', time: '1 ngày trước' },
-                                        ].map(({ Icon, color, label, desc, time }) => (
-                                            <div key={label} className="p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer">
-                                                <div className="flex gap-3">
-                                                    <div className={`w-8 h-8 rounded-full bg-${color}-100 flex items-center justify-center shrink-0`}>
-                                                        <Icon size={16} weight="fill" className={`text-${color}-600`} />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm text-slate-800 font-medium">{label}</p>
-                                                        <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{desc}</p>
-                                                        <p className="text-[10px] text-slate-400 mt-1">{time}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="p-3 border-t border-slate-100 text-center bg-slate-50 hover:bg-slate-100 cursor-pointer">
-                                        <span className="text-xs font-medium text-violet-600">Xem tất cả thông báo</span>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        </Link>
+                        
+                        <Link to="/app/sessions" className="hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-full border border-slate-200 bg-white shadow-sm hover:shadow-md transition-all cursor-pointer">
+                            <div className="flex items-center gap-1" title="Chờ bạn thanh toán (Tạm giữ)">
+                                <LockKey size={14} weight="duotone" className="text-red-500" />
+                                <span className="text-xs font-bold text-red-600">{pendingLearnerCredits || 0}</span>
+                            </div>
+                            
+                            <span className="text-slate-300">|</span>
+                            
+                            <div className="flex items-center gap-1" title="Sắp nhận từ dạy học">
+                                <Clock size={14} weight="duotone" className="text-emerald-500" />
+                                <span className="text-xs font-bold text-emerald-600">+{pendingTeacherCredits || 0}</span>
+                            </div>
+                        </Link>
+                        
+                        <NotificationDropdown />
                     </div>
                 </header>
 

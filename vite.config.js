@@ -14,4 +14,7 @@ export default defineConfig({
     // Mở http://localhost:5173 — trùng origin thường khai báo trong Google Cloud (khác với 127.0.0.1)
     open: 'http://localhost:5173',
   },
+  define: {
+    global: 'window',
+  },
 })

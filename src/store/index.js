@@ -38,14 +38,22 @@ export const useStore = create(
         credits: (userData.creditsBalance !== undefined && userData.creditsBalance !== null)
             ? userData.creditsBalance
             : state.credits,
+        pendingLearnerCredits: userData.pendingLearnerCredits || 0,
+        pendingTeacherCredits: userData.pendingTeacherCredits || 0,
         showMissionPopup: true,
     })),
     // Sync credits từ server (gọi sau khi login hoặc khi cần đồng bộ)
-    syncCredits: (balance) => set({ credits: balance }),
+    syncCredits: (balance, pendingLearner = 0, pendingTeacher = 0) => set({ 
+        credits: balance, 
+        pendingLearnerCredits: pendingLearner, 
+        pendingTeacherCredits: pendingTeacher 
+    }),
     logout: () => set({ user: null, isAuthenticated: false, role: 'user', creditHistory: [] }),
 
     // CREDIT & PROFILE STATE
     credits: 180, // 200 welcome - 20 spent = 180 after initial tx
+    pendingLearnerCredits: 0,
+    pendingTeacherCredits: 0,
     addCredits: (amount) => set((state) => ({ credits: state.credits + amount })),
     deductCredits: (amount) => set((state) => ({ credits: state.credits - amount })),
 
