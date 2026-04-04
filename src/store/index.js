@@ -8,11 +8,8 @@ const MOCK_TASKS = [
     { id: 3, title: 'Verify your email address', reward: 20, completed: true },
 ];
 
-// Mock initial credit history
-const INITIAL_CREDIT_HISTORY = [
-    { id: 'h1', type: 'welcome', amount: +20, description: 'Welcome credit - Xác thực email', date: '2026-03-01T08:00:00' },
-    { id: 'h2', type: 'session_booked', amount: -40, description: 'Đặt lịch học UI/UX Basics với Maria Garcia', date: '2026-03-09T10:00:00' },
-];
+// Mock initial credit history is disabled, we fetch from API now
+const INITIAL_CREDIT_HISTORY = [];
 
 // Mock learning progress
 const INITIAL_LEARNING_PROGRESS = [

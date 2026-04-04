@@ -1,15 +1,34 @@
 import { useStore } from '../../store';
+import { useState, useEffect } from 'react';
+import { getMyTransactions } from '../../services/userService';
 import { Zap, TrendingUp, TrendingDown, Clock, BookOpen, Award, Gift, ArrowUpRight, ArrowDownRight, Wallet } from 'lucide-react';
 
 const TX_CONFIG = {
-    session_booked: { icon: BookOpen, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', label: 'Đặt lịch học', sign: '-' },
-    session_completed: { icon: Award, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', label: 'Nhận từ buổi dạy', sign: '+' },
-    welcome: { icon: Gift, color: 'text-[#5A63F6]', bg: 'bg-indigo-50', border: 'border-indigo-100', label: 'Welcome / Nhiệm vụ', sign: '+' },
-    bonus: { icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', label: 'Thưởng cộng đồng', sign: '+' },
+    SESSION_BOOKED: { icon: BookOpen, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', label: 'Đặt lịch học', sign: '-' },
+    SESSION_COMPLETED: { icon: Award, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', label: 'Nhận từ buổi dạy', sign: '+' },
+    MISSION_REWARD: { icon: Gift, color: 'text-[#5A63F6]', bg: 'bg-indigo-50', border: 'border-indigo-100', label: 'Nhiệm vụ', sign: '+' },
+    DEPOSIT: { icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', label: 'Nạp credits', sign: '+' },
+    WITHDRAWAL: { icon: TrendingDown, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', label: 'Rút credits', sign: '-' }
 };
 
 const CreditHistory = () => {
-    const { credits, creditHistory } = useStore();
+    const { credits } = useStore();
+    const [creditHistory, setCreditHistory] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchHistory = async () => {
+            try {
+                const data = await getMyTransactions();
+                setCreditHistory(Array.isArray(data) ? data : []);
+            } catch (error) {
+                console.error("Failed to load credit history from API", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchHistory();
+    }, []);
 
     const totalEarned = creditHistory.filter(tx => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0);
     const totalSpent = creditHistory.filter(tx => tx.amount < 0).reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
@@ -77,7 +96,9 @@ const CreditHistory = () => {
                     <span className="text-sm font-bold text-slate-400">{creditHistory.length} giao dịch</span>
                 </div>
 
-                {creditHistory.length === 0 ? (
+                {loading ? (
+                    <div className="p-16 text-center text-slate-500 animate-pulse">Đang tải lịch sử giao dịch...</div>
+                ) : creditHistory.length === 0 ? (
                     <div className="p-16 text-center">
                         <div className="text-5xl mb-4">💳</div>
                         <p className="text-slate-500 font-medium">Chưa có giao dịch nào</p>
@@ -85,7 +106,7 @@ const CreditHistory = () => {
                 ) : (
                     <div className="divide-y divide-slate-50">
                         {creditHistory.map((tx, idx) => {
-                            const config = TX_CONFIG[tx.type] || TX_CONFIG['welcome'];
+                            const config = TX_CONFIG[tx.transactionType] || TX_CONFIG['MISSION_REWARD'];
                             const Icon = config.icon;
                             const isPositive = tx.amount > 0;
                             return (
@@ -102,7 +123,7 @@ const CreditHistory = () => {
                                                 {config.label}
                                             </span>
                                             <span className="text-xs text-slate-400 font-medium">
-                                                {new Date(tx.date).toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                {new Date(tx.createdAt).toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </div>
                                     </div>

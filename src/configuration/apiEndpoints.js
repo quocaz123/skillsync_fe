@@ -21,6 +21,7 @@ export const API_ENDPOINTS = {
     UPDATE_AVATAR: "/api/users/me/avatar",
     UPDATE_BIO: "/api/users/me/bio",
     SET_PASSWORD: "/api/users/me/password",
+    TRANSACTIONS: "/api/users/me/transactions",
   },
   SKILLS: {
     GET_ALL: "/api/skills",
