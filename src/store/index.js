@@ -42,7 +42,7 @@ export const useStore = create(
     })),
     // Sync credits từ server (gọi sau khi login hoặc khi cần đồng bộ)
     syncCredits: (balance) => set({ credits: balance }),
-    logout: () => set({ user: null, isAuthenticated: false, role: 'user', creditHistory: [] }),
+    logout: () => set({ user: null, isAuthenticated: false, role: 'user', credits: 0, creditHistory: [] }),
 
     // CREDIT & PROFILE STATE
     credits: 180, // 200 welcome - 20 spent = 180 after initial tx
