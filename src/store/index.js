@@ -42,7 +42,15 @@ export const useStore = create(
     })),
     // Sync credits từ server (gọi sau khi login hoặc khi cần đồng bộ)
     syncCredits: (balance) => set({ credits: balance }),
-    logout: () => set({ user: null, isAuthenticated: false, role: 'user', creditHistory: [] }),
+    /** Id lộ trình đã đăng ký (đồng bộ với mock khi API enroll offline) */
+    enrolledPathIds: [],
+    addEnrolledPath: (pathId) =>
+        set((state) =>
+            state.enrolledPathIds.includes(pathId)
+                ? state
+                : { enrolledPathIds: [...state.enrolledPathIds, pathId] }
+        ),
+    logout: () => set({ user: null, isAuthenticated: false, role: 'user', creditHistory: [], enrolledPathIds: [] }),
 
     // CREDIT & PROFILE STATE
     credits: 180, // 200 welcome - 20 spent = 180 after initial tx
@@ -179,7 +187,8 @@ export const useStore = create(
                 isAuthenticated: state.isAuthenticated,
                 role: state.role,
                 credits: state.credits,
-                creditHistory: state.creditHistory
+                creditHistory: state.creditHistory,
+                enrolledPathIds: state.enrolledPathIds,
             }),
         }
     )

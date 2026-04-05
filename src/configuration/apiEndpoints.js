@@ -51,6 +51,13 @@ export const API_ENDPOINTS = {
         JOIN: (id) => `/api/sessions/${id}/join`,
         LEAVE: (id) => `/api/sessions/${id}/leave`,
     },
+    LEARNING_PATHS: {
+        BY_ID: (id) => `/api/learning-paths/${id}`,
+        ENROLL: (id) => `/api/learning-paths/${id}/enroll`,
+    },
+    USER_LEARNING_PATHS: {
+        BY_ID: (id) => `/api/user-learning-paths/${id}`,
+    },
 };
 
 export default API_ENDPOINTS;

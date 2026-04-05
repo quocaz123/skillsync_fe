@@ -22,6 +22,9 @@ import JoinSessionGuidePage from './pages/user/JoinSessionGuide';
 import Profile from './pages/user/Profile';
 import CreditHistory from './pages/user/CreditHistory';
 import LearningPath from './pages/user/LearningPath';
+import LearningPathDetail from './pages/user/LearningPathDetail';
+import LearningPathStudy from './pages/user/LearningPathStudy';
+import LearningPathLessonPlayer from './pages/user/LearningPathLessonPlayer';
 import TeachingManagement from './pages/user/TeachingManagement';
 import CreateTeachingSession from './pages/user/CreateTeachingSession';
 import CreateLearningPath from './pages/user/CreateLearningPath';
@@ -68,6 +71,9 @@ function App() {
           <Route path="guide" element={<JoinSessionGuidePage />} />
           <Route path="profile" element={<Profile />} />
           <Route path="credits" element={<CreditHistory />} />
+          <Route path="learning-path/study/:pathId/lesson/:lessonId" element={<LearningPathLessonPlayer />} />
+          <Route path="learning-path/study/:pathId" element={<LearningPathStudy />} />
+          <Route path="learning-path/:pathId" element={<LearningPathDetail />} />
           <Route path="learning-path" element={<LearningPath />} />
           <Route path="teaching" element={<TeachingManagement />} />
           <Route path="teaching/create" element={<CreateTeachingSession />} />
