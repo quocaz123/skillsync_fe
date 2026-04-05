@@ -16,6 +16,7 @@ import AdminSystem from './pages/admin/AdminSystem';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminTeachingSkills from './pages/admin/AdminTeachingSkills';
 import AdminEscrow from './pages/admin/AdminEscrow';
+import AdminForumPosts from './pages/admin/AdminForumPosts';
 import Explore from './pages/user/Explore';
 import Sessions from './pages/user/Sessions';
 import JoinSessionGuidePage from './pages/user/JoinSessionGuide';
