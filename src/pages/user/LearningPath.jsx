@@ -468,11 +468,8 @@ function Chip({ label, onRemove }) {
 // ─────────────────────────────────────────────
 function MyPathCard({ path }) {
     const isCompleted = path.status === 'COMPLETED';
-    const isPaused = path.status === 'PAUSED';
-
     const statusBadge = () => {
         if (isCompleted) return <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold border border-emerald-200">Hoàn thành</span>;
-        if (isPaused) return <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold border border-amber-200">Tạm dừng</span>;
         return <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold border border-indigo-200">Đang học</span>;
     };
 
@@ -491,7 +488,7 @@ function MyPathCard({ path }) {
 
     return (
         <div className={`bg-white rounded-2xl border overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col group
-            ${isCompleted ? 'border-emerald-200' : isPaused ? 'border-amber-200' : 'border-indigo-200 hover:-translate-y-0.5'}`}>
+            ${isCompleted ? 'border-emerald-200' : 'border-indigo-200 hover:-translate-y-0.5'}`}>
 
             {/* Thumbnail */}
             <div
@@ -514,7 +511,7 @@ function MyPathCard({ path }) {
                     </div>
                     <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                         <div
-                            className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-emerald-500' : isPaused ? 'bg-amber-400' : 'bg-indigo-500'}`}
+                            className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-emerald-500' : 'bg-indigo-500'}`}
                             style={{ width: `${path.progress}%` }}
                         />
                     </div>
@@ -565,7 +562,7 @@ function MyPathCard({ path }) {
 function MyPathsTab({ onExplore }) {
     const [subTab, setSubTab] = useState('ongoing'); // 'ongoing' | 'completed'
 
-    const activePaths = myPaths.filter(p => p.status === 'ONGOING' || p.status === 'PAUSED');
+    const activePaths = myPaths.filter(p => p.status !== 'COMPLETED');
     const completedPaths = myPaths.filter(p => p.status === 'COMPLETED');
 
     const shownPaths = subTab === 'ongoing' ? activePaths : completedPaths;

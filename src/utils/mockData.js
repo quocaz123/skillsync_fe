@@ -22,7 +22,7 @@ export const MY_PATHS_MOCK = [
         type: 'mentor',
         thumbnailFrom: '#6366f1',
         thumbnailTo: '#8b5cf6',
-        status: 'ONGOING',        // ONGOING | PAUSED | COMPLETED
+        status: 'ONGOING',        // ONGOING | COMPLETED (FE Lộ trình của tôi chỉ hiển thị hai nhãn)
         ctaType: 'book_session',  // continue_video | book_session | view_session | unlock_module
         upcomingSession: null,
         enrolledDate: '01/01/2026',
@@ -104,7 +104,7 @@ export const MY_PATHS_MOCK = [
         type: 'system',
         thumbnailFrom: '#6366f1',
         thumbnailTo: '#06b6d4',
-        status: 'PAUSED',
+        status: 'ONGOING',
         ctaType: 'continue_video',
         upcomingSession: null,
         enrolledDate: '10/01/2026',
