@@ -13,7 +13,14 @@ import MissionWelcomePopup from './MissionWelcomePopup';
 const MainLayout = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, credits, logout, login: updateUser, showMissionPopup, dismissMissionPopup } = useStore();
+    const {
+        user,
+        credits,
+        logout,
+        login: updateUser,
+        showMissionPopup,
+        dismissMissionPopup,
+    } = useStore();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
@@ -271,14 +278,14 @@ const MainLayout = () => {
                                     </div>
                                     <div className="max-h-72 overflow-y-auto">
                                         {[
-                                            { Icon: Clock, color: 'blue', label: 'Buổi học sắp tới', desc: 'Có buổi học ReactJS trong 30 phút nữa.', time: 'Vừa xong' },
-                                            { Icon: Wallet, color: 'green', label: 'Nhận 50 Credits', desc: 'Hoàn thành buổi dạy, nhận 50 credits.', time: '2 giờ trước' },
-                                            { Icon: User, color: 'violet', label: 'Người theo dõi mới', desc: 'Trần Thị B vừa bắt đầu theo dõi bạn.', time: '1 ngày trước' },
-                                        ].map(({ Icon, color, label, desc, time }) => (
+                                            { Icon: Clock, label: 'Buổi học sắp tới', desc: 'Có buổi học ReactJS trong 30 phút nữa.', time: 'Vừa xong', wrap: 'bg-blue-100', icon: 'text-blue-600' },
+                                            { Icon: Wallet, label: 'Nhận 50 Credits', desc: 'Hoàn thành buổi dạy, nhận 50 credits.', time: '2 giờ trước', wrap: 'bg-emerald-100', icon: 'text-emerald-600' },
+                                            { Icon: User, label: 'Người theo dõi mới', desc: 'Trần Thị B vừa bắt đầu theo dõi bạn.', time: '1 ngày trước', wrap: 'bg-violet-100', icon: 'text-violet-600' },
+                                        ].map(({ Icon, label, desc, time, wrap, icon }) => (
                                             <div key={label} className="p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer">
                                                 <div className="flex gap-3">
-                                                    <div className={`w-8 h-8 rounded-full bg-${color}-100 flex items-center justify-center shrink-0`}>
-                                                        <Icon size={16} weight="fill" className={`text-${color}-600`} />
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${wrap}`}>
+                                                        <Icon size={16} weight="fill" className={icon} />
                                                     </div>
                                                     <div>
                                                         <p className="text-sm text-slate-800 font-medium">{label}</p>
