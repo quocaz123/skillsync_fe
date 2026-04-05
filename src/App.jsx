@@ -28,6 +28,8 @@ import LearningPathLessonPlayer from './pages/user/LearningPathLessonPlayer';
 import TeachingManagement from './pages/user/TeachingManagement';
 import CreateTeachingSession from './pages/user/CreateTeachingSession';
 import CreateLearningPath from './pages/user/CreateLearningPath';
+import MentorLearningPathManagementPage from './pages/user/MentorLearningPathManagementPage';
+import AdminSystemCourseManagementPage from './pages/admin/AdminSystemCourseManagementPage';
 import Community from './pages/user/Community';
 import VideoCallPage from './pages/user/VideoCallPage';
 import Missions from './pages/user/Missions';
@@ -62,6 +64,11 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/auth/google/callback" element={<GoogleAuthCallback />} />
 
+        <Route path="/mentor" element={<ProtectedUserRoute><MainLayout /></ProtectedUserRoute>}>
+          <Route index element={<Navigate to="/mentor/learning-paths" replace />} />
+          <Route path="learning-paths" element={<MentorLearningPathManagementPage />} />
+        </Route>
+
         {/* User Routes (Protected) */}
         <Route path="/app" element={<ProtectedUserRoute><MainLayout /></ProtectedUserRoute>}>
           <Route index element={<UserDashboard />} />
@@ -92,6 +99,8 @@ function App() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="teaching-skills" element={<AdminTeachingSkills />} />
           <Route path="paths" element={<AdminPaths />} />
+          <Route path="paths/create" element={<CreateLearningPath />} />
+          <Route path="system-learning-paths" element={<AdminSystemCourseManagementPage />} />
           <Route path="system" element={<AdminSystem />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>

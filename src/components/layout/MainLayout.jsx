@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     House, Compass, User, BookOpen, Clock, SignOut,
     Question, List, Wallet, Path, Lightning, ChalkboardTeacher, UsersThree,
-    Bell, X, Target
+    Bell, X, Target, NotePencil,
 } from '@phosphor-icons/react';
 import { useStore } from '../../store';
 import { logout as logoutApi } from '../../services/authService';
@@ -66,6 +66,7 @@ const MainLayout = () => {
         { path: '/app/explore', label: 'Khám phá', icon: Compass },
         { path: '/app/sessions', label: 'Buổi học', icon: Clock },
         { path: '/app/teaching', label: 'Quản lý dạy', icon: ChalkboardTeacher },
+        { path: '/mentor/learning-paths', label: 'Quản lí khóa học', icon: NotePencil },
         { path: '/app/community', label: 'Cộng đồng', icon: UsersThree },
         { path: '/app/learning-path', label: 'Lộ trình khóa học', icon: Path },
         { path: '/app/missions', label: 'Nhiệm vụ', icon: Target },
@@ -87,6 +88,7 @@ const MainLayout = () => {
         '/app/explore': 'Khám phá',
         '/app/sessions': 'Buổi học',
         '/app/teaching': 'Quản lý dạy',
+        '/mentor/learning-paths': 'Quản lí khóa học',
         '/app/community': 'Cộng đồng',
         '/app/learning-path': 'Lộ trình khóa học',
         '/app/missions': 'Nhiệm vụ',
