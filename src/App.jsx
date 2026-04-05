@@ -36,23 +36,27 @@ import Missions from './pages/user/Missions';
 import { useStore } from './store';
 
 // Mock Pages for now
-const NotFound = () => <div className="flex flex-col items-center justify-center min-h-screen"><h1 className="text-4xl font-bold text-primary-600">404</h1><p className="mt-2">Page Not Found</p></div>;
+const NotFound = () => (
+  <div className="flex flex-col items-center justify-center min-h-screen">
+    <h1 className="text-4xl font-bold text-primary-600">404</h1>
+    <p className="mt-2">Page Not Found</p>
+  </div>
+);
 
 // Route Guards
 const ProtectedUserRoute = ({ children }) => {
   const { isAuthenticated, role } = useStore();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (role === 'admin') return <Navigate to="/admin" replace />;
+  if (role === "admin") return <Navigate to="/admin" replace />;
   return children;
 };
 
 const ProtectedAdminRoute = ({ children }) => {
   const { isAuthenticated, role } = useStore();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (role !== 'admin') return <Navigate to="/" replace />;
+  if (role !== "admin") return <Navigate to="/" replace />;
   return children;
 };
-
 
 function App() {
   return (
@@ -70,7 +74,14 @@ function App() {
         </Route>
 
         {/* User Routes (Protected) */}
-        <Route path="/app" element={<ProtectedUserRoute><MainLayout /></ProtectedUserRoute>}>
+        <Route
+          path="/app"
+          element={
+            <ProtectedUserRoute>
+              <MainLayout />
+            </ProtectedUserRoute>
+          }
+        >
           <Route index element={<UserDashboard />} />
           <Route path="explore" element={<Explore />} />
           <Route path="skills" element={<Skills />} />
@@ -91,9 +102,17 @@ function App() {
         </Route>
 
         {/* Admin Routes (Protected) */}
-        <Route path="/admin" element={<ProtectedAdminRoute><AdminLayout /></ProtectedAdminRoute>}>
+        <Route
+          path="/admin"
+          element={
+            <ProtectedAdminRoute>
+              <AdminLayout />
+            </ProtectedAdminRoute>
+          }
+        >
           <Route index element={<AdminDash />} />
           <Route path="reports" element={<AdminReports />} />
+          <Route path="forum-posts" element={<AdminForumPosts />} />
           <Route path="sessions" element={<AdminSessions />} />
           <Route path="credits" element={<AdminCredits />} />
           <Route path="users" element={<AdminUsers />} />
