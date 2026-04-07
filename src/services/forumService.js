@@ -162,6 +162,7 @@ export function mapForumPost(post) {
     type: String(post.categoryId || "").toLowerCase(),
     typeLabel: typeMeta.label,
     typeBg: typeMeta.bg,
+    categoryLabel: post.categoryName || typeMeta.label,
     authorInitials: getInitials(authorName),
     authorColor: getAvatarColor(authorName),
     authorName,
