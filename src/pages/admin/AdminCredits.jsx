@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Zap, TrendingUp, AlertTriangle, Download, Eye, Flag, Plus, X } from 'lucide-react';
+import { Zap, TrendingUp, AlertTriangle, Eye, Flag, Plus, X } from 'lucide-react';
 import httpClient from '../../configuration/axiosClient';
 import API_ENDPOINTS from '../../configuration/apiEndpoints';
 const typeConfig = {
-    session_payment: { label: 'Thanh toán', bg: 'bg-indigo-50', text: 'text-indigo-700' },
-    mentor_earn: { label: 'Thu nhập Mentor', bg: 'bg-emerald-50', text: 'text-emerald-700' },
-    mission_reward: { label: 'Phần thưởng', bg: 'bg-amber-50', text: 'text-amber-700' },
-    refund: { label: 'Hoàn tiền', bg: 'bg-blue-50', text: 'text-blue-700' },
-    unknown: { label: 'Không rõ', bg: 'bg-rose-50', text: 'text-rose-700' },
+    WELCOME_BONUS: { label: 'Tặng thưởng', bg: 'bg-amber-50', text: 'text-amber-700' },
+    REFUND: { label: 'Hoàn tiền', bg: 'bg-blue-50', text: 'text-blue-700' },
+    PENALTY: { label: 'Phạt / Trừ tiền', bg: 'bg-rose-50', text: 'text-rose-700' },
+    MISSION_REWARD: { label: 'Thưởng nhiệm vụ', bg: 'bg-indigo-50', text: 'text-indigo-700' },
+    SPEND_SESSION: { label: 'Thanh toán', bg: 'bg-slate-50', text: 'text-slate-600' },
+    EARN_SESSION: { label: 'Thu nhập Mentor', bg: 'bg-emerald-50', text: 'text-emerald-700' },
+    unknown: { label: 'Hệ thống', bg: 'bg-slate-50', text: 'text-slate-700' },
 };
 
 const AdminCredits = () => {
@@ -73,8 +75,9 @@ const AdminCredits = () => {
     };
 
     const filtered = transactions.filter(t => {
-        // Lọc theo Loại
-        if (filter !== 'all' && filter !== 'suspicious' && t.transactionType?.toLowerCase() !== filter.toLowerCase()) return false;
+        // Lọc theo Loại (Chuyển đổi id filter welcome_bonus -> WELCOME_BONUS)
+        const filterType = filter.toUpperCase();
+        if (filter !== 'all' && filter !== 'suspicious' && t.transactionType !== filterType) return false;
         if (filter === 'suspicious' && !t.suspicious) return false;
 
         // Lọc theo Từ khóa (Tên / ID)
@@ -124,9 +127,6 @@ const AdminCredits = () => {
                         className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition-colors">
                         <Plus size={14} /> Cấp / Trừ Credit
                     </button>
-                    <button className="flex items-center gap-1.5 px-4 py-2 bg-[#5A63F6] text-white rounded-xl font-bold text-sm hover:bg-[#4a53e6] transition-colors">
-                        <Download size={14} /> Xuất báo cáo
-                    </button>
                 </div>
             </div>
 
@@ -153,10 +153,10 @@ const AdminCredits = () => {
                 {[
                     { id: 'all', label: 'Tất cả' },
                     { id: 'suspicious', label: '⚠️ Nghi ngờ' },
-                    { id: 'session_payment', label: 'Thanh toán' },
-                    { id: 'mentor_earn', label: 'Thu nhập Mentor' },
-                    { id: 'mission_reward', label: 'Phần thưởng' },
+                    { id: 'welcome_bonus', label: 'Tặng thưởng' },
                     { id: 'refund', label: 'Hoàn tiền' },
+                    { id: 'penalty', label: 'Phạt / Trừ tiền' },
+                    { id: 'mission_reward', label: 'Thưởng nhiệm vụ' },
                 ].map(f => (
                     <button key={f.id} onClick={() => setFilter(f.id)}
                         className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${filter === f.id
@@ -208,7 +208,7 @@ const AdminCredits = () => {
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                             {paginatedTransactions.map(t => {
-                                const tc = typeConfig[t.type] || typeConfig.unknown;
+                                const tc = typeConfig[t.transactionType] || typeConfig.unknown;
                                 return (
                                     <tr key={t.id} className={`hover:bg-slate-50/50 transition-colors group ${t.suspicious ? 'bg-rose-50/30' : ''}`}>
                                         <td className="px-6 py-4 text-sm font-medium text-slate-600 max-w-[150px]">
@@ -389,7 +389,9 @@ const AdminCredits = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Loại GD</label>
-                                    <div className="mt-1 text-sm font-bold text-indigo-600">{selectedTx.transactionType}</div>
+                                    <div className="mt-1 text-sm font-bold text-indigo-600">
+                                        {typeConfig[selectedTx.transactionType]?.label || selectedTx.transactionType}
+                                    </div>
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Số lượng</label>
