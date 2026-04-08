@@ -89,11 +89,10 @@ const VideoCallPage = () => {
             zegoRef.current?.leaveRoom?.();
         } catch (e) {
             // If leaveRoom fails, fall back to destroy
-            safeDestroyZego();
             setStatus('ended');
-            setTimeout(() => navigate('/app/sessions'), 1500);
+            setTimeout(() => { window.location.href = '/app/sessions'; }, 1500);
         }
-    }, [navigate, safeDestroyZego, stopTimer]);
+    }, [safeDestroyZego, stopTimer]);
 
     const toggleMic = useCallback(() => {
         if (!zegoRef.current) return;
@@ -230,7 +229,7 @@ const VideoCallPage = () => {
                         }
 
                         setStatus('ended');
-                        setTimeout(() => navigate('/app/sessions'), 1500);
+                        setTimeout(() => { window.location.href = '/app/sessions'; }, 1500);
                     },
                 });
             } catch (err) {
@@ -292,7 +291,7 @@ const VideoCallPage = () => {
                 </div>
 
                 <button
-                    onClick={() => navigate('/app/sessions')}
+                    onClick={() => { window.location.href = '/app/sessions'; }}
                     className="mt-4 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-xl transition-colors"
                 >
                     ← Quay lại Lịch học
@@ -301,87 +300,98 @@ const VideoCallPage = () => {
         );
     }
 
-    if (status === 'ended') {
-        return (
-            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-4 text-white">
-                <div className="w-20 h-20 rounded-full bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center">
-                    <PhoneOff className="w-10 h-10 text-emerald-400" />
-                </div>
-                <h2 className="text-xl font-bold">Buổi học đã kết thúc</h2>
-                <p className="text-slate-400 text-sm">Đang chuyển về trang Lịch học…</p>
-            </div>
-        );
-    }
+
 
     return (
         <div className="min-h-screen bg-black relative overflow-hidden">
             <div ref={containerRef} className="w-full h-screen" />
 
-            <div className="absolute top-4 left-4 z-50 bg-slate-900/80 backdrop-blur-md border border-slate-700 rounded-2xl px-4 py-3 text-white shadow-xl">
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                    <ShieldCheck size={16} className="text-emerald-400" />
-                    Phòng học trực tuyến
+            {status === 'ended' && (
+                <div className="absolute inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center gap-4 text-white">
+                    <div className="w-20 h-20 rounded-full bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center">
+                        <PhoneOff className="w-10 h-10 text-emerald-400" />
+                    </div>
+                    <h2 className="text-xl font-bold">Buổi học đã kết thúc</h2>
+                    <p className="text-slate-400 text-sm">Đang chuyển về trang Lịch học…</p>
                 </div>
-                <div className="text-xs text-slate-400 mt-1">
-                    {sessionInfo?.roomId || '---'}
-                </div>
-                <div className="mt-2 flex items-center gap-2 text-sm">
-                    <Clock size={14} className="text-indigo-400" />
-                    <span className="font-mono">{formatDuration(duration)}</span>
-                </div>
-                <div className="text-xs text-slate-500 mt-1">
-                    {user?.fullName || sessionInfo?.userName || 'Người dùng'}
-                </div>
-            </div>
+            )}
 
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50">
-                <div className="flex items-center gap-3 bg-slate-900/85 backdrop-blur-md border border-slate-700 rounded-2xl px-4 py-3 shadow-2xl">
-                    <button
-                        onClick={toggleMic}
-                        className={`w-12 h-12 rounded-full flex items-center justify-center transition ${
-                            isMicOn
-                                ? 'bg-slate-700 hover:bg-slate-600 text-white'
-                                : 'bg-amber-600 hover:bg-amber-500 text-white'
-                        }`}
-                        title={isMicOn ? 'Tắt mic' : 'Bật mic'}
-                    >
-                        {isMicOn ? <Mic size={20} /> : <MicOff size={20} />}
-                    </button>
+            {status !== 'ended' && (
+                <>
+                    <div className="absolute top-4 left-4 z-50 bg-slate-900/80 backdrop-blur-md border border-slate-700 rounded-2xl px-4 py-3 text-white shadow-xl">
+                        <div className="flex items-center gap-2 text-sm font-semibold">
+                            <ShieldCheck size={16} className="text-emerald-400" />
+                            Phòng học trực tuyến
+                        </div>
+                        <div className="text-xs text-slate-400 mt-1">
+                            {sessionInfo?.roomId || '---'}
+                        </div>
+                        <div className="mt-2 flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                                <Clock size={14} className="text-indigo-400" />
+                                <span className="font-mono">{formatDuration(duration)}</span>
+                            </div>
+                            {sessionInfo?.expireSeconds && (sessionInfo.expireSeconds - duration) <= 300 && (
+                                <span className="text-[10px] font-bold text-red-400 animate-pulse bg-red-900/30 px-1.5 py-0.5 rounded-md">
+                                    Còn {formatDuration(Math.max(0, sessionInfo.expireSeconds - duration))}
+                                </span>
+                            )}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">
+                            {user?.fullName || sessionInfo?.userName || 'Người dùng'}
+                        </div>
+                    </div>
 
-                    <button
-                        onClick={toggleCamera}
-                        className={`w-12 h-12 rounded-full flex items-center justify-center transition ${
-                            isCameraOn
-                                ? 'bg-slate-700 hover:bg-slate-600 text-white'
-                                : 'bg-amber-600 hover:bg-amber-500 text-white'
-                        }`}
-                        title={isCameraOn ? 'Tắt camera' : 'Bật camera'}
-                    >
-                        {isCameraOn ? <Video size={20} /> : <VideoOff size={20} />}
-                    </button>
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50">
+                        <div className="flex items-center gap-3 bg-slate-900/85 backdrop-blur-md border border-slate-700 rounded-2xl px-4 py-3 shadow-2xl">
+                            <button
+                                onClick={toggleMic}
+                                className={`w-12 h-12 rounded-full flex items-center justify-center transition ${
+                                    isMicOn
+                                        ? 'bg-slate-700 hover:bg-slate-600 text-white'
+                                        : 'bg-amber-600 hover:bg-amber-500 text-white'
+                                }`}
+                                title={isMicOn ? 'Tắt mic' : 'Bật mic'}
+                            >
+                                {isMicOn ? <Mic size={20} /> : <MicOff size={20} />}
+                            </button>
 
-                    <button
-                        onClick={toggleScreenSharing}
-                        className={`w-12 h-12 rounded-full flex items-center justify-center transition ${
-                            isScreenSharing
-                                ? 'bg-indigo-600 hover:bg-indigo-500 text-white'
-                                : 'bg-slate-700 hover:bg-slate-600 text-white'
-                        }`}
-                        title="Chia sẻ màn hình"
-                    >
-                        <MonitorUp size={20} />
-                    </button>
+                            <button
+                                onClick={toggleCamera}
+                                className={`w-12 h-12 rounded-full flex items-center justify-center transition ${
+                                    isCameraOn
+                                        ? 'bg-slate-700 hover:bg-slate-600 text-white'
+                                        : 'bg-amber-600 hover:bg-amber-500 text-white'
+                                }`}
+                                title={isCameraOn ? 'Tắt camera' : 'Bật camera'}
+                            >
+                                {isCameraOn ? <Video size={20} /> : <VideoOff size={20} />}
+                            </button>
 
-                    <button
-                        onClick={endCall}
-                        className="px-5 h-12 rounded-full bg-red-600 hover:bg-red-700 text-white font-bold flex items-center gap-2 transition"
-                        title="Kết thúc buổi học"
-                    >
-                        <PhoneOff size={18} />
-                        <span>Kết thúc</span>
-                    </button>
-                </div>
-            </div>
+                            <button
+                                onClick={toggleScreenSharing}
+                                className={`w-12 h-12 rounded-full flex items-center justify-center transition ${
+                                    isScreenSharing
+                                        ? 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                                        : 'bg-slate-700 hover:bg-slate-600 text-white'
+                                }`}
+                                title="Chia sẻ màn hình"
+                            >
+                                <MonitorUp size={20} />
+                            </button>
+
+                            <button
+                                onClick={endCall}
+                                className="px-5 h-12 rounded-full bg-red-600 hover:bg-red-700 text-white font-bold flex items-center gap-2 transition"
+                                title="Kết thúc buổi học"
+                            >
+                                <PhoneOff size={18} />
+                                <span>Kết thúc</span>
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 };

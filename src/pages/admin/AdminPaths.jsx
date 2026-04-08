@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { BookOpen, Eye, CheckCircle2, XCircle, Zap, Users } from 'lucide-react';
+import {
+    MapTrifold, Eye, CheckCircle, XCircle,
+    CurrencyCircleDollar, Users, Warning, HourglassMedium,
+} from '@phosphor-icons/react';
 
 const MOCK_PATHS = [
     { id: 'p1', title: 'Trở thành UI/UX Designer', mentor: 'Phạm Thị Dung', created: '2026-03-01', modules: 8, price: 400, students: 24, status: 'active', category: 'Design' },
@@ -19,7 +22,7 @@ const StatusBadge = ({ status }) => {
     const c = statusConfig[status] || statusConfig.pending;
     return (
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${c.bg} ${c.text} border ${c.border} rounded-full text-[11px] font-extrabold`}>
-            <div className={`w-1.5 h-1.5 rounded-full ${c.dot}`}></div>
+            <div className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
             {c.label}
         </span>
     );
@@ -27,41 +30,52 @@ const StatusBadge = ({ status }) => {
 
 const AdminPaths = () => {
     const [filter, setFilter] = useState('all');
-
     const filtered = filter === 'all' ? MOCK_PATHS : MOCK_PATHS.filter(p => p.status === filter);
-
     const pending = MOCK_PATHS.filter(p => p.status === 'pending').length;
     const active = MOCK_PATHS.filter(p => p.status === 'active').length;
-    const rejected = MOCK_PATHS.filter(p => p.status === 'rejected').length;
     const totalStudents = MOCK_PATHS.reduce((a, p) => a + p.students, 0);
+
+    const stats = [
+        { Icon: MapTrifold, label: 'Tổng lộ trình', value: MOCK_PATHS.length, color: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-100', weight: 'duotone' },
+        { Icon: HourglassMedium, label: 'Chờ duyệt', value: pending, color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-100', weight: 'duotone' },
+        { Icon: CheckCircle, label: 'Đang hoạt động', value: active, color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-100', weight: 'fill' },
+        { Icon: Users, label: 'Tổng học viên', value: totalStudents, color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-100', weight: 'duotone' },
+    ];
 
     return (
         <div className="max-w-7xl mx-auto space-y-5 sm:space-y-6 pb-4">
-            <div className="flex items-center justify-between">
+            {/* Header */}
+            <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
-                        <BookOpen size={22} className="text-[#5A63F6]" /> Quản lý Lộ trình Học
+                        <MapTrifold size={22} weight="duotone" className="text-[#5A63F6]" /> Quản lý Lộ trình Học
                     </h1>
                     <p className="text-sm text-slate-400 font-medium mt-1">Duyệt và kiểm soát chất lượng lộ trình do Mentor tạo lên</p>
                 </div>
                 {pending > 0 && (
                     <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl">
-                        <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+                        <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                         <span className="text-sm font-bold text-amber-700">{pending} lộ trình chờ duyệt</span>
                     </div>
                 )}
             </div>
 
+            {/* Dev Notice */}
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex items-start gap-3">
+                <Warning size={22} weight="duotone" className="text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                    <p className="font-bold text-amber-800 text-sm">Tính năng đang phát triển</p>
+                    <p className="text-xs text-amber-700 mt-0.5">
+                        Learning Path API chưa hoàn thiện — dữ liệu hiện tại là mẫu minh hoạ. Chức năng duyệt sẽ được kích hoạt khi backend sẵn sàng.
+                    </p>
+                </div>
+            </div>
+
             {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {[
-                    { label: 'Tổng lộ trình', value: MOCK_PATHS.length, icon: '🗺️', bg: 'bg-slate-50', border: 'border-slate-100', color: 'text-slate-700' },
-                    { label: 'Chờ duyệt', value: pending, icon: '⏳', bg: 'bg-amber-50', border: 'border-amber-100', color: 'text-amber-700' },
-                    { label: 'Đang hoạt động', value: active, icon: '✅', bg: 'bg-emerald-50', border: 'border-emerald-100', color: 'text-emerald-700' },
-                    { label: 'Tổng học viên đăng ký', value: totalStudents, icon: '👥', bg: 'bg-blue-50', border: 'border-blue-100', color: 'text-blue-700' },
-                ].map(s => (
+                {stats.map(s => (
                     <div key={s.label} className={`${s.bg} border ${s.border} rounded-2xl p-5 flex items-center gap-4`}>
-                        <span className="text-3xl">{s.icon}</span>
+                        <s.Icon size={28} weight={s.weight} className={s.color} />
                         <div>
                             <div className={`text-2xl font-extrabold ${s.color}`}>{s.value}</div>
                             <div className="text-xs font-semibold text-slate-500 mt-0.5">{s.label}</div>
@@ -71,12 +85,12 @@ const AdminPaths = () => {
             </div>
 
             {/* Filter */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
                 {[
                     { id: 'all', label: 'Tất cả' },
-                    { id: 'pending', label: '⏳ Chờ duyệt' },
-                    { id: 'active', label: '✅ Đang mở' },
-                    { id: 'rejected', label: '❌ Từ chối' },
+                    { id: 'pending', label: 'Chờ duyệt' },
+                    { id: 'active', label: 'Đang mở' },
+                    { id: 'rejected', label: 'Từ chối' },
                 ].map(f => (
                     <button key={f.id} onClick={() => setFilter(f.id)}
                         className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${filter === f.id ? 'bg-[#5A63F6] text-white shadow-md shadow-indigo-200' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
@@ -108,7 +122,7 @@ const AdminPaths = () => {
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 text-white flex items-center justify-center shrink-0 shadow-sm">
-                                                <BookOpen size={16} />
+                                                <MapTrifold size={16} weight="bold" />
                                             </div>
                                             <div>
                                                 <div className="font-bold text-slate-900 text-sm">{path.title}</div>
@@ -125,22 +139,28 @@ const AdminPaths = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className="flex items-center gap-1 font-extrabold text-amber-600">
-                                            <Zap size={14} className="fill-amber-500" /> {path.price} CR
+                                            <CurrencyCircleDollar size={15} weight="duotone" /> {path.price} CR
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className="flex items-center gap-1 text-sm font-bold text-slate-600">
-                                            <Users size={13} /> {path.students}
+                                            <Users size={14} weight="duotone" /> {path.students}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4"><StatusBadge status={path.status} /></td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center justify-end gap-2">
-                                            <button className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors" title="Xem chi tiết"><Eye size={15} /></button>
+                                            <button className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors" title="Xem chi tiết">
+                                                <Eye size={15} weight="regular" />
+                                            </button>
                                             {path.status === 'pending' && (
                                                 <>
-                                                    <button className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-500 hover:text-white text-emerald-600 font-bold transition-all shadow-sm" title="Duyệt lộ trình"><CheckCircle2 size={16} /></button>
-                                                    <button className="p-2 rounded-xl bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-600 font-bold transition-all shadow-sm" title="Từ chối"><XCircle size={16} /></button>
+                                                    <button className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-500 hover:text-white text-emerald-600 font-bold transition-all shadow-sm disabled:opacity-50 cursor-not-allowed" title="Chức năng đang phát triển" disabled>
+                                                        <CheckCircle size={16} weight="duotone" />
+                                                    </button>
+                                                    <button className="p-2 rounded-xl bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-600 font-bold transition-all shadow-sm disabled:opacity-50 cursor-not-allowed" title="Chức năng đang phát triển" disabled>
+                                                        <XCircle size={16} weight="regular" />
+                                                    </button>
                                                 </>
                                             )}
                                         </div>

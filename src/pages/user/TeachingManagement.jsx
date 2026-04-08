@@ -4,13 +4,13 @@ import {
     ChalkboardTeacher, CalendarBlank, BellRinging, CurrencyDollar, ChartBar,
     Plus, Star, Lightning, PencilSimple, CalendarCheck, Clock,
     Check, X, ArrowRight, ChartLineUp, Coins, WarningCircle, Trash,
-    Spinner
+    Spinner, CheckCircle
 } from '@phosphor-icons/react';
 import httpClient from '../../configuration/axiosClient';
 import { API_ENDPOINTS } from '../../configuration/apiEndpoints';
 import {
     getSlotsBySkill, createSlotsBatch, deleteSlot,
-    getMySessions
+    getMySessions, approveSession, rejectSession
 } from '../../services/sessionService';
 
 const { TEACHING_SKILLS } = API_ENDPOINTS;
@@ -18,8 +18,8 @@ const { TEACHING_SKILLS } = API_ENDPOINTS;
 // â”€â”€ SlotChip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SlotChip = ({ slot, skillId, onDeleted }) => {
     const cfg = {
-        OPEN:    { border: 'border-emerald-300 bg-emerald-50', label: '⏳ Trống',    labelCls: 'text-emerald-600' },
-        BOOKED:  { border: 'border-sky-300 bg-sky-50',          label: 'Đã đặt', labelCls: 'text-sky-600' },
+        OPEN: { border: 'border-emerald-300 bg-emerald-50', label: '⏳ Trống', labelCls: 'text-emerald-600' },
+        BOOKED: { border: 'border-sky-300 bg-sky-50', label: 'Đã đặt', labelCls: 'text-sky-600' },
     }[slot.status] ?? { border: 'border-slate-200 bg-slate-50', label: slot.status, labelCls: 'text-slate-500' };
 
     const handleDelete = async () => {
@@ -43,7 +43,10 @@ const SlotChip = ({ slot, skillId, onDeleted }) => {
             <p className="text-slate-500 mb-1">
                 {timeLabel}{endLabel ? ` — ${endLabel}` : ''}
             </p>
-            <p className={`text-[11px] font-bold ${cfg.labelCls}`}>{cfg.label}</p>
+            <p className={`text-[11px] font-bold ${cfg.labelCls} mb-1`}>{cfg.label}</p>
+            <p className="text-[11px] font-extrabold text-amber-600 flex items-center gap-1">
+                <Lightning size={10} weight="fill" className="text-amber-400" /> {slot.creditCost || 5} cr
+            </p>
             {slot.status === 'OPEN' && (
                 <button
                     onClick={handleDelete}
@@ -110,28 +113,34 @@ const TabSchedule = ({ skills }) => {
     }, []);
 
     useEffect(() => {
-        if (selectedSkill) loadSlots(selectedSkill);
+        if (selectedSkill) {
+            loadSlots(selectedSkill);
+            setRows([EMPTY_ROW(selectedSkill.creditsPerHour || 5)]);
+        }
     }, [selectedSkill, loadSlots]);
 
     const updateRow = (i, field, value) =>
         setRows(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: value } : r));
 
-    const addRow = () => setRows(prev => [...prev, EMPTY_ROW()]);
+    const addRow = () => setRows(prev => [...prev, EMPTY_ROW(selectedSkill?.creditsPerHour || 5)]);
     const removeRow = (i) => setRows(prev => prev.filter((_, idx) => idx !== i));
 
-    const validRows = rows.filter(r => r.date && r.startTime);
+    const validRows = rows.filter(r => r.date && r.startTime && r.creditCost > 0);
 
     const handleCreate = async () => {
         if (!selectedSkill || validRows.length === 0) return;
         setCreating(true);
         setCreateMsg('');
         try {
-            const dates = validRows.map(r => r.date);
-            const times = validRows.map(r => r.startTime);
-            const endTimes = validRows.map(r => r.endTime || '');
-            const newSlots = await createSlotsBatch(selectedSkill.id, dates, times, endTimes.filter(Boolean).length > 0 ? endTimes : []);
+            const slotsPayload = validRows.map(r => ({
+                date: r.date,
+                time: r.startTime,
+                endTime: r.endTime || null,
+                creditCost: r.creditCost
+            }));
+            const newSlots = await createSlotsBatch(selectedSkill.id, slotsPayload);
             setSlots(prev => [...prev, ...(Array.isArray(newSlots) ? newSlots : [])]);
-            setRows([EMPTY_ROW()]);
+            setRows([EMPTY_ROW(selectedSkill?.creditsPerHour || 5)]);
             setCreateMsg(`✅ Đã tạo ${Array.isArray(newSlots) ? newSlots.length : 0} slot thành công!`);
         } catch (e) {
             setCreateMsg('❌ ' + (e?.response?.data?.message || 'Tạo slot thất bại.'));
@@ -159,7 +168,7 @@ const TabSchedule = ({ skills }) => {
                         className={`w-full text-left p-4 rounded-2xl border-2 transition-all ${selectedSkill?.id === s.id ? 'border-violet-400 bg-violet-50' : 'border-slate-100 bg-white hover:border-slate-200'}`}
                     >
                         <div className="flex items-center gap-2 mb-1">
-                            <span className="text-base">{s.skillIcon || 'ðŸ“˜'}</span>
+                            <span className="text-base">{s.skillIcon || '📘'}</span>
                             <span className={`font-bold text-sm ${selectedSkill?.id === s.id ? 'text-violet-700' : 'text-slate-700'}`}>{s.skillName}</span>
                         </div>
                         <p className="text-[11px] text-slate-400">
@@ -177,7 +186,7 @@ const TabSchedule = ({ skills }) => {
 
                 {/* Existing slots */}
                 <div>
-                        <h3 className="font-extrabold text-slate-900 flex items-center gap-2 text-base mb-3">
+                    <h3 className="font-extrabold text-slate-900 flex items-center gap-2 text-base mb-3">
                         <CalendarBlank size={18} weight="duotone" className="text-violet-500" />
                         Các slot hiện tại — {selectedSkill?.skillName}
                     </h3>
@@ -211,15 +220,16 @@ const TabSchedule = ({ skills }) => {
 
                     <div className="space-y-2 mb-4">
                         {/* Header labels */}
-                        <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1">
-                            <span>NgÃ y dáº¡y</span>
-                            <span>Báº¯t Ä‘áº§u</span>
-                            <span>Káº¿t thÃºc</span>
+                        <div className="grid grid-cols-[1fr_1fr_1fr_80px_auto] gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1">
+                            <span>Ngày dạy</span>
+                            <span>Bắt đầu</span>
+                            <span>Kết thúc</span>
+                            <span>Credits</span>
                             <span></span>
                         </div>
 
                         {rows.map((row, i) => (
-                            <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center">
+                            <div key={i} className="grid grid-cols-[1fr_1fr_1fr_80px_auto] gap-2 items-center">
                                 <input
                                     type="date"
                                     min={today}
@@ -239,6 +249,16 @@ const TabSchedule = ({ skills }) => {
                                     onChange={e => updateRow(i, 'endTime', e.target.value)}
                                     className="px-3 py-2.5 rounded-xl border-2 border-slate-100 bg-slate-50 text-sm font-semibold text-slate-700 focus:border-violet-400 focus:bg-white outline-none transition-all w-full"
                                 />
+                                <div className="flex items-center gap-1 bg-amber-50 border-2 border-amber-100 rounded-xl px-2 py-2.5 w-full">
+                                    <Lightning size={14} weight="fill" className="text-amber-400 shrink-0" />
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        value={row.creditCost || ''}
+                                        onChange={e => updateRow(i, 'creditCost', Math.max(1, parseInt(e.target.value) || 1))}
+                                        className="w-full bg-transparent text-sm font-extrabold text-amber-700 focus:outline-none"
+                                    />
+                                </div>
                                 {rows.length > 1 ? (
                                     <button onClick={() => removeRow(i)}
                                         className="w-8 h-8 rounded-xl bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-all shrink-0">
@@ -264,11 +284,10 @@ const TabSchedule = ({ skills }) => {
                         <button
                             onClick={handleCreate}
                             disabled={creating || validRows.length === 0}
-                            className={`ml-auto flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${
-                                !creating && validRows.length > 0
+                            className={`ml-auto flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${!creating && validRows.length > 0
                                     ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm'
                                     : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                            }`}
+                                }`}
                         >
                             {creating ? <Spinner size={14} className="animate-spin" /> : <Plus size={14} weight="bold" />}
                             {creating ? 'Đang tạo...' : `Tạo ${validRows.length} slot`}
@@ -295,17 +314,16 @@ const TabSubjects = ({ skills, onSelectSkill }) => {
                 <div key={skill.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                     <div className="p-6 pb-4 flex flex-col md:flex-row md:items-start gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-violet-100 flex items-center justify-center text-2xl shrink-0">
-                            {skill.skillIcon || 'ðŸ“˜'}
+                            {skill.skillIcon || '📘'}
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-2 mb-1">
                                 <h3 className="font-extrabold text-slate-900 text-lg">{skill.skillName}</h3>
                                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{skill.level}</span>
-                                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                                    skill.verificationStatus === 'APPROVED'
+                                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${skill.verificationStatus === 'APPROVED'
                                         ? 'bg-emerald-100 text-emerald-600'
                                         : 'bg-amber-100 text-amber-600'
-                                }`}>
+                                    }`}>
                                     {skill.verificationStatus === 'APPROVED' ? '✅ Đã duyệt' : '⏳ Chờ duyệt'}
                                 </span>
                             </div>
@@ -339,20 +357,54 @@ const TabSubjects = ({ skills, onSelectSkill }) => {
 
 
 
-// â”€â”€ TabRequests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── TabRequests ──────────────────────────────────────────
 const TabRequests = ({ navigate }) => {
-    const [sessions, setSessions] = useState([]);
+    const [scheduledSessions, setScheduledSessions] = useState([]);
+    const [pendingSessions, setPendingSessions] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        getMySessions('teacher', 'SCHEDULED')
-            .then(data => setSessions(Array.isArray(data) ? data : []))
-            .catch(() => setSessions([]))
-            .finally(() => setLoading(false));
+    const loadData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [scheduled, pending] = await Promise.all([
+                getMySessions('teacher', 'SCHEDULED'),
+                getMySessions('teacher', 'PENDING_APPROVAL')
+            ]);
+            setScheduledSessions(Array.isArray(scheduled) ? scheduled : []);
+            setPendingSessions(Array.isArray(pending) ? pending : []);
+        } catch (e) {
+            setScheduledSessions([]);
+            setPendingSessions([]);
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
+    const handleApprove = async (id) => {
+        try {
+            await approveSession(id);
+            loadData();
+        } catch (e) {
+            alert(e?.response?.data?.message || 'Không thể duyệt yêu cầu này.');
+        }
+    };
+
+    const handleReject = async (id) => {
+        if (!window.confirm('Bạn có chắc muốn từ chối yêu cầu này?')) return;
+        try {
+            await rejectSession(id);
+            loadData();
+        } catch (e) {
+            alert(e?.response?.data?.message || 'Không thể từ chối yêu cầu này.');
+        }
+    };
+
     if (loading) return <div className="flex items-center gap-2 text-slate-400 py-8"><Spinner size={18} className="animate-spin" /> Đang tải...</div>;
-    if (sessions.length === 0) return (
+    if (scheduledSessions.length === 0 && pendingSessions.length === 0) return (
         <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
             <CheckCircle size={40} className="mx-auto mb-3 text-slate-200" />
             <p className="text-slate-500 font-semibold">Không có yêu cầu đặt lịch nào đang chờ.</p>
@@ -360,70 +412,113 @@ const TabRequests = ({ navigate }) => {
     );
 
     return (
-        <div className="space-y-5">
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex items-start gap-3">
-                <WarningCircle size={20} weight="duotone" className="text-amber-500 shrink-0 mt-0.5" />
-                <div>
-                    <p className="font-bold text-amber-800 text-sm">{sessions.length} buổi học sắp diễn ra</p>
-                    <p className="text-xs text-amber-600 mt-0.5">Nhấn "Vào lớp" để bắt đầu khi đến giờ.</p>
-                </div>
-            </div>
-            {sessions.map(session => {
-                const dt = new Date(`${session.slotDate}T${session.slotTime}`);
-                return (
-                    <div key={session.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                        <div className="flex flex-col md:flex-row md:items-center gap-4">
-                            <div className="flex items-start gap-3 flex-1">
-                                <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-extrabold text-sm shrink-0">
-                                    {session.learnerName?.charAt(0) || 'L'}
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                                        <span className="font-extrabold text-slate-900 text-sm">{session.learnerName}</span>
-                                        <span className="text-[11px] text-slate-400">muá»‘n há»c</span>
-                                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-600">ðŸ“˜ {session.skillName}</span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-3 text-xs text-slate-500 font-medium">
-                                        <span className="flex items-center gap-1"><CalendarCheck size={12} weight="duotone" className="text-violet-400" />
-                                            {dt.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'numeric' })}
-                                        </span>
-                                        <span className="flex items-center gap-1"><Clock size={12} weight="duotone" className="text-violet-400" />
-                                            {dt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                        <span className="flex items-center gap-1 text-amber-600 font-bold">
-                                            <Lightning size={12} weight="fill" className="text-amber-400" /> {session.creditCost} credits
-                                        </span>
-                                    </div>
-                                    {session.learnerNotes && (
-                                        <div className="mt-3 bg-slate-50 rounded-xl px-4 py-3 text-xs text-slate-500 italic border border-slate-100">
-                                            "{session.learnerNotes}"
+        <div className="space-y-6">
+            {/* PENDING SESSIONS */}
+            {pendingSessions.length > 0 && (
+                <div className="space-y-4">
+                    <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                        <BellRinging size={18} weight="duotone" className="text-violet-500" /> Cần duyệt ({pendingSessions.length})
+                    </h3>
+                    {pendingSessions.map(session => {
+                        const dt = new Date(`${session.slotDate}T${session.slotTime}`);
+                        return (
+                            <div key={session.id} className="bg-white rounded-2xl border-2 border-violet-100 shadow-sm p-5 relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-1 bg-violet-400 bottom-0" />
+                                <div className="flex flex-col md:flex-row md:items-start gap-4">
+                                    <div className="flex items-start gap-3 flex-1">
+                                        <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center font-extrabold text-sm shrink-0">
+                                            {session.learnerName?.charAt(0) || 'L'}
                                         </div>
-                                    )}
+                                        <div className="flex-1">
+                                            <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                                                <span className="font-extrabold text-slate-900 text-sm">{session.learnerName}</span>
+                                                <span className="text-[11px] text-slate-500">muốn học</span>
+                                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-xl bg-slate-100 text-slate-700">{session.skillIcon} {session.skillName}</span>
+                                            </div>
+                                            <div className="flex flex-wrap gap-3 text-xs text-slate-600 font-medium bg-slate-50 border border-slate-100 px-3 py-2 rounded-xl inline-flex mb-3">
+                                                <span className="flex items-center gap-1"><CalendarCheck size={14} weight="duotone" className="text-violet-500" />
+                                                    {dt.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'numeric' })}
+                                                </span>
+                                                <span className="flex items-center gap-1"><Clock size={14} weight="duotone" className="text-violet-500" />
+                                                    {dt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                            {session.learnerNotes && (
+                                                <div className="bg-indigo-50/50 rounded-xl px-4 py-3 text-xs text-slate-600 border border-indigo-100 relative">
+                                                    <span className="absolute -top-2 left-3 bg-white text-[10px] font-bold text-indigo-400 px-1">Ghi chú từ sinh viên:</span>
+                                                    <p className="italic">"{session.learnerNotes}"</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2 shrink-0 md:flex-col lg:flex-row">
+                                        <button
+                                            onClick={() => handleReject(session.id)}
+                                            className="flex items-center justify-center gap-1.5 px-4 py-2 bg-white hover:bg-red-50 text-red-600 border border-red-200 font-bold text-xs rounded-xl transition-all"
+                                        >
+                                            Từ chối
+                                        </button>
+                                        <button
+                                            onClick={() => handleApprove(session.id)}
+                                            className="flex items-center justify-center gap-1.5 px-6 py-2 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm"
+                                        >
+                                            <Check size={14} weight="bold" /> Duyệt
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                            <button
-                                onClick={() => navigate(`/app/call/${session.id}`)}
-                                className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm"
-                            >
-                                <ArrowRight size={13} weight="bold" /> Vào lớp
-                            </button>
-                        </div>
-                    </div>
-                );
-            })}
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* SCHEDULED SESSIONS */}
+            {scheduledSessions.length > 0 && (
+                <div className="space-y-4">
+                    <h3 className="font-bold text-slate-800 text-base flex items-center gap-2 mt-2">
+                        <CalendarCheck size={18} weight="duotone" className="text-slate-500" /> Đã xếp lịch ({scheduledSessions.length})
+                    </h3>
+                    {scheduledSessions.map(session => {
+                        const dt = new Date(`${session.slotDate}T${session.slotTime}`);
+                        return (
+                            <div key={session.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+                                <div className="flex flex-col md:flex-row md:items-center gap-4">
+                                    <div className="flex items-center gap-3 flex-1">
+                                        <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm shrink-0 border border-slate-200">
+                                            {session.learnerName?.charAt(0) || 'L'}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="font-bold text-slate-800 text-sm">{session.learnerName}</span>
+                                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold">Chờ học</span>
+                                            </div>
+                                            <p className="text-xs text-slate-500 mb-1">Dạy: {session.skillIcon} {session.skillName}</p>
+                                            <div className="flex gap-3 text-xs text-slate-500 font-semibold">
+                                                <span>Ngày: {dt.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}</span>
+                                                <span>Giờ: {dt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => navigate(`/app/call/${session.id}`)}
+                                        className="flex items-center justify-center gap-1.5 px-5 py-2.5 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl transition-all w-full md:w-auto"
+                                    >
+                                        <ArrowRight size={14} weight="bold" /> Vào lớp
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 };
 
-// â”€â”€ CheckCircle (missing from imports) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const CheckCircle = ({ size, className }) => (
-    <CalendarBlank size={size} className={className} weight="duotone" />
-);
-
-// â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Main ──────────────────────────────────────────────────
 const TABS = [
     { id: 'schedule', label: 'Lịch rảnh', icon: CalendarBlank },
-    { id: 'requests', label: 'Yêu cầu',   icon: BellRinging },
+    { id: 'requests', label: 'Yêu cầu', icon: BellRinging },
 ];
 
 const TeachingManagement = () => {
@@ -436,7 +531,7 @@ const TeachingManagement = () => {
     useEffect(() => {
         const load = async () => {
             try {
-                        const res = await httpClient.get(TEACHING_SKILLS.GET_MY);
+                const res = await httpClient.get(TEACHING_SKILLS.GET_MY);
                 const data = res?.result ?? (Array.isArray(res) ? res : []);
                 setSkills(data.filter(s => s.verificationStatus === 'APPROVED'));
             } catch (_) {

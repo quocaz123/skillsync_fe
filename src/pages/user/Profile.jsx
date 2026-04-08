@@ -2,30 +2,31 @@ import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../../store';
 import {
     MapPin,
-    CalendarDays,
+    CalendarBlank,
     Star,
     Medal,
-    Edit3,
+    PencilSimple,
     Compass,
     Users,
     ShieldCheck,
-    AtSign,
+    At,
     Camera,
-    Coins,
-    Presentation,
+    Coin,
+    ChalkboardTeacher,
     Laptop,
-    Loader2,
+    CircleNotch,
     X,
-    Activity,
+    Heartbeat,
     Target,
     Lightbulb,
-    UserRound
-} from 'lucide-react';
+    UserCircle
+} from '@phosphor-icons/react';
 import { AddSkillModal } from '../../components/profile/AddSkillModal.jsx';
 import { uploadFile } from '../../services/uploadService.js';
 import { getMyProfile, updateAvatar, updateBio } from '../../services/userService.js';
 import { getMyTeachingSkills, deleteTeachingSkill } from '../../services/skillService.js';
 import { trackAction } from '../../services/missionService.js';
+import { getReviewsByUserId } from '../../services/reviewService.js';
 
 const LEVEL_LABEL = {
     BEGINNER: 'Beginner',
@@ -37,7 +38,7 @@ const LEVEL_LABEL = {
 const Profile = () => {
     const { user, setUser } = useStore();
     const [profile, setProfile] = useState(null);
-    const [activeTab, setActiveTab] = useState('learner'); // 'learner' | 'mentor'
+    const [activeTab, setActiveTab] = useState('learner'); // 'learner' | 'mentor' | 'reviews'
     const [showAddSkillModal, setShowAddSkillModal] = useState(false);
 
     // Avatar state
@@ -53,6 +54,10 @@ const Profile = () => {
     // Teaching skills state
     const [teachingSkills, setTeachingSkills] = useState([]);
     const [loadingSkills, setLoadingSkills] = useState(false);
+
+    // Reviews state
+    const [reviews, setReviews] = useState([]);
+    const [loadingReviews, setLoadingReviews] = useState(false);
 
     // Load profile + teaching skills on mount
     useEffect(() => {
@@ -162,13 +167,13 @@ const Profile = () => {
         <div className="max-w-6xl mx-auto space-y-8 font-sans pb-12">
 
             {/* Top Profile Header */}
-            <div className="bg-white rounded-[2rem] border border-slate-200/60 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 relative group">
+            <div className="bg-white rounded-[2rem] border border-slate-200/60 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(90,99,246,0.1)] transition-shadow duration-300 relative group">
 
                 {/* Banner */}
                 <div className="h-48 w-full relative overflow-hidden bg-slate-900">
-                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-600/90 via-purple-600/90 to-fuchsia-600/90 z-10 mix-blend-multiply"></div>
-                    <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-500 rounded-full mix-blend-screen filter blur-[80px] opacity-70 z-0 animate-pulse"></div>
-                    <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-fuchsia-500 rounded-full mix-blend-screen filter blur-[60px] opacity-60 z-0"></div>
+                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 z-10 opacity-90 mix-blend-multiply"></div>
+                    <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-400 rounded-full mix-blend-screen filter blur-[80px] opacity-70 z-0 animate-[pulse_6s_ease-in-out_infinite]"></div>
+                    <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-fuchsia-400 rounded-full mix-blend-screen filter blur-[60px] opacity-60 z-0 animate-[pulse_8s_ease-in-out_infinite]"></div>
                 </div>
 
                 {/* Avatar & Info */}
@@ -177,18 +182,19 @@ const Profile = () => {
 
                         {/* Avatar with upload */}
                         <div className="relative group/avatar">
-                            <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500 to-fuchsia-500 rounded-[2rem] blur opacity-30 group-hover/avatar:opacity-50 transition-opacity"></div>
-                            <label className="w-32 h-32 sm:w-40 sm:h-40 relative rounded-[2rem] bg-white p-2 shadow-xl border border-white block cursor-pointer">
+                            {/* Glow Effect */}
+                            <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500 via-violet-500 to-fuchsia-500 rounded-[2rem] blur-xl opacity-40 group-hover/avatar:opacity-75 transition-all duration-500 scale-105"></div>
+                            <label className="w-32 h-32 sm:w-40 sm:h-40 relative rounded-[2rem] bg-white p-2 shadow-2xl border border-white/50 block cursor-pointer transition-transform duration-300 hover:scale-[1.02]">
                                 <div className="w-full h-full bg-[#f1f4f9] rounded-[1.5rem] flex items-center justify-center text-5xl sm:text-6xl text-[#3b4758] font-extrabold overflow-hidden relative">
                                     {avatarUrl ? (
                                         <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover rounded-[1.5rem]" />
                                     ) : (
                                         <span>{displayName?.charAt(0)?.toUpperCase() || 'U'}</span>
                                     )}
-                                    <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover/avatar:opacity-100 transition-opacity z-10 rounded-[1.5rem]">
+                                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center text-white opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-300 z-10 rounded-[1.5rem]">
                                         {avatarUploading
-                                            ? <Loader2 size={28} className="animate-spin mb-1 text-white/90" />
-                                            : <Camera size={28} className="mb-1 text-white/90 drop-shadow-md" />
+                                            ? <CircleNotch size={32} weight="bold" className="animate-spin mb-1 text-white/90" />
+                                            : <Camera size={32} weight="duotone" className="mb-1 text-white/90 drop-shadow-md" />
                                         }
                                         <span className="text-xs font-bold tracking-wide drop-shadow-md">
                                             {avatarUploading ? 'Đang tải...' : 'Tải lên'}
@@ -203,7 +209,8 @@ const Profile = () => {
                                         disabled={avatarUploading}
                                     />
                                 </div>
-                                <div className="absolute bottom-1 right-1 w-6 h-6 bg-emerald-500 border-4 border-white rounded-full z-20 shadow-sm"></div>
+                                {/* Status dot */}
+                                <div className="absolute bottom-1 right-1 w-7 h-7 bg-emerald-500 border-4 border-white rounded-full z-20 shadow-md"></div>
                             </label>
                         </div>
 
@@ -212,17 +219,17 @@ const Profile = () => {
                             <div>
                                 <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
                                     {displayName}
-                                    <ShieldCheck className="text-blue-500" size={28} />
+                                    <ShieldCheck className="text-blue-500" weight="fill" size={32} />
                                 </h1>
                                 {joinedDate && (
-                                    <p className="text-slate-400 text-sm mt-1 flex items-center gap-1.5">
-                                        <CalendarDays size={14} /> Tham gia {joinedDate}
+                                    <p className="text-slate-500 font-medium text-sm mt-1.5 flex items-center gap-1.5">
+                                        <CalendarBlank size={16} weight="duotone" className="text-slate-400" /> Tham gia từ {joinedDate}
                                     </p>
                                 )}
                             </div>
                             <div className="flex items-center gap-3">
-                                <button className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center gap-2 shadow-sm">
-                                    <Edit3 size={18} /> Chỉnh sửa hồ sơ
+                                <button className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl font-bold text-sm transition-colors flex items-center gap-2 shadow-sm border border-slate-200/60 active:scale-95">
+                                    <PencilSimple size={18} weight="bold" className="text-slate-500" /> Chỉnh sửa hồ sơ
                                 </button>
                             </div>
                         </div>
@@ -230,34 +237,44 @@ const Profile = () => {
 
                     {/* Stats Strip */}
                     <div className="flex items-center justify-between sm:justify-around text-center overflow-x-auto gap-6 hide-scrollbar pt-6 pb-2 border-t border-slate-100">
-                        <div className="flex flex-col items-center shrink-0 min-w-[70px]">
-                            <Coins size={24} className="text-amber-500 mb-2" />
-                            <h3 className="text-2xl font-black text-indigo-600 mb-0.5 tracking-tight">{credits}</h3>
-                            <p className="text-slate-400 text-xs sm:text-sm font-medium">Credits</p>
+                        <div className="flex flex-col items-center shrink-0 min-w-[70px] group/stat">
+                            <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mb-2 group-hover/stat:scale-110 group-hover/stat:bg-amber-100 transition-all">
+                                <Coin size={26} weight="duotone" className="text-amber-500" />
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-800 tracking-tight">{credits}</h3>
+                            <p className="text-slate-400 text-xs sm:text-sm font-bold">Credits</p>
                         </div>
-                        <div className="flex flex-col items-center shrink-0 min-w-[70px]">
-                            <Presentation size={24} className="text-indigo-500 mb-2" />
-                            <h3 className="text-2xl font-black text-indigo-600 mb-0.5 tracking-tight">{totalTeachingSessions}</h3>
-                            <p className="text-slate-400 text-xs sm:text-sm font-medium">Buổi dạy</p>
+                        <div className="flex flex-col items-center shrink-0 min-w-[70px] group/stat">
+                            <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center mb-2 group-hover/stat:scale-110 group-hover/stat:bg-indigo-100 transition-all">
+                                <ChalkboardTeacher size={26} weight="duotone" className="text-indigo-500" />
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-800 tracking-tight">{totalTeachingSessions}</h3>
+                            <p className="text-slate-400 text-xs sm:text-sm font-bold">Buổi dạy</p>
                         </div>
-                        <div className="flex flex-col items-center shrink-0 min-w-[70px]">
-                            <Laptop size={24} className="text-emerald-500 mb-2" />
-                            <h3 className="text-2xl font-black text-indigo-600 mb-0.5 tracking-tight">{totalLearningSessions}</h3>
-                            <p className="text-slate-400 text-xs sm:text-sm font-medium">Buổi học</p>
+                        <div className="flex flex-col items-center shrink-0 min-w-[70px] group/stat">
+                            <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-2 group-hover/stat:scale-110 group-hover/stat:bg-emerald-100 transition-all">
+                                <Laptop size={26} weight="duotone" className="text-emerald-500" />
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-800 tracking-tight">{totalLearningSessions}</h3>
+                            <p className="text-slate-400 text-xs sm:text-sm font-bold">Buổi học</p>
                         </div>
-                        <div className="flex flex-col items-center shrink-0 min-w-[70px]">
-                            <Star size={24} className="text-amber-400 mb-2 fill-current" />
-                            <h3 className="text-2xl font-black text-indigo-600 mb-0.5 tracking-tight">
+                        <div className="flex flex-col items-center shrink-0 min-w-[70px] group/stat">
+                            <div className="w-12 h-12 bg-yellow-50 rounded-2xl flex items-center justify-center mb-2 group-hover/stat:scale-110 group-hover/stat:bg-yellow-100 transition-all">
+                                <Star size={26} weight="fill" className="text-yellow-400" />
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-800 tracking-tight">
                                 {averageRating != null ? averageRating.toFixed(1) : '—'}
                             </h3>
-                            <p className="text-slate-400 text-xs sm:text-sm font-medium">
+                            <p className="text-slate-400 text-xs sm:text-sm font-bold">
                                 Đánh giá{totalReviews > 0 ? ` (${totalReviews})` : ''}
                             </p>
                         </div>
-                        <div className="flex flex-col items-center shrink-0 min-w-[70px]">
-                            <Activity size={24} className="text-rose-500 mb-2" />
-                            <h3 className="text-2xl font-black text-indigo-600 mb-0.5 tracking-tight">{trustScore}</h3>
-                            <p className="text-slate-400 text-xs sm:text-sm font-medium">Trust</p>
+                        <div className="flex flex-col items-center shrink-0 min-w-[70px] group/stat">
+                            <div className="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center mb-2 group-hover/stat:scale-110 group-hover/stat:bg-rose-100 transition-all">
+                                <Heartbeat size={26} weight="duotone" className="text-rose-500" />
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-800 tracking-tight">{trustScore}</h3>
+                            <p className="text-slate-400 text-xs sm:text-sm font-bold">Niềm tin</p>
                         </div>
                     </div>
                 </div>
@@ -265,18 +282,24 @@ const Profile = () => {
 
             {/* Role Tabs */}
             <div className="flex justify-center">
-                <div className="bg-slate-100/80 backdrop-blur-md p-1.5 rounded-2xl inline-flex shadow-inner">
+                <div className="bg-slate-100/90 backdrop-blur-md p-1.5 rounded-2xl inline-flex shadow-inner border border-slate-200/50">
                     <button
                         onClick={() => setActiveTab('learner')}
-                        className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold transition-all duration-300 ${activeTab === 'learner' ? 'bg-white text-blue-600 shadow-sm shadow-slate-200/50 scale-100' : 'text-slate-500 hover:text-slate-700 scale-95 hover:scale-100'}`}
+                        className={`flex items-center gap-2 px-8 py-3 rounded-xl font-extrabold transition-all duration-300 ${activeTab === 'learner' ? 'bg-white text-blue-600 shadow-md scale-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 scale-95 hover:scale-100'}`}
                     >
-                        <Compass size={18} /> Học viên
+                        <Compass size={20} weight={activeTab === 'learner' ? 'duotone' : 'regular'} /> Học viên
                     </button>
                     <button
                         onClick={() => setActiveTab('mentor')}
-                        className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold transition-all duration-300 ${activeTab === 'mentor' ? 'bg-white text-purple-600 shadow-sm shadow-slate-200/50 scale-100' : 'text-slate-500 hover:text-slate-700 scale-95 hover:scale-100'}`}
+                        className={`flex items-center gap-2 px-8 py-3 rounded-xl font-extrabold transition-all duration-300 ${activeTab === 'mentor' ? 'bg-white text-purple-600 shadow-md scale-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 scale-95 hover:scale-100'}`}
                     >
-                        <Users size={18} /> Giảng viên
+                        <Users size={20} weight={activeTab === 'mentor' ? 'duotone' : 'regular'} /> Giảng viên
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('reviews')}
+                        className={`flex items-center gap-2 px-8 py-3 rounded-xl font-extrabold transition-all duration-300 ${activeTab === 'reviews' ? 'bg-white text-amber-600 shadow-md scale-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 scale-95 hover:scale-100'}`}
+                    >
+                        <Star size={20} weight={activeTab === 'reviews' ? 'duotone' : 'regular'} /> Lời khen
                     </button>
                 </div>
             </div>
@@ -285,77 +308,128 @@ const Profile = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
                 {/* Left Column — Skills */}
-                <div className="lg:col-span-2 space-y-8 animate-in slide-in-from-bottom-4 duration-500 fade-in">
-                    <div className="bg-white rounded-3xl border border-slate-200/60 p-8 shadow-sm relative overflow-hidden">
-                        <div className={`absolute top-0 right-0 w-64 h-64 rounded-full mix-blend-multiply filter blur-[80px] opacity-40 -z-0 pointer-events-none ${activeTab === 'learner' ? 'bg-blue-100' : 'bg-purple-100'}`}></div>
+                <div className="lg:col-span-2 space-y-8 animate-[slideIn_0.5s_ease-out]">
+                    <div className="bg-white rounded-[2rem] border border-slate-200/60 p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group/skills">
+                        <div className={`absolute top-0 right-0 w-64 h-64 rounded-full mix-blend-multiply filter blur-[80px] opacity-40 -z-0 pointer-events-none transition-colors duration-1000 ${activeTab === 'learner' ? 'bg-blue-100' : 'bg-purple-100'}`}></div>
 
                         <div className="relative z-10 flex justify-between items-center mb-8">
                             <div>
-                                <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+                                <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
                                     {activeTab === 'learner' ? (
-                                        <><Target className="text-blue-500" /> Kỹ năng muốn học</>
+                                        <><Target size={28} weight="duotone" className="text-blue-500" /> Kỹ năng muốn học</>
+                                    ) : activeTab === 'mentor' ? (
+                                        <><Lightbulb size={28} weight="duotone" className="text-purple-500" /> Kỹ năng giảng dạy</>
                                     ) : (
-                                        <><Lightbulb className="text-purple-500" /> Kỹ năng giảng dạy</>
+                                        <><Star size={28} weight="duotone" className="text-amber-500" /> Đánh giá từ Học viên</>
                                     )}
                                 </h2>
-                                <p className="text-slate-500 mt-1">
-                                    {activeTab === 'learner' ? 'Những chủ đề bạn muốn thành thạo' : 'Cập nhật chứng chỉ để minh chứng năng lực'}
+                                <p className="text-slate-500 mt-1 font-medium text-sm">
+                                    {activeTab === 'learner' ? 'Những chủ đề bạn kỳ vọng nâng cao trình độ' : activeTab === 'mentor' ? 'Chứng minh năng lực của bạn với cộng đồng' : 'Những lời nhận xét mang lại động lực phát triển'}
                                 </p>
                             </div>
-                            <button className="bg-slate-100 hover:bg-slate-200 text-slate-700 w-10 h-10 rounded-full flex items-center justify-center transition-colors shadow-sm">
-                                <Edit3 size={18} />
+                            <button className="bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 w-10 h-10 rounded-xl flex items-center justify-center transition-colors shadow-sm border border-slate-200">
+                                <PencilSimple size={18} weight="bold" />
                             </button>
                         </div>
 
                         <div className="flex flex-wrap gap-3 relative z-10">
                             {activeTab === 'learner' ? (
                                 learningInterests.length === 0 ? (
-                                    <p className="text-slate-400 text-sm">Bạn chưa đăng ký học kỹ năng nào.</p>
+                                    <div className="w-full py-10 flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                                        <Target size={32} weight="duotone" className="text-slate-300 mb-2" />
+                                        <p className="text-slate-400 font-medium">Bạn chưa đăng ký danh mục mục tiêu kỹ năng nào.</p>
+                                    </div>
                                 ) : (
                                     learningInterests.map((item, idx) => (
                                         <div
                                             key={idx}
                                             title={item.learningGoal || ''}
-                                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border font-semibold text-sm transition-all hover:-translate-y-1 shadow-sm bg-blue-50/50 border-blue-200 text-blue-700 hover:shadow-blue-200"
+                                            className="flex items-center gap-2.5 px-5 py-3 rounded-2xl border font-bold text-sm transition-all hover:-translate-y-1 bg-gradient-to-br from-blue-50 to-indigo-50/50 border-blue-200/60 shadow-sm text-blue-800 hover:shadow-blue-200 hover:border-blue-300"
                                         >
-                                            {item.skillIcon && <span>{item.skillIcon}</span>}
+                                            {item.skillIcon && <span className="text-base">{item.skillIcon}</span>}
                                             <span>{item.skillName}</span>
                                             {item.desiredLevel && (
-                                                <span className="text-[10px] bg-blue-100 px-1.5 py-0.5 rounded font-bold">
+                                                <span className="text-[10px] bg-white text-blue-600 border border-blue-100 px-2 py-0.5 rounded-md font-black uppercase tracking-wider shadow-sm">
                                                     {LEVEL_LABEL[item.desiredLevel] || item.desiredLevel}
                                                 </span>
                                             )}
                                         </div>
                                     ))
                                 )
-                            ) : loadingSkills ? (
-                                <div className="flex items-center gap-2 text-slate-400">
-                                    <Loader2 size={18} className="animate-spin" />
-                                    <span className="text-sm">Đang tải...</span>
-                                </div>
-                            ) : teachingSkills.length === 0 ? (
-                                <p className="text-slate-400 text-sm">Bạn chưa có kỹ năng dạy nào. Thêm ngay!</p>
-                            ) : (
-                                teachingSkills.map((ts) => (
-                                    <div key={ts.id} className="group flex items-center gap-2 px-4 py-2.5 rounded-xl border font-semibold text-sm bg-purple-50/50 border-purple-200 text-purple-700 hover:shadow-purple-200 hover:-translate-y-1 transition-all shadow-sm">
-                                        <span>{ts.skillIcon}</span>
-                                        <span>{ts.skillName}</span>
-                                        <span className="text-[10px] bg-purple-100 px-1.5 py-0.5 rounded font-bold">{ts.level}</span>
-                                        <button
-                                            onClick={() => handleDeleteSkill(ts.id)}
-                                            className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all ml-1"
-                                            title="Xóa"
-                                        >
-                                            <X size={14} />
-                                        </button>
+                            ) : activeTab === 'mentor' ? (
+                                loadingSkills ? (
+                                    <div className="w-full flex flex-col items-center py-10 gap-2 text-slate-400">
+                                        <CircleNotch size={28} weight="bold" className="animate-spin text-purple-400" />
+                                        <span className="font-semibold text-sm">Đang tải kỹ năng...</span>
                                     </div>
-                                ))
+                                ) : teachingSkills.length === 0 ? (
+                                    <div className="w-full py-10 flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                                        <Lightbulb size={32} weight="duotone" className="text-slate-300 mb-2" />
+                                        <p className="text-slate-400 font-medium">Bạn chưa thiết lập Kỹ năng giảng dạy. Thêm ngay!</p>
+                                    </div>
+                                ) : (
+                                    teachingSkills.map((ts) => (
+                                        <div key={ts.id} className="group relative pr-10 flex items-center gap-2.5 px-5 py-3 rounded-2xl border font-bold text-sm bg-gradient-to-br from-purple-50 to-fuchsia-50/50 border-purple-200/60 shadow-sm text-purple-800 hover:shadow-purple-200 hover:-translate-y-1 transition-all">
+                                            <span className="text-base">{ts.skillIcon}</span>
+                                            <span>{ts.skillName}</span>
+                                            <span className="text-[10px] bg-white border border-purple-100 text-purple-600 uppercase tracking-wider px-2 py-0.5 rounded-md font-black shadow-sm">{ts.level}</span>
+                                            <button
+                                                onClick={() => handleDeleteSkill(ts.id)}
+                                                className="absolute right-3 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-lg p-1.5 transition-all shadow-sm"
+                                                title="Xóa kỹ năng"
+                                            >
+                                                <X size={14} weight="bold" />
+                                            </button>
+                                        </div>
+                                    ))
+                                )
+                            ) : (
+                                <div className="w-full flex flex-col gap-4">
+                                    {loadingReviews ? (
+                                        <div className="w-full flex flex-col items-center py-10 gap-2 text-slate-400">
+                                            <CircleNotch size={28} weight="bold" className="animate-spin text-amber-400" />
+                                            <span className="font-semibold text-sm">Đang nạp phản hồi...</span>
+                                        </div>
+                                    ) : reviews.length === 0 ? (
+                                        <div className="w-full py-10 flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                                            <Star size={32} weight="duotone" className="text-slate-300 mb-2" />
+                                            <p className="text-slate-400 font-medium">Chưa có đánh giá nào từ học viên. Hãy hoàn thành nhiều buổi học nhé!</p>
+                                        </div>
+                                    ) : (
+                                        reviews.map((r) => (
+                                            <div key={r.id} className="bg-gradient-to-br from-amber-50 to-yellow-50/30 border border-amber-100/60 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow">
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-12 h-12 bg-white rounded-[14px] flex items-center justify-center font-extrabold text-amber-600 shadow-sm shrink-0 overflow-hidden border border-amber-100">
+                                                            {r.reviewerAvatar ? <img src={r.reviewerAvatar} alt="avatar" className="w-full h-full object-cover"/> : r.reviewerName?.charAt(0)}
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-extrabold text-slate-800 text-sm mb-0.5">{r.reviewerName}</div>
+                                                            <div className="text-xs text-slate-500 font-medium">
+                                                                Trải nghiệm <span className="font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded ml-1">{r.skillName}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-0.5 bg-white px-2.5 py-1.5 rounded-xl border border-amber-100 shadow-sm">
+                                                        {[...Array(5)].map((_, i) => (
+                                                            <Star key={i} size={14} weight={i < r.rating ? 'fill' : 'regular'} className={i < r.rating ? 'text-amber-400' : 'text-slate-200'} />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <p className="text-slate-700 text-sm italic font-medium bg-white/70 backdrop-blur-sm p-4 rounded-2xl shadow-inner border border-white">"{r.comment}"</p>
+                                                <div className="text-[11px] text-slate-400 font-bold text-right mt-3 uppercase tracking-wider">
+                                                    {new Date(r.createdAt).toLocaleDateString('vi-VN')}
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
                             )}
 
                             {activeTab === 'mentor' && (
                                 <button
                                     onClick={() => setShowAddSkillModal(true)}
-                                    className="px-5 py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-semibold text-sm hover:bg-slate-50 hover:border-slate-400 hover:text-slate-700 transition-colors flex items-center gap-2"
+                                    className="col-span-1 min-w-[140px] px-5 py-3 rounded-2xl border-2 border-dashed border-purple-200 text-purple-600 font-extrabold text-sm hover:bg-purple-50 hover:border-purple-400 transition-all flex items-center justify-center gap-2 hover:-translate-y-1"
                                 >
                                     + Thêm mới
                                 </button>
@@ -365,21 +439,21 @@ const Profile = () => {
                 </div>
 
                 {/* Right Column */}
-                <div className="space-y-8 animate-in slide-in-from-bottom-8 duration-700 fade-in">
+                <div className="space-y-8 animate-[slideIn_0.7s_ease-out]">
 
                     {/* About / Bio */}
-                    <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-sm">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                                <UserRound className="text-indigo-500" size={20} /> Giới thiệu bản thân
+                    <div className="bg-white rounded-[2rem] border border-slate-200/60 p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative">
+                        <div className="flex items-center justify-between mb-5">
+                            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                                <UserCircle className="text-indigo-500" weight="duotone" size={24} /> Giới thiệu
                             </h3>
                             {!bioEditing && (
                                 <button
                                     onClick={() => { setBioEditing(true); setBioValue(profile?.bio || ''); }}
-                                    className="text-slate-400 hover:text-slate-600 transition-colors"
+                                    className="text-slate-400 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50 w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
                                     title="Chỉnh sửa bio"
                                 >
-                                    <Edit3 size={16} />
+                                    <PencilSimple size={16} weight="bold" />
                                 </button>
                             )}
                         </div>
@@ -387,71 +461,75 @@ const Profile = () => {
                         {bioEditing ? (
                             <div className="space-y-3">
                                 <textarea
-                                    className="w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                    className="w-full border border-indigo-200 bg-indigo-50/30 rounded-2xl p-4 text-sm font-medium text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400 shadow-inner"
                                     rows={5}
                                     maxLength={500}
                                     value={bioValue}
                                     onChange={e => setBioValue(e.target.value)}
-                                    placeholder="Viết vài dòng giới thiệu về bản thân..."
+                                    placeholder="Viết vài dòng ấn tượng giới thiệu về con người và kinh nghiệm của bạn..."
                                 />
                                 <div className="flex gap-2">
                                     <button
                                         onClick={handleSaveBio}
                                         disabled={bioSaving}
-                                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-60 transition-colors"
+                                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-indigo-600/20 disabled:opacity-60 transition-all hover:-translate-y-0.5"
                                     >
-                                        {bioSaving ? 'Đang lưu...' : 'Lưu'}
+                                        {bioSaving ? 'Đang lưu...' : 'Lưu giới thiệu'}
                                     </button>
                                     <button
                                         onClick={() => setBioEditing(false)}
-                                        className="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+                                        className="px-4 py-2.5 rounded-xl text-sm font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
                                     >
                                         Hủy
                                     </button>
                                 </div>
                             </div>
                         ) : (
-                            <p className="text-slate-600 leading-relaxed text-sm">
-                                {profile?.bio || <span className="italic text-slate-400">Chưa có giới thiệu. Nhấn ✏️ để thêm.</span>}
+                            <p className="text-slate-600 leading-relaxed text-sm font-medium">
+                                {profile?.bio || <span className="italic text-slate-400 font-normal">Thông tin đang chờ được tỏa sáng. Bấm biểu tượng ✏️ để chỉnh sửa.</span>}
                             </p>
                         )}
 
-                        <div className="mt-6 pt-6 border-t border-slate-100 flex flex-col gap-3">
-                            <div className="flex items-center gap-3 text-slate-500 text-sm font-medium">
-                                <AtSign size={18} className="text-slate-400" />
+                        <div className="mt-6 pt-6 border-t border-slate-100 flex flex-col gap-3.5">
+                            <div className="flex items-center gap-3 text-slate-600 text-sm font-bold">
+                                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center">
+                                    <At size={18} weight="duotone" className="text-slate-400" />
+                                </div>
                                 {profile?.email || user?.email || '—'}
                             </div>
                             {joinedDate && (
-                                <div className="flex items-center gap-3 text-slate-500 text-sm font-medium">
-                                    <CalendarDays size={18} className="text-slate-400" />
-                                    Tham gia {joinedDate}
+                                <div className="flex items-center gap-3 text-slate-600 text-sm font-bold">
+                                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center">
+                                        <CalendarBlank size={18} weight="duotone" className="text-slate-400" />
+                                    </div>
+                                    Tham gia từ {joinedDate}
                                 </div>
                             )}
                         </div>
                     </div>
 
                     {/* Trust Score Card */}
-                    <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-sm relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-100 rounded-full mix-blend-multiply filter blur-[50px] opacity-60"></div>
-                        <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2 relative z-10">
-                            <Medal className="text-amber-500" /> Điểm uy tín
+                    <div className="bg-white rounded-[2rem] border border-slate-200/60 p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group">
+                        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-amber-100 rounded-full mix-blend-multiply filter blur-[50px] opacity-60 group-hover:scale-125 transition-transform duration-1000"></div>
+                        <h3 className="text-lg font-black text-slate-900 mb-5 flex items-center gap-2 relative z-10">
+                            <Medal size={24} weight="duotone" className="text-amber-500" /> Điểm phân hạng uy tín
                         </h3>
                         <div className="relative z-10">
-                            <div className="flex items-end gap-2 mb-2">
-                                <span className="text-4xl font-black text-indigo-600">{trustScore}</span>
-                                <span className="text-slate-400 text-sm mb-1">/ 100</span>
+                            <div className="flex items-end gap-2 mb-3">
+                                <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-rose-500 tracking-tighter">{trustScore}</span>
+                                <span className="text-slate-400 font-extrabold mb-1">/ 100</span>
                             </div>
-                            <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                            <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden shadow-inner p-0.5">
                                 <div
-                                    className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 transition-all duration-700"
+                                    className="h-full rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 transition-all duration-1000 shadow-sm"
                                     style={{ width: `${Math.min(trustScore, 100)}%` }}
                                 />
                             </div>
-                            <p className="text-xs text-slate-400 mt-2">
-                                {trustScore >= 80 ? '🌟 Uy tín cao — được cộng đồng tin tưởng'
-                                    : trustScore >= 50 ? '✅ Hoạt động ổn định'
-                                        : '⚠️ Hoàn thành buổi học để tăng điểm uy tín'}
-                            </p>
+                            <div className="mt-4 bg-amber-50/50 border border-amber-100 text-amber-800 rounded-xl p-3 text-xs font-semibold leading-relaxed">
+                                {trustScore >= 80 ? '🌟 Hạng S: Bạn sở hữu Trust Score tuyệt đối. Được phép dạy mở khóa slot tự do!'
+                                    : trustScore >= 50 ? '✅ Hạng A: Bạn là thành viên tích cực, hoàn thành tốt các chỉ tiêu hệ thống.'
+                                        : '⚠️ Hạng B: Điểm uy tín khá thấp. Cẩn trọng với các đánh giá xấu nhé!'}
+                            </div>
                         </div>
                     </div>
                 </div>

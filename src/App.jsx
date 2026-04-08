@@ -13,10 +13,10 @@ import AdminSessions from './pages/admin/AdminSessions';
 import AdminCredits from './pages/admin/AdminCredits';
 import AdminPaths from './pages/admin/AdminPaths';
 import AdminSystem from './pages/admin/AdminSystem';
-import AdminSettings from './pages/admin/AdminSettings';
 import AdminTeachingSkills from './pages/admin/AdminTeachingSkills';
+import AdminEscrow from './pages/admin/AdminEscrow';
+import AdminForumPosts from './pages/admin/AdminForumPosts';
 import Explore from './pages/user/Explore';
-import Skills from './pages/user/Skills';
 import Sessions from './pages/user/Sessions';
 import JoinSessionGuidePage from './pages/user/JoinSessionGuide';
 import Profile from './pages/user/Profile';
@@ -31,23 +31,27 @@ import Missions from './pages/user/Missions';
 import { useStore } from './store';
 
 // Mock Pages for now
-const NotFound = () => <div className="flex flex-col items-center justify-center min-h-screen"><h1 className="text-4xl font-bold text-primary-600">404</h1><p className="mt-2">Page Not Found</p></div>;
+const NotFound = () => (
+  <div className="flex flex-col items-center justify-center min-h-screen">
+    <h1 className="text-4xl font-bold text-primary-600">404</h1>
+    <p className="mt-2">Page Not Found</p>
+  </div>
+);
 
 // Route Guards
 const ProtectedUserRoute = ({ children }) => {
   const { isAuthenticated, role } = useStore();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (role === 'admin') return <Navigate to="/admin" replace />;
+  if (role === "admin") return <Navigate to="/admin" replace />;
   return children;
 };
 
 const ProtectedAdminRoute = ({ children }) => {
   const { isAuthenticated, role } = useStore();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (role !== 'admin') return <Navigate to="/" replace />;
+  if (role !== "admin") return <Navigate to="/" replace />;
   return children;
 };
-
 
 function App() {
   return (
@@ -60,10 +64,16 @@ function App() {
         <Route path="/auth/google/callback" element={<GoogleAuthCallback />} />
 
         {/* User Routes (Protected) */}
-        <Route path="/app" element={<ProtectedUserRoute><MainLayout /></ProtectedUserRoute>}>
+        <Route
+          path="/app"
+          element={
+            <ProtectedUserRoute>
+              <MainLayout />
+            </ProtectedUserRoute>
+          }
+        >
           <Route index element={<UserDashboard />} />
           <Route path="explore" element={<Explore />} />
-          <Route path="skills" element={<Skills />} />
           <Route path="sessions" element={<Sessions />} />
           <Route path="guide" element={<JoinSessionGuidePage />} />
           <Route path="profile" element={<Profile />} />
@@ -78,16 +88,24 @@ function App() {
         </Route>
 
         {/* Admin Routes (Protected) */}
-        <Route path="/admin" element={<ProtectedAdminRoute><AdminLayout /></ProtectedAdminRoute>}>
+        <Route
+          path="/admin"
+          element={
+            <ProtectedAdminRoute>
+              <AdminLayout />
+            </ProtectedAdminRoute>
+          }
+        >
           <Route index element={<AdminDash />} />
           <Route path="reports" element={<AdminReports />} />
+          <Route path="forum-posts" element={<AdminForumPosts />} />
           <Route path="sessions" element={<AdminSessions />} />
+          <Route path="escrow" element={<AdminEscrow />} />
           <Route path="credits" element={<AdminCredits />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="teaching-skills" element={<AdminTeachingSkills />} />
           <Route path="paths" element={<AdminPaths />} />
           <Route path="system" element={<AdminSystem />} />
-          <Route path="settings" element={<AdminSettings />} />
         </Route>
 
         {/* 404 */}

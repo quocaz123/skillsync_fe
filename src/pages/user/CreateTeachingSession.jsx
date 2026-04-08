@@ -10,13 +10,6 @@ import { createSlotsBatch } from '../../services/sessionService';
 
 const { TEACHING_SKILLS } = API_ENDPOINTS;
 
-const LEVELS = [
-    { id: 'BEGINNER',     label: 'Beginner',     sub: 'Biết cơ bản' },
-    { id: 'INTERMEDIATE', label: 'Intermediate', sub: 'Có kinh nghiệm thực tế' },
-    { id: 'ADVANCED',     label: 'Advanced',     sub: 'Chuyên sâu, nhiều dự án' },
-];
-
-// Màu sắc theo category
 const categoryStyle = (cat) => {
     const map = {
         'Công nghệ': { bg: 'bg-blue-50',    border: 'border-blue-200',   text: 'text-blue-600'   },
@@ -29,23 +22,43 @@ const categoryStyle = (cat) => {
     return map[cat] ?? { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-600' };
 };
 
-// Thời gian có thể chọn
 const TIME_OPTIONS = [
     '07:00', '08:00', '09:00', '10:00', '11:00',
     '13:00', '14:00', '15:00', '16:00', '17:00',
     '19:00', '20:00', '21:00',
 ];
 
-// Tạo 14 ngày tiếp theo
-const getNext14Days = () =>
-    Array.from({ length: 14 }, (_, i) => {
+// Tạo 30 ngày tiếp theo
+const getNext30Days = () =>
+    Array.from({ length: 30 }, (_, i) => {
         const d = new Date();
         d.setDate(d.getDate() + i + 1);
-        return {
-            iso: d.toISOString().split('T')[0],
-            label: d.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'numeric' }),
-        };
+        return d.toISOString().split('T')[0];
     });
+
+const ALL_DATES = getNext30Days();
+
+// Tự động tính giờ kết thúc = bắt đầu + 1 tiếng
+const calcEndTime = (startTime) => {
+    const [h, m] = startTime.split(':').map(Number);
+    const end = (h + 1) % 24;
+    return `${String(end).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
+
+// Format ngày hiển thị
+const formatDate = (iso) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'numeric' });
+};
+
+// Tạo slot mới rỗng
+const newSlot = () => ({
+    id: crypto.randomUUID(),
+    date: ALL_DATES[0],
+    time: '09:00',
+    endTime: '10:00',
+    creditCost: 5,
+});
 
 // ── Step Indicator ────────────────────────────────
 const StepBar = ({ step }) => {
@@ -77,9 +90,7 @@ const StepBar = ({ step }) => {
 // ── Step 1: Chọn kỹ năng đã được duyệt ──────────
 const Step1 = ({ approvedSkills, loading, data, setData, onNext }) => {
     const canNext = data.teachingSkill;
-    const style = data.teachingSkill
-        ? categoryStyle(data.teachingSkill.skillCategory)
-        : {};
+    const style = data.teachingSkill ? categoryStyle(data.teachingSkill.skillCategory) : {};
 
     if (loading) {
         return (
@@ -130,7 +141,7 @@ const Step1 = ({ approvedSkills, loading, data, setData, onNext }) => {
                                 </p>
                                 <p className="text-[11px] text-slate-400 mt-0.5">{skill.skillCategory} · {skill.level}</p>
                                 <p className="text-[11px] text-amber-600 font-bold mt-1 flex items-center gap-1">
-                                    <Lightning size={10} weight="fill" /> {skill.creditsPerHour} credits/giờ
+                                    <Lightning size={10} weight="fill" /> {skill.creditsPerHour} credits/giờ (gợi ý)
                                 </p>
                             </div>
                             {selected && (
@@ -163,92 +174,161 @@ const Step1 = ({ approvedSkills, loading, data, setData, onNext }) => {
     );
 };
 
-// ── Step 2: Tạo lịch rảnh (batch) ────────────────
+// ── Step 2: Tạo từng slot riêng lẻ với credit riêng ──────────
 const Step2 = ({ data, setData, onNext, onBack }) => {
-    const DAYS = getNext14Days();
-    const [selectedDates, setSelectedDates] = useState([]);
-    const [selectedTimes, setSelectedTimes] = useState([]);
+    const defaultCredits = data.teachingSkill?.creditsPerHour ?? 5;
+    const [slots, setSlots] = useState(
+        data.slots?.length ? data.slots : [{ ...newSlot(), creditCost: defaultCredits }]
+    );
 
-    const toggleDate = (d) => setSelectedDates(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
-    const toggleTime = (t) => setSelectedTimes(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+    const addSlot = () => setSlots(prev => [...prev, { ...newSlot(), creditCost: defaultCredits }]);
+    const removeSlot = (id) => setSlots(prev => prev.filter(s => s.id !== id));
+    const updateSlot = (id, field, value) => {
+        setSlots(prev => prev.map(s => {
+            if (s.id !== id) return s;
+            const updated = { ...s, [field]: value };
+            if (field === 'time') updated.endTime = calcEndTime(value);
+            return updated;
+        }));
+    };
 
     const handleNext = () => {
-        setData(d => ({ ...d, selectedDates, selectedTimes }));
+        setData(d => ({ ...d, slots }));
         onNext();
     };
 
+    const isValid = slots.length > 0 && slots.every(s => s.date && s.time && s.creditCost > 0);
+
     return (
         <div>
-            <h2 className="text-lg font-extrabold text-slate-900 mb-1">Tạo lịch rảnh</h2>
+            <h2 className="text-lg font-extrabold text-slate-900 mb-1">Tạo lịch dạy</h2>
             <p className="text-xs text-slate-400 mb-5">
-                Chọn nhiều ngày + nhiều giờ → hệ thống tạo tất cả tổ hợp (dates x times).
-                Slot trùng tự được bỏ qua.
+                Mỗi dòng là một buổi học. Bạn có thể đặt số credits khác nhau cho từng buổi.
             </p>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-2 mb-6">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-2 mb-5">
                 <span className="text-lg shrink-0">💡</span>
                 <p className="text-xs text-amber-700">
-                    Học viên sẽ thấy các slot <strong>Trống</strong> và đặt lịch trực tiếp. Credits chuyển ngay khi đặt.
+                    Học viên sẽ thấy từng slot kèm <strong>số credits cần trả</strong>. Credits sẽ được tạm giữ khi bạn đồng ý dạy.
                 </p>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-4 mb-5">
-                {/* Date picker */}
-                <div className="flex-1">
-                    <p className="text-xs font-bold text-slate-500 mb-2">
-                        📅 Chọn ngày ({selectedDates.length} đã chọn):
-                    </p>
-                    <div className="grid grid-cols-2 gap-1.5 max-h-72 overflow-y-auto pr-1">
-                        {DAYS.map(({ iso, label }) => {
-                            const sel = selectedDates.includes(iso);
-                            return (
-                                <button key={iso} onClick={() => toggleDate(iso)}
-                                    className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-left ${sel ? 'border-violet-400 bg-violet-50 text-violet-700' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'}`}>
-                                    {sel && <Check size={10} weight="bold" className="inline mr-1" />}
-                                    {label}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-                {/* Time picker */}
-                <div className="flex-1">
-                    <p className="text-xs font-bold text-slate-500 mb-2">
-                        🕐 Chọn giờ ({selectedTimes.length} đã chọn):
-                    </p>
-                    <div className="grid grid-cols-2 gap-1.5">
-                        {TIME_OPTIONS.map(t => {
-                            const sel = selectedTimes.includes(t);
-                            return (
-                                <button key={t} onClick={() => toggleTime(t)}
-                                    className={`px-3 py-2.5 rounded-xl text-sm font-semibold border transition-all ${sel ? 'border-violet-400 bg-violet-50 text-violet-700' : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'}`}>
-                                    {sel && <Check size={11} weight="bold" className="inline mr-1" />}
-                                    {t}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
+            {/* Header */}
+            <div className="hidden md:grid grid-cols-[1fr_130px_130px_110px_36px] gap-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-wide mb-2 px-1">
+                <span>📅 Ngày</span>
+                <span>🕐 Bắt đầu</span>
+                <span>🕑 Kết thúc</span>
+                <span>⚡ Credits</span>
+                <span></span>
             </div>
 
-            {selectedDates.length > 0 && selectedTimes.length > 0 && (
-                <p className="text-sm text-violet-700 font-bold bg-violet-50 px-4 py-2 rounded-xl inline-block mb-4">
-                    Sẽ tạo tối đa <strong>{selectedDates.length * selectedTimes.length}</strong> slot
-                    &nbsp;({selectedDates.length} ngày × {selectedTimes.length} giờ)
-                </p>
+            <div className="flex flex-col gap-3 mb-4">
+                {slots.map((slot) => (
+                    <div key={slot.id}
+                        className="group grid grid-cols-1 md:grid-cols-[1fr_130px_130px_110px_36px] gap-2 items-center bg-white border border-slate-100 rounded-2xl p-3 shadow-sm hover:border-violet-200 hover:shadow-md transition-all">
+
+                        {/* Ngày */}
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-400 md:hidden mb-1 block">📅 Ngày</label>
+                            <select
+                                value={slot.date}
+                                onChange={e => updateSlot(slot.id, 'date', e.target.value)}
+                                className="w-full text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all cursor-pointer"
+                            >
+                                {ALL_DATES.map(d => (
+                                    <option key={d} value={d}>{formatDate(d)} ({d})</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Giờ bắt đầu */}
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-400 md:hidden mb-1 block">🕐 Bắt đầu</label>
+                            <select
+                                value={slot.time}
+                                onChange={e => updateSlot(slot.id, 'time', e.target.value)}
+                                className="w-full text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all cursor-pointer"
+                            >
+                                {TIME_OPTIONS.map(t => (
+                                    <option key={t} value={t}>{t}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Giờ kết thúc */}
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-400 md:hidden mb-1 block">🕑 Kết thúc</label>
+                            <select
+                                value={slot.endTime}
+                                onChange={e => updateSlot(slot.id, 'endTime', e.target.value)}
+                                className="w-full text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all cursor-pointer"
+                            >
+                                {TIME_OPTIONS.map(t => (
+                                    <option key={t} value={t}>{t}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Credits */}
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-400 md:hidden mb-1 block">⚡ Credits</label>
+                            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                                <Lightning size={14} weight="fill" className="text-amber-400 shrink-0" />
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={999}
+                                    value={slot.creditCost || ''}
+                                    onChange={e => updateSlot(slot.id, 'creditCost', Math.max(1, parseInt(e.target.value) || 1))}
+                                    className="w-full bg-transparent text-sm font-extrabold text-amber-700 focus:outline-none"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Xóa */}
+                        <button
+                            onClick={() => removeSlot(slot.id)}
+                            disabled={slots.length === 1}
+                            className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                            <Trash size={16} weight="bold" />
+                        </button>
+                    </div>
+                ))}
+            </div>
+
+            {/* Thêm buổi */}
+            <button
+                onClick={addSlot}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-violet-200 text-violet-500 font-bold text-sm hover:border-violet-400 hover:bg-violet-50 transition-all mb-5"
+            >
+                <Plus size={16} weight="bold" /> Thêm buổi học
+            </button>
+
+            {/* Tổng kết */}
+            {slots.length > 0 && (
+                <div className="flex items-center justify-between bg-violet-50 border border-violet-200 rounded-xl px-4 py-3 mb-4">
+                    <span className="text-sm font-bold text-violet-700">
+                        {slots.length} buổi học
+                    </span>
+                    <span className="text-sm font-extrabold text-amber-600 flex items-center gap-1">
+                        <Lightning size={14} weight="fill" />
+                        {slots.reduce((sum, s) => sum + (s.creditCost || 0), 0)} credits tổng
+                    </span>
+                </div>
             )}
 
-            {selectedDates.length === 0 || selectedTimes.length === 0 ? (
-                <p className="text-xs text-amber-600 font-semibold mb-4">⚠️ Vui lòng chọn ít nhất 1 ngày và 1 giờ.</p>
-            ) : null}
+            {!isValid && (
+                <p className="text-xs text-amber-600 font-semibold mb-4">⚠️ Mỗi buổi cần có ngày, giờ và số credits hợp lệ (≥ 1).</p>
+            )}
 
             <div className="flex justify-between mt-2">
                 <button onClick={onBack} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all">
                     <ArrowLeft size={15} weight="bold" /> Quay lại
                 </button>
-                <button onClick={handleNext} disabled={selectedDates.length === 0 || selectedTimes.length === 0}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${selectedDates.length > 0 && selectedTimes.length > 0 ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>
-                    Tiếp theo <ArrowRight size={15} weight="bold" />
+                <button onClick={handleNext} disabled={!isValid}
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${isValid ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}>
+                    Xem lại <ArrowRight size={15} weight="bold" />
                 </button>
             </div>
         </div>
@@ -258,11 +338,11 @@ const Step2 = ({ data, setData, onNext, onBack }) => {
 // ── Step 3: Xác nhận + Submit ─────────────────────
 const Step3 = ({ data, onBack, onSubmit, submitting, submitError }) => {
     const s = data.teachingSkill;
-    const slotCount = (data.selectedDates?.length ?? 0) * (data.selectedTimes?.length ?? 0);
+    const slots = data.slots ?? [];
 
     return (
         <div>
-            <h2 className="text-lg font-extrabold text-slate-900 mb-5">Xem lại & tạo lịch</h2>
+            <h2 className="text-lg font-extrabold text-slate-900 mb-5">Xem lại &amp; tạo lịch</h2>
 
             {/* Skill preview */}
             {s && (
@@ -273,9 +353,6 @@ const Step3 = ({ data, onBack, onSubmit, submitting, submitError }) => {
                             <div className="flex items-center gap-2 flex-wrap">
                                 <span className={`font-extrabold text-base ${categoryStyle(s.skillCategory).text}`}>{s.skillName}</span>
                                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-600">{s.level}</span>
-                                <span className="flex items-center gap-1 text-[11px] font-extrabold text-amber-600">
-                                    <Lightning size={11} weight="fill" className="text-amber-400" /> {s.creditsPerHour}/h
-                                </span>
                             </div>
                             <p className="text-xs text-slate-500 mt-1">{s.outcomeDesc}</p>
                         </div>
@@ -283,23 +360,35 @@ const Step3 = ({ data, onBack, onSubmit, submitting, submitError }) => {
                 </div>
             )}
 
-            {/* Schedule preview */}
-            <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 mb-4">
-                <p className="text-xs font-bold text-slate-500 mb-3 flex items-center gap-1">
-                    <CalendarBlank size={12} weight="duotone" className="text-violet-500" />
-                    Slot sẽ được tạo: tối đa <strong className="text-violet-600 ml-1">{slotCount} slot</strong>
-                </p>
-                <div className="flex flex-wrap gap-2">
-                    {(data.selectedDates ?? []).slice(0, 4).map(d => (
-                        <span key={d} className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">{d}</span>
-                    ))}
-                    {(data.selectedDates ?? []).length > 4 && (
-                        <span className="text-[11px] text-slate-400">+{data.selectedDates.length - 4} ngày nữa</span>
-                    )}
+            {/* Bảng slots */}
+            <div className="bg-white rounded-xl border border-slate-100 shadow-sm mb-4 overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                    <p className="text-xs font-bold text-slate-500 flex items-center gap-1">
+                        <CalendarBlank size={12} weight="duotone" className="text-violet-500" />
+                        {slots.length} buổi học sẽ được tạo
+                    </p>
+                    <span className="text-xs font-extrabold text-amber-600 flex items-center gap-1">
+                        <Lightning size={12} weight="fill" />
+                        Tổng: {slots.reduce((sum, sl) => sum + (sl.creditCost || 0), 0)} credits
+                    </span>
                 </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                    {(data.selectedTimes ?? []).map(t => (
-                        <span key={t} className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">{t}</span>
+                <div className="divide-y divide-slate-50 max-h-64 overflow-y-auto">
+                    {slots.map((slot, idx) => (
+                        <div key={slot.id ?? idx} className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 transition-colors">
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <span className="text-[11px] font-bold w-5 text-slate-300 text-center">{idx + 1}</span>
+                                <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+                                    {formatDate(slot.date)} ({slot.date})
+                                </span>
+                                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                                    {slot.time} – {slot.endTime}
+                                </span>
+                            </div>
+                            <span className="text-xs font-extrabold text-amber-600 flex items-center gap-1 shrink-0 ml-3">
+                                <Lightning size={11} weight="fill" className="text-amber-400" />
+                                {slot.creditCost} credits
+                            </span>
+                        </div>
                     ))}
                 </div>
             </div>
@@ -313,7 +402,7 @@ const Step3 = ({ data, onBack, onSubmit, submitting, submitError }) => {
             <div className="bg-sky-50 border border-sky-200 rounded-xl p-4 mb-6 flex items-start gap-3">
                 <span className="text-xl shrink-0">🚀</span>
                 <p className="text-xs text-sky-600">
-                    Sau khi tạo, học viên sẽ thấy các slot <strong>Trống</strong> và có thể đặt lịch ngay.
+                    Sau khi tạo, học viên sẽ thấy các slot <strong>Trống</strong> kèm số credits cần trả và có thể đặt lịch ngay.
                 </p>
             </div>
 
@@ -325,7 +414,7 @@ const Step3 = ({ data, onBack, onSubmit, submitting, submitError }) => {
                 <button onClick={onSubmit} disabled={submitting}
                     className="flex items-center gap-2 px-7 py-2.5 rounded-xl font-bold text-sm bg-violet-600 text-white hover:bg-violet-700 shadow-md shadow-violet-200 active:scale-95 transition-all disabled:opacity-60">
                     {submitting ? <Spinner size={15} className="animate-spin" /> : <Rocket size={16} weight="duotone" />}
-                    {submitting ? 'Đang tạo…' : `Tạo ${slotCount} slot`}
+                    {submitting ? 'Đang tạo…' : `Tạo ${slots.length} buổi học`}
                 </button>
             </div>
         </div>
@@ -338,13 +427,13 @@ const SuccessScreen = ({ data, createdCount, onDone }) => (
         <div className="text-6xl mb-4">🎉</div>
         <h2 className="text-2xl font-extrabold text-slate-900 mb-2">Tạo lịch thành công!</h2>
         <p className="text-slate-500 text-sm mb-4">
-            Đã tạo <strong className="text-violet-600">{createdCount} slot</strong> cho kỹ năng <strong>{data.teachingSkill?.skillName}</strong>.
+            Đã tạo <strong className="text-violet-600">{createdCount} buổi học</strong> cho kỹ năng <strong>{data.teachingSkill?.skillName}</strong>.
         </p>
         <div className="bg-violet-50 border border-violet-200 rounded-2xl px-6 py-4 inline-block mb-8 text-left">
             <p className="text-xs font-bold text-violet-700 mb-1">🔔 Bước tiếp theo:</p>
             <ul className="text-xs text-violet-600 space-y-1 list-disc list-inside">
                 <li>Học viên tìm thấy slot trống của bạn trong mục Khám phá</li>
-                <li>Họ đặt lịch → credits tự trừ ngay</li>
+                <li>Họ đặt lịch → credits được giữ an toàn trong hệ thống Tạm giữ</li>
                 <li>Đến giờ, cả 2 vào /app/sessions → bấm Tham gia học</li>
             </ul>
         </div>
@@ -365,7 +454,6 @@ const CreateTeachingSession = () => {
     const [form, setForm] = useState({});
     const [createdCount, setCreatedCount] = useState(0);
 
-    // Load approved teaching skills
     const [approvedSkills, setApprovedSkills] = useState([]);
     const [loadingSkills, setLoadingSkills] = useState(true);
 
@@ -391,11 +479,13 @@ const CreateTeachingSession = () => {
         setSubmitting(true);
         setSubmitError('');
         try {
-            const result = await createSlotsBatch(
-                form.teachingSkill.id,
-                form.selectedDates,
-                form.selectedTimes
-            );
+            const slotsPayload = (form.slots ?? []).map(s => ({
+                date: s.date,
+                time: s.time,
+                endTime: s.endTime || null,
+                creditCost: s.creditCost,
+            }));
+            const result = await createSlotsBatch(form.teachingSkill.id, slotsPayload);
             setCreatedCount(Array.isArray(result) ? result.length : 0);
             setDone(true);
         } catch (e) {
@@ -414,7 +504,7 @@ const CreateTeachingSession = () => {
                 <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
                     <Sparkle size={24} weight="duotone" className="text-amber-400" /> Tạo lịch dạy mới
                 </h1>
-                <p className="text-sm text-slate-400 mt-1">Chọn kỹ năng đã duyệt → chọn ngày/giờ → xác nhận</p>
+                <p className="text-sm text-slate-400 mt-1">Chọn kỹ năng → tạo từng buổi học với giá riêng → xác nhận</p>
             </div>
 
             {!done && <StepBar step={step} />}

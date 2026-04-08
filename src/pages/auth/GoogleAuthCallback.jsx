@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
-import { exchangeGoogleAuthCode, getCurrentUser } from '../../services/authService';
+import { exchangeGoogleAuthCode } from '../../services/authService';
+import { getMyProfile } from '../../services/userService';
 
 export default function GoogleAuthCallback() {
     const navigate = useNavigate();
@@ -23,7 +24,7 @@ export default function GoogleAuthCallback() {
                 setSession(user);
                 // Sync credits mới nhất từ DB
                 try {
-                    const freshUser = await getCurrentUser();
+                    const freshUser = await getMyProfile();
                     if (freshUser?.creditsBalance != null) syncCredits(freshUser.creditsBalance);
                 } catch { /* ignore */ }
                 if (user.role === 'admin') navigate('/admin', { replace: true });

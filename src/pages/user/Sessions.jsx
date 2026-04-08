@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
-import { getMySessions } from '../../services/sessionService';
+import { getMySessions, confirmSession } from '../../services/sessionService';
+import { createSessionReport } from '../../services/reportService';
+import { createSessionReview } from '../../services/reviewService';
 import {
     Clock, CheckCircle2, ArrowRight, Play, Star,
-    CalendarDays, Zap, BookOpen, XCircle, ThumbsUp, Medal, Award, Loader2
+    CalendarDays, Zap, BookOpen, XCircle, ThumbsUp, Medal, Award, Loader2, AlertTriangle, ShieldAlert
 } from 'lucide-react';
 
 const StarRating = ({ rating, setRating }) => (
@@ -17,6 +19,22 @@ const StarRating = ({ rating, setRating }) => (
     </div>
 );
 
+// ─── Join-time guard ────────────────────────────────────────────────────────
+// Returns: { state: 'no-time' | 'too-early' | 'ready' | 'ended', minutesLeft, label }
+const getJoinStatus = (session) => {
+    if (!session.slotDate || !session.slotTime) return { state: 'no-time' };
+    const slotDt = new Date(`${session.slotDate}T${session.slotTime}`);
+    const now = new Date();
+    const diffMs = slotDt - now;
+    const diffMin = Math.ceil(diffMs / 60000);
+    // Allow join 15 minutes before start
+    if (diffMin > 15) return { state: 'too-early', minutesLeft: diffMin };
+    // Allow up to 24h after start (backend enforces this too)
+    const afterMs = now - slotDt;
+    if (afterMs > 24 * 60 * 60 * 1000) return { state: 'ended' };
+    return { state: 'ready' };
+};
+
 const Sessions = () => {
     const navigate = useNavigate();
     const { user } = useStore();
@@ -28,6 +46,16 @@ const Sessions = () => {
     const [rating, setRating] = useState(0);
     const [reviewText, setReviewText] = useState('');
     const [successModal, setSuccessModal] = useState(null);
+    const [reportModal, setReportModal] = useState(null);
+    const [reportReason, setReportReason] = useState('POOR_QUALITY');
+    const [reportDesc, setReportDesc] = useState('');
+    const [now, setNow] = useState(new Date());
+
+    // Tick every 30s to refresh countdown labels without full re-fetch
+    useEffect(() => {
+        const tick = setInterval(() => setNow(new Date()), 30000);
+        return () => clearInterval(tick);
+    }, []);
 
     useEffect(() => {
         const load = async () => {
@@ -45,8 +73,8 @@ const Sessions = () => {
         load();
     }, []);
 
-    const upcomingSessions = sessions.filter(s => s.status === 'SCHEDULED');
-    const pastSessions = sessions.filter(s => s.status === 'COMPLETED');
+    const upcomingSessions = sessions.filter(s => s.status === 'SCHEDULED' || s.status === 'IN_PROGRESS');
+    const pastSessions = sessions.filter(s => s.status === 'COMPLETED' || s.status === 'DISPUTED' || s.status === 'CANCELLED');
 
     const handleOpenReview = (session) => {
         setReviewModal(session);
@@ -54,16 +82,48 @@ const Sessions = () => {
         setReviewText('');
     };
 
-    const handleSubmitReview = () => {
+    const handleSubmitReview = async () => {
         if (!rating) return;
-        // TODO: POST /api/reviews when review endpoint is added
-        setSessions(prev => prev.map(s => s.id === reviewModal.id
-            ? { ...s, status: 'COMPLETED', rating, review: reviewText }
-            : s
-        ));
-        setSuccessModal(reviewModal);
-        setReviewModal(null);
-        setActiveTab('past');
+        try {
+            await createSessionReview(reviewModal.id, rating, reviewText);
+            setSessions(prev => prev.map(s => s.id === reviewModal.id
+                ? { ...s, status: 'COMPLETED', rating, review: reviewText }
+                : s
+            ));
+            setSuccessModal(reviewModal);
+            setReviewModal(null);
+            setActiveTab('past');
+        } catch (error) {
+            alert('Lỗi gửi đánh giá: ' + (error.response?.data?.message || 'Không thành công'));
+        }
+    };
+
+    const handleConfirmSession = async (sessionId) => {
+        try {
+            await confirmSession(sessionId);
+            setSessions(prev => prev.map(s => s.id === sessionId ? {...s, status: 'COMPLETED'} : s));
+            alert('Đã xác nhận hoàn thành buổi học!');
+        } catch (error) {
+            alert('Lỗi xác nhận: ' + (error.response?.data?.message || 'Không thành công'));
+        }
+    };
+
+    const handleOpenReport = (session) => {
+        setReportModal(session);
+        setReportReason('POOR_QUALITY');
+        setReportDesc('');
+    };
+
+    const handleSubmitReport = async () => {
+        if (!reportDesc) return;
+        try {
+            await createSessionReport(reportModal.id, reportReason, reportDesc, '');
+            setSessions(prev => prev.map(s => s.id === reportModal.id ? {...s, status: 'DISPUTED'} : s));
+            alert('Đã gửi báo cáo sự cố thành công!');
+            setReportModal(null);
+        } catch (error) {
+            alert('Lỗi gửi báo cáo: ' + (error.response?.data?.message || 'Không thành công'));
+        }
     };
 
     const ratingLabels = { 1: 'Cần cải thiện nhiều', 2: 'Chưa hài lòng', 3: 'Bình thường', 4: 'Rất tốt', 5: 'Tuyệt vời!' };
@@ -174,17 +234,51 @@ const Sessions = () => {
                                                 <div className="flex items-center gap-1.5 px-3 py-2 text-violet-700 text-sm font-bold bg-violet-50 rounded-xl border border-violet-100">
                                                     🎥 ZEGO
                                                 </div>
+                                                {session.status === 'IN_PROGRESS' && (
+                                                    <div className="flex items-center gap-1.5 px-3 py-2 text-emerald-700 text-sm font-bold bg-emerald-50 rounded-xl border border-emerald-100">
+                                                        <CheckCircle2 size={16} /> Đang diễn ra
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
                                         {/* Action buttons */}
                                         <div className="flex flex-col gap-3 shrink-0 w-full md:w-48">
-                                            <button
-                                                onClick={() => navigate(`/app/call/${session.id}`)}
-                                                className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/40 hover:-translate-y-0.5 active:translate-y-0"
-                                            >
-                                                <Play size={18} fill="currentColor" /> Tham gia học
-                                            </button>
+                                            {(() => {
+                                                const js = getJoinStatus(session);
+                                                if (js.state === 'no-time') return (
+                                                    <div className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-slate-100 text-slate-400 font-bold rounded-xl text-sm cursor-not-allowed select-none">
+                                                        <Clock size={16} /> Chờ xác nhận giờ
+                                                    </div>
+                                                );
+                                                if (js.state === 'too-early') {
+                                                    const h = Math.floor(js.minutesLeft / 60);
+                                                    const m = js.minutesLeft % 60;
+                                                    const label = h > 0 ? `${h}g${m > 0 ? m + 'p' : ''} nữa` : `${m} phút nữa`;
+                                                    return (
+                                                        <div className="w-full flex flex-col items-center justify-center gap-1 px-5 py-3.5 bg-amber-50 border-2 border-amber-200 text-amber-700 font-bold rounded-xl text-sm cursor-not-allowed select-none">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Clock size={15} className="text-amber-500" /> Mở sau {label}
+                                                            </div>
+                                                            <span className="text-[11px] font-semibold text-amber-500 opacity-80">Vào phòng sớm nhất 15 phút trước</span>
+                                                        </div>
+                                                    );
+                                                }
+                                                if (js.state === 'ended') return (
+                                                    <div className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-slate-100 text-slate-400 font-bold rounded-xl text-sm cursor-not-allowed select-none">
+                                                        <Clock size={16} /> Đã hết giờ
+                                                    </div>
+                                                );
+                                                // state === 'ready'
+                                                return (
+                                                    <button
+                                                        onClick={() => navigate(`/app/call/${session.id}`)}
+                                                        className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/40 hover:-translate-y-0.5 active:translate-y-0"
+                                                    >
+                                                        <Play size={18} fill="currentColor" /> Tham gia học
+                                                    </button>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 </div>
@@ -239,8 +333,26 @@ const Sessions = () => {
                                                 </div>
                                                 <p className="mt-2 text-sm text-slate-700 italic font-medium">"{session.review}"</p>
                                             </div>
+                                        ) : session.status === 'CANCELLED' ? (
+                                            <div className="mt-auto pt-4 text-red-500 font-bold flex items-center gap-2">
+                                                <XCircle size={18} /> Đã hủy / Hoàn tiền
+                                            </div>
+                                        ) : session.status === 'DISPUTED' ? (
+                                            <div className="mt-auto pt-4 text-amber-600 font-bold flex items-center gap-2">
+                                                <AlertTriangle size={18} /> Đang xử lý khiếu nại
+                                            </div>
                                         ) : (
-                                            <div className="mt-auto pt-4 flex justify-end">
+                                            <div className="mt-auto pt-4 flex justify-end gap-3 flex-wrap">
+                                                {!isTeacher(session) && session.status === 'COMPLETED' && (
+                                                    <>
+                                                        <button onClick={() => handleConfirmSession(session.id)} className="text-xs font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-4 py-2 rounded-lg transition-colors flex items-center gap-1">
+                                                            <CheckCircle2 size={14} /> Chuyển tiền Mentor
+                                                        </button>
+                                                        <button onClick={() => handleOpenReport(session)} className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg transition-colors flex items-center gap-1">
+                                                            <ShieldAlert size={14} /> Báo cáo sự cố
+                                                        </button>
+                                                    </>
+                                                )}
                                                 <button onClick={() => handleOpenReview(session)} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-lg transition-colors">
                                                     Viết đánh giá
                                                 </button>
@@ -297,6 +409,57 @@ const Sessions = () => {
                                 className={`w-full py-4 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all text-lg ${rating ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-600/30 hover:-translate-y-1' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
                             >
                                 <ThumbsUp size={20} /> Hoàn thành buổi học
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* REPORT MODAL */}
+            {reportModal && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-8 duration-300 border border-slate-100 overflow-hidden flex flex-col">
+                        <div className="bg-red-50 p-6 border-b border-red-100 relative flex items-center gap-4">
+                            <button onClick={() => setReportModal(null)} className="absolute top-6 right-6 w-8 h-8 bg-white hover:bg-red-100 rounded-full flex items-center justify-center text-red-500 transition-colors shadow-sm">
+                                <XCircle size={20} />
+                            </button>
+                            <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center text-red-600 shadow-sm shrink-0">
+                                <ShieldAlert size={32} />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-black text-slate-800">Báo cáo buổi học</h2>
+                                <p className="text-slate-500 font-medium text-sm">Với Mentor {reportModal.teacherName}</p>
+                            </div>
+                        </div>
+                        <div className="p-8">
+                            <div className="mb-6">
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Lý do báo cáo:</label>
+                                <select 
+                                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:border-red-400"
+                                    value={reportReason}
+                                    onChange={(e) => setReportReason(e.target.value)}
+                                >
+                                    <option value="TEACHER_LATE">Mentor vào trễ / Không tham gia</option>
+                                    <option value="POOR_QUALITY">Chất lượng giảng dạy kém / Không đúng mong đợi</option>
+                                    <option value="TECHNICAL_ISSUE">Sự cố kỹ thuật (Mạng, Mic, App...)</option>
+                                    <option value="OTHER">Lý do khác</option>
+                                </select>
+                            </div>
+                            <div className="mb-8">
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Chi tiết (Bắt buộc):</label>
+                                <textarea
+                                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm font-medium outline-none focus:border-red-400 min-h-[100px] resize-none placeholder:text-slate-400"
+                                    placeholder="Vui lòng mô tả chi tiết vấn đề bạn gặp phải để Admin xử lý và xem xét hoàn tiền..."
+                                    value={reportDesc}
+                                    onChange={e => setReportDesc(e.target.value)}
+                                />
+                            </div>
+                            <button
+                                onClick={handleSubmitReport}
+                                disabled={!reportDesc}
+                                className={`w-full py-3.5 font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${reportDesc ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/20 hover:-translate-y-0.5' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
+                            >
+                                <AlertTriangle size={18} /> Gửi Khiếu Nại
                             </button>
                         </div>
                     </div>
