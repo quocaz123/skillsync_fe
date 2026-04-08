@@ -50,6 +50,7 @@ const ModerationBadge = ({ status }) => {
 };
 
 const AdminForumPosts = () => {
+  const [allPosts, setAllPosts] = useState([]);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("PENDING");
@@ -58,14 +59,17 @@ const AdminForumPosts = () => {
   const [rejectionReason, setRejectionReason] = useState("");
   const [processing, setProcessing] = useState(false);
   const [notice, setNotice] = useState(null);
+  const [noticeTimer, setNoticeTimer] = useState(null);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const data = await getAdminForumPosts(
-        filterStatus === "ALL" ? null : filterStatus,
-      );
-      setPosts(Array.isArray(data) ? data : []);
+      const [filteredData, allData] = await Promise.all([
+        getAdminForumPosts(filterStatus === "ALL" ? null : filterStatus),
+        getAdminForumPosts(null),
+      ]);
+      setPosts(Array.isArray(filteredData) ? filteredData : []);
+      setAllPosts(Array.isArray(allData) ? allData : []);
     } catch (err) {
       console.error("Failed to load forum posts", err);
     } finally {
@@ -101,6 +105,28 @@ const AdminForumPosts = () => {
     setRejectionReason("");
   }, [selectedPost?.id]);
 
+  useEffect(() => {
+    if (!notice) return undefined;
+
+    if (noticeTimer) {
+      clearTimeout(noticeTimer);
+    }
+
+    const timer = setTimeout(() => setNotice(null), 4000);
+    setNoticeTimer(timer);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notice]);
+
+  useEffect(() => {
+    return () => {
+      if (noticeTimer) {
+        clearTimeout(noticeTimer);
+      }
+    };
+  }, [noticeTimer]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return posts;
@@ -119,11 +145,11 @@ const AdminForumPosts = () => {
 
   const stats = useMemo(
     () => ({
-      pending: posts.filter((post) => post.status === "PENDING").length,
-      approved: posts.filter((post) => post.status === "APPROVED").length,
-      rejected: posts.filter((post) => post.status === "REJECTED").length,
+      pending: allPosts.filter((post) => post.status === "PENDING").length,
+      approved: allPosts.filter((post) => post.status === "APPROVED").length,
+      rejected: allPosts.filter((post) => post.status === "REJECTED").length,
     }),
-    [posts],
+    [allPosts],
   );
 
   const handleModerate = async (post, action) => {

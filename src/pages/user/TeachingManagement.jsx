@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useStore } from '../../store/index';
 import {
     ChalkboardTeacher, CalendarBlank, BellRinging, CurrencyDollar, ChartBar,
     Plus, Star, Lightning, PencilSimple, CalendarCheck, Clock,
@@ -18,8 +19,8 @@ const { TEACHING_SKILLS } = API_ENDPOINTS;
 // â”€â”€ SlotChip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SlotChip = ({ slot, skillId, onDeleted }) => {
     const cfg = {
-        OPEN:    { border: 'border-emerald-300 bg-emerald-50', label: '⏳ Trống',    labelCls: 'text-emerald-600' },
-        BOOKED:  { border: 'border-sky-300 bg-sky-50',          label: 'Đã đặt', labelCls: 'text-sky-600' },
+        OPEN: { border: 'border-emerald-300 bg-emerald-50', label: '⏳ Trống', labelCls: 'text-emerald-600' },
+        BOOKED: { border: 'border-sky-300 bg-sky-50', label: 'Đã đặt', labelCls: 'text-sky-600' },
     }[slot.status] ?? { border: 'border-slate-200 bg-slate-50', label: slot.status, labelCls: 'text-slate-500' };
 
     const handleDelete = async () => {
@@ -177,7 +178,7 @@ const TabSchedule = ({ skills }) => {
 
                 {/* Existing slots */}
                 <div>
-                        <h3 className="font-extrabold text-slate-900 flex items-center gap-2 text-base mb-3">
+                    <h3 className="font-extrabold text-slate-900 flex items-center gap-2 text-base mb-3">
                         <CalendarBlank size={18} weight="duotone" className="text-violet-500" />
                         Các slot hiện tại — {selectedSkill?.skillName}
                     </h3>
@@ -264,11 +265,10 @@ const TabSchedule = ({ skills }) => {
                         <button
                             onClick={handleCreate}
                             disabled={creating || validRows.length === 0}
-                            className={`ml-auto flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${
-                                !creating && validRows.length > 0
+                            className={`ml-auto flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${!creating && validRows.length > 0
                                     ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm'
                                     : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                            }`}
+                                }`}
                         >
                             {creating ? <Spinner size={14} className="animate-spin" /> : <Plus size={14} weight="bold" />}
                             {creating ? 'Đang tạo...' : `Tạo ${validRows.length} slot`}
@@ -301,11 +301,10 @@ const TabSubjects = ({ skills, onSelectSkill }) => {
                             <div className="flex flex-wrap items-center gap-2 mb-1">
                                 <h3 className="font-extrabold text-slate-900 text-lg">{skill.skillName}</h3>
                                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{skill.level}</span>
-                                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                                    skill.verificationStatus === 'APPROVED'
+                                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${skill.verificationStatus === 'APPROVED'
                                         ? 'bg-emerald-100 text-emerald-600'
                                         : 'bg-amber-100 text-amber-600'
-                                }`}>
+                                    }`}>
                                     {skill.verificationStatus === 'APPROVED' ? '✅ Đã duyệt' : '⏳ Chờ duyệt'}
                                 </span>
                             </div>
@@ -423,7 +422,7 @@ const CheckCircle = ({ size, className }) => (
 // â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TABS = [
     { id: 'schedule', label: 'Lịch rảnh', icon: CalendarBlank },
-    { id: 'requests', label: 'Yêu cầu',   icon: BellRinging },
+    { id: 'requests', label: 'Yêu cầu', icon: BellRinging },
 ];
 
 const TeachingManagement = () => {
@@ -436,7 +435,7 @@ const TeachingManagement = () => {
     useEffect(() => {
         const load = async () => {
             try {
-                        const res = await httpClient.get(TEACHING_SKILLS.GET_MY);
+                const res = await httpClient.get(TEACHING_SKILLS.GET_MY);
                 const data = res?.result ?? (Array.isArray(res) ? res : []);
                 setSkills(data.filter(s => s.verificationStatus === 'APPROVED'));
             } catch (_) {

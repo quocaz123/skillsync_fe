@@ -1375,6 +1375,12 @@ const Community = () => {
   }, [activeTab]);
 
   useEffect(() => {
+    if (activeTab !== "community") return;
+    loadForumData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  useEffect(() => {
     if (!user?.id) return;
 
     const intervalMs = activeTab === "my-posts" ? 7000 : 15000;

@@ -1,21 +1,12 @@
 import { useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  SquaresFour,
-  CalendarBlank,
-  CurrencyCircleDollar,
-  Users,
-  BookOpen,
-  Flag,
-  ChartBar,
-  GearSix,
-  List,
-  SignOut,
-  ShieldCheck,
-  X,
-} from "@phosphor-icons/react";
-import { useStore } from "../../store";
-import { logout as logoutApi } from "../../services/authService";
+    SquaresFour, CalendarBlank, CurrencyCircleDollar,
+    Users, BookOpen, Flag, ChartBar, GearSix,
+    List, SignOut, ShieldCheck, X, NotePencil,
+} from '@phosphor-icons/react';
+import { useStore } from '../../store';
+import { logout as logoutApi } from '../../services/authService';
 
 const AdminLayout = () => {
   const location = useLocation();
@@ -47,9 +38,13 @@ const AdminLayout = () => {
         },
         { path: "/admin/sessions", label: "Sessions", icon: CalendarBlank },
         {
-          path: "/admin/credits",
-          label: "Credits & GD",
-          icon: CurrencyCircleDollar,
+            label: 'Người dùng',
+            items: [
+                { path: '/admin/users', label: 'Quản lý Người dùng', icon: Users },
+                { path: '/admin/teaching-skills', label: 'Xét duyệt Mentor', icon: ShieldCheck },
+                { path: '/admin/paths', label: 'Lộ trình Học', icon: BookOpen },
+                { path: '/admin/system-learning-paths', label: 'Khóa học hệ thống', icon: NotePencil },
+            ],
         },
       ],
     },
@@ -74,18 +69,18 @@ const AdminLayout = () => {
     },
   ];
 
-  const headerTitles = {
-    "/admin": "Tổng quan Hệ thống",
-    "/admin/reports": "Xử lý Báo cáo",
-    "/admin/forum-posts": "Duyệt bài cộng đồng",
-    "/admin/sessions": "Quản lý Sessions",
-    "/admin/credits": "Credits & Giao dịch",
-    "/admin/users": "Quản lý Người dùng",
-    "/admin/teaching-skills": "Xét duyệt Kỹ năng Mentor",
-    "/admin/paths": "Quản lý Lộ trình Học",
-    "/admin/system": "Sức khoẻ Hệ thống",
-    "/admin/settings": "Cài đặt Hệ thống",
-  };
+    const headerTitles = {
+        '/admin': 'Tổng quan Hệ thống',
+        '/admin/reports': 'Xử lý Báo cáo',
+        '/admin/sessions': 'Quản lý Sessions',
+        '/admin/credits': 'Credits & Giao dịch',
+        '/admin/users': 'Quản lý Người dùng',
+        '/admin/teaching-skills': 'Xét duyệt Kỹ năng Mentor',
+        '/admin/paths': 'Quản lý Lộ trình Học',
+        '/admin/system-learning-paths': 'Quản lí khóa học hệ thống',
+        '/admin/system': 'Sức khoẻ Hệ thống',
+        '/admin/settings': 'Cài đặt Hệ thống',
+    };
 
   const SidebarContent = ({ onLinkClick }) => (
     <>
