@@ -3,9 +3,9 @@ import { Database, CircleNotch, Warning, ArrowsClockwise, HardDrives } from '@ph
 import { getSystemLogs } from '../../services/adminLogService';
 
 const levelConfig = {
-    INFO:    { dot: 'bg-blue-400', text: 'text-slate-600', bg: 'bg-slate-50/50' },
+    INFO: { dot: 'bg-blue-400', text: 'text-slate-600', bg: 'bg-slate-50/50' },
     WARNING: { dot: 'bg-amber-400', text: 'text-amber-700', bg: 'bg-amber-50/40' },
-    ERROR:   { dot: 'bg-rose-500', text: 'text-rose-700', bg: 'bg-rose-50/40' },
+    ERROR: { dot: 'bg-rose-500', text: 'text-rose-700', bg: 'bg-rose-50/40' },
 };
 
 const AdminSystem = () => {
@@ -68,7 +68,7 @@ const AdminSystem = () => {
                     <h3 className="font-extrabold text-slate-900 flex items-center gap-2">
                         <Database size={18} weight="duotone" className="text-slate-500" /> Toàn bộ sự kiện
                     </h3>
-                    
+
                     {/* Pagination */}
                     {totalPages > 1 && (
                         <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
@@ -84,7 +84,7 @@ const AdminSystem = () => {
                         </div>
                     )}
                 </div>
-                
+
                 <div className="divide-y divide-slate-50 flex-1">
                     {loading ? (
                         <div className="flex items-center justify-center h-64">
@@ -122,7 +122,7 @@ const AdminSystem = () => {
                         })
                     )}
                 </div>
-                
+
             </div>
         </div>
     );
