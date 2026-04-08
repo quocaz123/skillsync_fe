@@ -100,40 +100,6 @@ const StepBar = ({ step }) => {
 
 // ── Step 1: Chọn kỹ năng đã được duyệt ──────────
 const Step1 = ({ approvedSkills, loading, data, setData, onNext }) => {
-    const canNext = data.teachingSkill;
-    const style = data.teachingSkill
-        ? categoryStyle(data.teachingSkill.skillCategory)
-        : {};
-
-    if (loading) {
-        return (
-          <div key={idx} className="flex items-center flex-1 last:flex-none">
-            <div className="flex flex-col items-center shrink-0">
-              <div
-                className={`w-9 h-9 rounded-full flex items-center justify-center font-extrabold text-sm transition-all ${done ? "bg-violet-600 text-white" : active ? "bg-violet-600 text-white ring-4 ring-violet-100" : "bg-white border-2 border-slate-200 text-slate-400"}`}
-              >
-                {done ? <Check size={16} weight="bold" /> : idx}
-              </div>
-              <span
-                className={`text-[11px] font-bold mt-1 ${active ? "text-violet-600" : done ? "text-violet-400" : "text-slate-400"}`}
-              >
-                {label}
-              </span>
-            </div>
-            {i < steps.length - 1 && (
-              <div
-                className={`h-0.5 flex-1 mx-1 mb-4 transition-all ${done ? "bg-violet-500" : "bg-slate-200"}`}
-              />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-// ── Step 1: Chọn kỹ năng đã được duyệt ──────────
-const Step1 = ({ approvedSkills, loading, data, setData, onNext }) => {
   const canNext = data.teachingSkill;
   const style = data.teachingSkill
     ? categoryStyle(data.teachingSkill.skillCategory)

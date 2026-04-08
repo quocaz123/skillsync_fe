@@ -15,6 +15,7 @@ import AdminPaths from './pages/admin/AdminPaths';
 import AdminSystem from './pages/admin/AdminSystem';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminTeachingSkills from './pages/admin/AdminTeachingSkills';
+import AdminForumPosts from './pages/admin/AdminForumPosts';
 import Explore from './pages/user/Explore';
 import Skills from './pages/user/Skills';
 import Sessions from './pages/user/Sessions';

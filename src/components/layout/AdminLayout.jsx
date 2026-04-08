@@ -37,15 +37,7 @@ const AdminLayout = () => {
           icon: BookOpen,
         },
         { path: "/admin/sessions", label: "Sessions", icon: CalendarBlank },
-        {
-            label: 'Người dùng',
-            items: [
-                { path: '/admin/users', label: 'Quản lý Người dùng', icon: Users },
-                { path: '/admin/teaching-skills', label: 'Xét duyệt Mentor', icon: ShieldCheck },
-                { path: '/admin/paths', label: 'Lộ trình Học', icon: BookOpen },
-                { path: '/admin/system-learning-paths', label: 'Khóa học hệ thống', icon: NotePencil },
-            ],
-        },
+        { path: "/admin/credits", label: "Quản lý Credits", icon: CurrencyCircleDollar },
       ],
     },
     {
@@ -58,6 +50,7 @@ const AdminLayout = () => {
           icon: ShieldCheck,
         },
         { path: "/admin/paths", label: "Lộ trình Học", icon: BookOpen },
+        { path: "/admin/system-learning-paths", label: "Khóa học hệ thống", icon: NotePencil },
       ],
     },
     {

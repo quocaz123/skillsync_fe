@@ -58,6 +58,8 @@ export const API_ENDPOINTS = {
     SYSTEM_STATS: "/admin/stats",
     TEACHING_SKILLS: "/api/admin/teaching-skills",
     FORUM_POSTS: "/api/admin/forum-posts",
+    TRANSACTIONS: "/api/admin/transactions",
+    GRANT_CREDIT: "/api/admin/transactions/grant",
   },
   SLOTS: {
     BY_SKILL: (skillId) => `/api/teaching-skills/${skillId}/slots`,
