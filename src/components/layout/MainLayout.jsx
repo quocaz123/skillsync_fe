@@ -47,12 +47,16 @@ const MainLayout = () => {
                 time = 0;
                 localStorage.setItem(dateKey, today);
             }
-            time += 1; // Cập nhật mỗi 1s
-            localStorage.setItem(onlineKey, time.toString());
-            setOnlineTime(time);
-            
-            // Only fire the event occasionally to not overload other components, or every second is fine too
-            if (time % 5 === 0) window.dispatchEvent(new Event('onlineTimeUpdated'));
+
+            if (time < 1800) {
+                time += 1; // Cập nhật mỗi 1s
+                localStorage.setItem(onlineKey, time.toString());
+                setOnlineTime(time);
+                
+                if (time % 5 === 0) window.dispatchEvent(new Event('onlineTimeUpdated'));
+            } else {
+                setOnlineTime(1800);
+            }
         }, 1000);
         
         return () => clearInterval(interval);
