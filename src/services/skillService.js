@@ -16,6 +16,12 @@ export const getMyTeachingSkills = async () => {
   return res.data ?? res;
 };
 
+/** Danh sách tất cả teaching skills công khai đã được duyệt */
+export const getApprovedTeachingSkills = async (params = {}) => {
+  const res = await httpClient.get(TEACHING_SKILLS.GET_APPROVED, { params });
+  return res.data ?? res;
+};
+
 /**
  * Đăng ký teaching skill mới
  * @param {{ skillId, level, experienceDesc, outcomeDesc, creditsPerHour }} payload

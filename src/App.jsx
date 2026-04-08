@@ -13,7 +13,6 @@ import AdminSessions from './pages/admin/AdminSessions';
 import AdminCredits from './pages/admin/AdminCredits';
 import AdminPaths from './pages/admin/AdminPaths';
 import AdminSystem from './pages/admin/AdminSystem';
-import AdminSettings from './pages/admin/AdminSettings';
 import AdminTeachingSkills from './pages/admin/AdminTeachingSkills';
 import AdminEscrow from './pages/admin/AdminEscrow';
 import AdminForumPosts from './pages/admin/AdminForumPosts';
@@ -107,7 +106,6 @@ function App() {
           <Route path="teaching-skills" element={<AdminTeachingSkills />} />
           <Route path="paths" element={<AdminPaths />} />
           <Route path="system" element={<AdminSystem />} />
-          <Route path="settings" element={<AdminSettings />} />
         </Route>
 
         {/* 404 */}

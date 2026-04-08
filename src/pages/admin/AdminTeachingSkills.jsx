@@ -1,16 +1,16 @@
 import { useState, useEffect } from "react";
 import {
   BookOpen,
-  Search,
-  CheckCircle2,
-  AlertCircle,
+  MagnifyingGlass,
+  CheckCircle,
+  Warning,
   XCircle,
   Eye,
-  Shield,
-  Link,
-  Download,
-  Loader2,
-} from "lucide-react";
+  ShieldCheck,
+  Link as LinkIcon,
+  DownloadSimple,
+  CircleNotch,
+} from "@phosphor-icons/react";
 import SkillIcon from "../../components/SkillIcon.jsx";
 import {
   getAdminTeachingSkills,
@@ -149,7 +149,7 @@ const AdminTeachingSkills = () => {
             {filterStatus !== "ALL" ? filterStatus : ""}
           </p>
           <div className="relative">
-            <Search
+            <MagnifyingGlass
               size={16}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
             />
@@ -166,12 +166,12 @@ const AdminTeachingSkills = () => {
         <div className="overflow-x-auto min-h-[300px]">
           {loading ? (
             <div className="flex items-center justify-center h-40 text-slate-400 gap-2">
-              <Loader2 size={20} className="animate-spin" /> Đang tải dữ liệu...
+              <CircleNotch size={20} className="animate-spin text-[#5A63F6]" /> Đang tải dữ liệu...
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center">
               <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3">
-                <CheckCircle2 size={24} className="text-slate-300" />
+                <CheckCircle size={24} weight="duotone" className="text-slate-300" />
               </div>
               <p className="font-bold text-slate-600">
                 Không có hồ sơ nào cần duyệt
@@ -272,14 +272,14 @@ const AdminTeachingSkills = () => {
           <div className="bg-white w-full max-w-3xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
               <h2 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-                <Shield size={18} className="text-[#5A63F6]" /> Xét duyệt hồ sơ
+                <ShieldCheck size={18} weight="duotone" className="text-[#5A63F6]" /> Xét duyệt hồ sơ
                 giảng dạy
               </h2>
               <button
                 onClick={() => setSelectedSkill(null)}
                 className="p-2 hover:bg-slate-100 rounded-full text-slate-400"
               >
-                <XCircle size={18} />
+                <XCircle size={18} weight="regular" />
               </button>
             </div>
 
@@ -378,7 +378,7 @@ const AdminTeachingSkills = () => {
                           rel="noreferrer"
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors"
                         >
-                          <Download size={14} /> Tải file
+                          <DownloadSimple size={14} /> Tải file
                         </a>
                       )}
                       {ev.externalUrl && (
@@ -388,7 +388,7 @@ const AdminTeachingSkills = () => {
                           rel="noreferrer"
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors"
                         >
-                          <Link size={14} /> Mở Link
+                          <LinkIcon size={14} /> Mở Link
                         </a>
                       )}
                     </div>
@@ -446,9 +446,9 @@ const AdminTeachingSkills = () => {
                   className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50"
                 >
                   {processing ? (
-                    <Loader2 size={16} className="animate-spin" />
+                    <CircleNotch size={16} className="animate-spin" />
                   ) : (
-                    <CheckCircle2 size={16} />
+                    <CheckCircle size={16} weight="fill" />
                   )}
                   Duyệt hợp lệ
                 </button>

@@ -92,6 +92,10 @@ export const API_ENDPOINTS = {
   ADMIN_ESCROW: '/api/admin/escrow',
   ADMIN_USERS: '/api/admin/users',
   ADMIN_REPORTS: '/api/admin/reports',
+  ADMIN_SESSIONS: '/api/admin/sessions',
+  ADMIN_STATS: '/api/admin/stats',
+  ADMIN_CREDITS_TRANSACTIONS: '/api/admin/credits/transactions',
+  ADMIN_SYSTEM_LOGS: '/api/admin/logs',
 };
 
 export default API_ENDPOINTS;

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
     Check, X, UploadSimple, Medal, VideoCamera, LinkedinLogo,
-    AirplaneTilt, GraduationCap, WarningCircle, CaretDown, CheckCircle, Spinner
+    Briefcase, Certificate, GraduationCap, WarningCircle, CaretDown, CheckCircle, Spinner, LinkSimple, FileText
 } from '@phosphor-icons/react';
 import { useStore } from '../../store';
 import { getAllSkills, createTeachingSkill, createEvidence } from '../../services/skillService.js';
@@ -14,11 +14,11 @@ const LEVELS = [
 ];
 
 const EVIDENCE_DEFS = [
-    { id: 'cert', label: 'Chứng chỉ chuyên môn', type: 'mandatory', pts: 40, uploadType: 'TEACHING_EVIDENCE', acceptUrl: false, icon: Medal, tips: 'IELTS, TOEIC, JLPT, AWS, Google... Điểm số cụ thể = không thể giả' },
-    { id: 'video', label: 'Video tự giới thiệu bằng kỹ năng đó', type: 'mandatory', pts: 30, uploadType: 'TEACHING_EVIDENCE', acceptUrl: true, icon: VideoCamera, tips: '2 phút nói tự nhiên — học viên nghe ngay trình độ thực sự' },
-    { id: 'linkedin', label: 'LinkedIn', type: 'optional', pts: 10, uploadType: null, acceptUrl: true, icon: LinkedinLogo, tips: 'Liên kết profile có endorsements' },
-    { id: 'work', label: 'Bằng chứng làm việc/dự án', type: 'optional', pts: 15, uploadType: 'TEACHING_EVIDENCE', acceptUrl: true, icon: AirplaneTilt, tips: 'GitHub, Portfolio, Bằng chứng sinh sống nước ngoài...' },
-    { id: 'teaching', label: 'Chứng chỉ giảng dạy', type: 'optional', pts: 5, uploadType: 'TEACHING_EVIDENCE', acceptUrl: false, icon: GraduationCap, tips: 'TESOL, CELTA, Sư phạm...' }
+    { id: 'cert', label: 'Chứng chỉ chuyên môn', type: 'mandatory', pts: 40, uploadType: 'TEACHING_EVIDENCE', acceptUrl: false, icon: Certificate, tips: 'IELTS, TOEIC, JLPT, AWS, Google... tải lên ảnh/PDF chứng chỉ' },
+    { id: 'video', label: 'Video bằng chứng giảng dạy / tự giới thiệu', type: 'mandatory', pts: 30, uploadType: 'TEACHING_EVIDENCE', acceptUrl: true, icon: VideoCamera, tips: 'Độ dài tối thiểu 2 phút để học viên đáng giá kỹ năng nói/trình bày' },
+    { id: 'linkedin', label: 'Hồ sơ LinkedIn', type: 'optional', pts: 10, uploadType: null, acceptUrl: true, icon: LinkedinLogo, tips: 'Link hồ sơ (Nên có Endorsements)' },
+    { id: 'work', label: 'Dự án / Nơi làm việc', type: 'optional', pts: 15, uploadType: 'TEACHING_EVIDENCE', acceptUrl: true, icon: Briefcase, tips: 'Link GitHub, Behance, Portfolio hoặc file chứng minh' },
+    { id: 'teaching', label: 'Chứng chỉ sư phạm', type: 'optional', pts: 5, uploadType: 'TEACHING_EVIDENCE', acceptUrl: false, icon: GraduationCap, tips: 'TESOL, CELTA, bằng Sư phạm...' }
 ];
 
 // Map evidence id -> EvidenceType enum on BE
@@ -608,16 +608,29 @@ const EvidenceItem = ({ ev, state, expanded, onToggle, onFileChange, onUrlChange
             </div>
 
             {expanded && (
-                <div className="px-4 pb-4 border-t border-slate-100 pt-4 space-y-3 animate-in slide-in-from-top-2 fade-in duration-200">
+                <div className="px-5 pb-5 border-t border-slate-100 pt-5 space-y-4 animate-[slideIn_0.2s_ease-out]">
                     {/* File upload option */}
                     {ev.uploadType && (
                         <div>
-                            <p className="text-xs font-bold text-slate-600 mb-2">📎 Upload file:</p>
-                            <label className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed border-slate-300 hover:border-indigo-400 cursor-pointer transition-colors bg-slate-50">
-                                <UploadSimple size={20} className="text-slate-400" />
-                                <span className="text-sm text-slate-500 font-medium">
-                                    {state?.file ? `✅ ${state.file.name}` : 'Chọn file từ máy tính…'}
-                                </span>
+                            <p className="text-[11px] font-extrabold text-slate-500 mb-2 uppercase tracking-wider">📎 Tải file lên</p>
+                            <label className={`relative overflow-hidden flex flex-col items-center justify-center gap-3 px-6 py-6 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${state?.file ? 'bg-indigo-50 border-indigo-200 hover:border-indigo-300' : 'bg-slate-50 border-slate-200 hover:border-indigo-400 hover:bg-slate-100/50'}`}>
+                                {isUploading && (
+                                    <div className="absolute inset-0 z-10 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center">
+                                        <Spinner size={28} className="animate-spin text-indigo-500 mb-2" />
+                                        <span className="text-xs font-bold text-indigo-700">Đang tải lên máy chủ...</span>
+                                    </div>
+                                )}
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm ${state?.file ? 'bg-indigo-100' : 'bg-white border border-slate-200'}`}>
+                                    {state?.file ? <FileText size={24} weight="duotone" className="text-indigo-600" /> : <UploadSimple size={24} weight="duotone" className="text-slate-400" />}
+                                </div>
+                                <div className="text-center">
+                                    <span className="block text-sm font-bold text-slate-700 mb-1">
+                                        {state?.file ? 'Click để thay đổi file khác' : 'Kéo thả hoặc Nhấn để tải file'}
+                                    </span>
+                                    <span className="text-xs text-slate-400">
+                                        {state?.file ? state.file.name : 'PNG, JPG, PDF, MP4 (Max 100MB)'}
+                                    </span>
+                                </div>
                                 <input
                                     ref={fileRef}
                                     type="file"
@@ -627,17 +640,30 @@ const EvidenceItem = ({ ev, state, expanded, onToggle, onFileChange, onUrlChange
                             </label>
                         </div>
                     )}
+                    {/* OR separator */}
+                    {ev.uploadType && ev.acceptUrl && (
+                        <div className="flex items-center gap-3 py-1">
+                            <div className="h-px bg-slate-200 flex-1"></div>
+                            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">hoặc</span>
+                            <div className="h-px bg-slate-200 flex-1"></div>
+                        </div>
+                    )}
                     {/* URL input option */}
                     {ev.acceptUrl && (
                         <div>
-                            <p className="text-xs font-bold text-slate-600 mb-2">🔗 Hoặc nhập link:</p>
-                            <input
-                                type="url"
-                                placeholder="https://..."
-                                value={state?.externalUrl || ''}
-                                onChange={e => onUrlChange(e.target.value)}
-                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition"
-                            />
+                            <p className="text-[11px] font-extrabold text-slate-500 mb-2 uppercase tracking-wider">🔗 Nhập liên kết</p>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <LinkSimple size={18} weight="bold" className="text-slate-400" />
+                                </div>
+                                <input
+                                    type="url"
+                                    placeholder="https://..."
+                                    value={state?.externalUrl || ''}
+                                    onChange={e => onUrlChange(e.target.value)}
+                                    className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all shadow-sm"
+                                />
+                            </div>
                         </div>
                     )}
                 </div>

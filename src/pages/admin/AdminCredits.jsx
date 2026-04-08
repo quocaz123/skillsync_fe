@@ -1,59 +1,89 @@
-import { useState } from 'react';
-import { Zap, TrendingUp, AlertTriangle, Download, Eye, Flag } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import {
+    CurrencyCircleDollar, ChartBar, TrendUp, ArrowsClockwise,
+    CircleNotch, Warning, DownloadSimple
+} from '@phosphor-icons/react';
+import { getAdminCreditTransactions } from '../../services/adminCreditService';
 
-const MOCK_TRANSACTIONS = [
-    { id: 't1', from: 'Lê Hoàng Cường', to: 'Trần Thị Bình', amount: 40, type: 'session_payment', desc: 'Thanh toán buổi học UI/UX Design Basics', date: '2026-03-09T14:00:00', suspicious: false },
-    { id: 't2', from: 'Hệ thống', to: 'Trần Thị Bình', amount: 40, type: 'mentor_earn', desc: 'Thu nhập mentor sau buổi học hoàn thành', date: '2026-03-09T15:30:00', suspicious: false },
-    { id: 't3', from: 'Nguyễn Văn An', to: 'Phạm Thị Dung', amount: 60, type: 'session_payment', desc: 'Thanh toán buổi học Python Data Science', date: '2026-03-08T09:00:00', suspicious: false },
-    { id: 't4', from: 'Tài khoản ẩn danh (User #992)', to: 'Hệ thống', amount: 500, type: 'unknown', desc: 'Giao dịch lúc 3:14 SA — không rõ nguồn gốc', date: '2026-03-05T03:14:00', suspicious: true },
-    { id: 't5', from: 'Hệ thống', to: 'Nguyễn Văn An', amount: 20, type: 'mission_reward', desc: 'Phần thưởng hoàn thành nhiệm vụ: Đặt lịch lần đầu', date: '2026-03-07T10:00:00', suspicious: false },
-    { id: 't6', from: 'Hệ thống', to: 'Phạm Thị Dung', amount: 50, type: 'refund', desc: 'Hoàn lại credit do session bị hủy bởi mentor', date: '2026-03-06T09:00:00', suspicious: false },
-    { id: 't7', from: 'Tài khoản ẩn danh (User #992)', to: 'Nhiều tài khoản', amount: 200, type: 'unknown', desc: 'Phân phối credits bất thường cho 12 tài khoản', date: '2026-03-04T22:00:00', suspicious: true },
-];
-
-const typeConfig = {
-    session_payment: { label: 'Thanh toán', bg: 'bg-indigo-50', text: 'text-indigo-700' },
-    mentor_earn: { label: 'Thu nhập Mentor', bg: 'bg-emerald-50', text: 'text-emerald-700' },
-    mission_reward: { label: 'Phần thưởng', bg: 'bg-amber-50', text: 'text-amber-700' },
-    refund: { label: 'Hoàn tiền', bg: 'bg-blue-50', text: 'text-blue-700' },
-    unknown: { label: 'Không rõ', bg: 'bg-rose-50', text: 'text-rose-700' },
+const TYPE_CONFIG = {
+    WELCOME_BONUS: { label: 'Bonus', bg: 'bg-violet-50', text: 'text-violet-700' },
+    SPEND_SESSION: { label: 'Thanh toán', bg: 'bg-indigo-50', text: 'text-indigo-700' },
+    EARN_SESSION: { label: 'Thu nhập Mentor', bg: 'bg-emerald-50', text: 'text-emerald-700' },
+    MISSION_REWARD: { label: 'Phần thưởng', bg: 'bg-amber-50', text: 'text-amber-700' },
+    REFUND: { label: 'Hoàn tiền', bg: 'bg-blue-50', text: 'text-blue-700' },
+    PENALTY: { label: 'Phạt', bg: 'bg-rose-50', text: 'text-rose-700' },
 };
 
+const FILTER_OPTIONS = [
+    { id: 'ALL', label: 'Tất cả' },
+    { id: 'SPEND_SESSION', label: 'Thanh toán' },
+    { id: 'EARN_SESSION', label: 'Thu nhập' },
+    { id: 'MISSION_REWARD', label: 'Phần thưởng' },
+    { id: 'REFUND', label: 'Hoàn tiền' },
+    { id: 'WELCOME_BONUS', label: 'Bonus' },
+    { id: 'PENALTY', label: 'Phạt' },
+];
+
 const AdminCredits = () => {
-    const [filter, setFilter] = useState('all');
+    const [transactions, setTransactions] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [filter, setFilter] = useState('ALL');
 
-    const filtered = filter === 'all' ? MOCK_TRANSACTIONS
-        : filter === 'suspicious' ? MOCK_TRANSACTIONS.filter(t => t.suspicious)
-        : MOCK_TRANSACTIONS.filter(t => t.type === filter);
+    const fetchTransactions = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const data = await getAdminCreditTransactions(filter);
+            setTransactions(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error(err);
+            setError('Không thể tải lịch sử giao dịch.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    const totalCirculating = 24500;
-    const totalSuspicious = MOCK_TRANSACTIONS.filter(t => t.suspicious).reduce((a, t) => a + t.amount, 0);
-    const todayCount = MOCK_TRANSACTIONS.filter(t => t.date.startsWith('2026-03-09')).length;
+    useEffect(() => { fetchTransactions(); }, [filter]); // eslint-disable-line
+
+    const totalAmount = transactions.filter(t => t.transactionType === 'EARN_SESSION' || t.transactionType === 'WELCOME_BONUS' || t.transactionType === 'MISSION_REWARD')
+        .reduce((a, t) => a + (t.amount || 0), 0);
+    const totalSpent = transactions.filter(t => t.transactionType === 'SPEND_SESSION').reduce((a, t) => a + (t.amount || 0), 0);
+    const totalRefund = transactions.filter(t => t.transactionType === 'REFUND').reduce((a, t) => a + (t.amount || 0), 0);
+
+    const stats = [
+        { Icon: CurrencyCircleDollar, label: 'Tổng Giao dịch', value: transactions.length, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', weight: 'duotone' },
+        { Icon: TrendUp, label: 'Credits Phát sinh', value: totalAmount.toLocaleString(), color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', weight: 'duotone' },
+        { Icon: ChartBar, label: 'Credits Thanh toán', value: totalSpent.toLocaleString(), color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', weight: 'duotone' },
+        { Icon: Warning, label: 'Credits Hoàn trả', value: totalRefund.toLocaleString(), color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', weight: 'duotone' },
+    ];
 
     return (
         <div className="max-w-7xl mx-auto space-y-5 sm:space-y-6 pb-4">
-            <div className="flex items-center justify-between">
+            {/* Header */}
+            <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
-                        <Zap size={22} className="text-amber-500" /> Credits & Giao dịch
+                        <CurrencyCircleDollar size={22} weight="duotone" className="text-amber-500" /> Credits &amp; Giao dịch
                     </h1>
-                    <p className="text-sm text-slate-400 font-medium mt-1">Kiểm soát dòng credit và phát hiện giao dịch bất thường</p>
+                    <p className="text-sm text-slate-400 font-medium mt-1">Kiểm soát dòng credit trên toàn hệ thống</p>
                 </div>
-                <button className="flex items-center gap-1.5 px-4 py-2 bg-[#5A63F6] text-white rounded-xl font-bold text-sm hover:bg-[#4a53e6] transition-colors">
-                    <Download size={14} /> Xuất báo cáo
-                </button>
+                <div className="flex gap-2">
+                    <button onClick={fetchTransactions} disabled={loading}
+                        className="flex items-center gap-1.5 px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-bold text-sm transition-colors disabled:opacity-50">
+                        <ArrowsClockwise size={14} className={loading ? 'animate-spin' : ''} /> Làm mới
+                    </button>
+                    <button className="flex items-center gap-1.5 px-4 py-2 bg-[#5A63F6] text-white rounded-xl font-bold text-sm hover:bg-[#4a53e6] transition-colors">
+                        <DownloadSimple size={14} weight="bold" /> Xuất báo cáo
+                    </button>
+                </div>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {[
-                    { label: 'Credits lưu thông', value: totalCirculating.toLocaleString(), icon: '💰', bg: 'bg-amber-50', border: 'border-amber-100', color: 'text-amber-700' },
-                    { label: 'GD hôm nay', value: todayCount, icon: '📊', bg: 'bg-blue-50', border: 'border-blue-100', color: 'text-blue-700' },
-                    { label: 'Tổng GD theo dõi', value: MOCK_TRANSACTIONS.length, icon: '📋', bg: 'bg-slate-50', border: 'border-slate-100', color: 'text-slate-700' },
-                    { label: 'Credits nghi ngờ', value: totalSuspicious, icon: '⚠️', bg: 'bg-rose-50', border: 'border-rose-100', color: 'text-rose-700' },
-                ].map(s => (
+                {stats.map(s => (
                     <div key={s.label} className={`${s.bg} border ${s.border} rounded-2xl p-5 flex items-center gap-4`}>
-                        <span className="text-3xl">{s.icon}</span>
+                        <s.Icon size={28} weight={s.weight} className={s.color} />
                         <div>
                             <div className={`text-2xl font-extrabold ${s.color}`}>{s.value}</div>
                             <div className="text-xs font-semibold text-slate-500 mt-0.5">{s.label}</div>
@@ -64,90 +94,87 @@ const AdminCredits = () => {
 
             {/* Filter */}
             <div className="flex items-center gap-2 flex-wrap">
-                {[
-                    { id: 'all', label: 'Tất cả' },
-                    { id: 'suspicious', label: '⚠️ Nghi ngờ' },
-                    { id: 'session_payment', label: 'Thanh toán' },
-                    { id: 'mentor_earn', label: 'Thu nhập Mentor' },
-                    { id: 'mission_reward', label: 'Phần thưởng' },
-                    { id: 'refund', label: 'Hoàn tiền' },
-                ].map(f => (
+                {FILTER_OPTIONS.map(f => (
                     <button key={f.id} onClick={() => setFilter(f.id)}
-                        className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${filter === f.id
-                            ? f.id === 'suspicious' ? 'bg-rose-600 text-white' : 'bg-[#5A63F6] text-white shadow-md shadow-indigo-200'
-                            : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
+                        className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${filter === f.id ? 'bg-[#5A63F6] text-white shadow-md shadow-indigo-200' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
                         {f.label}
                     </button>
                 ))}
-                <span className="ml-auto text-xs text-slate-400 font-medium">{filtered.length} giao dịch</span>
+                <span className="ml-auto text-xs text-slate-400 font-medium">{transactions.length} giao dịch</span>
             </div>
 
             {/* Table */}
             <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 text-[11px] font-extrabold uppercase tracking-widest">
-                                <th className="px-6 py-4">Loại</th>
-                                <th className="px-6 py-4">Từ</th>
-                                <th className="px-6 py-4">Đến</th>
-                                <th className="px-6 py-4">Mô tả</th>
-                                <th className="px-6 py-4">Credits</th>
-                                <th className="px-6 py-4">Thời gian</th>
-                                <th className="px-6 py-4 text-right">Hành động</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {filtered.map(t => {
-                                const tc = typeConfig[t.type] || typeConfig.unknown;
-                                return (
-                                    <tr key={t.id} className={`hover:bg-slate-50/50 transition-colors group ${t.suspicious ? 'bg-rose-50/30' : ''}`}>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold ${tc.bg} ${tc.text}`}>
-                                                {tc.label}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm font-medium text-slate-600 max-w-[150px]">
-                                            <span className={`truncate block ${t.suspicious ? 'text-rose-600 font-bold' : ''}`}>{t.from}</span>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm font-medium text-slate-600">{t.to}</td>
-                                        <td className="px-6 py-4">
-                                            <p className="text-sm text-slate-600 max-w-xs line-clamp-2">{t.desc}</p>
-                                            {t.suspicious && (
-                                                <span className="inline-flex items-center gap-1 text-xs text-rose-600 font-bold mt-0.5">
-                                                    <AlertTriangle size={11} /> Nghi ngờ
+                <div className="overflow-x-auto min-h-[300px]">
+                    {loading ? (
+                        <div className="flex items-center justify-center h-40 text-slate-400 gap-2">
+                            <CircleNotch size={22} className="animate-spin text-[#5A63F6]" />
+                            <span className="text-sm font-medium">Đang tải...</span>
+                        </div>
+                    ) : error ? (
+                        <div className="flex items-center justify-center h-40 text-rose-500 gap-2">
+                            <Warning size={20} weight="duotone" /> <span className="text-sm font-medium">{error}</span>
+                        </div>
+                    ) : transactions.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center p-12 text-center">
+                            <CurrencyCircleDollar size={32} weight="duotone" className="text-slate-300 mb-3" />
+                            <p className="font-bold text-slate-500">Không có giao dịch nào</p>
+                        </div>
+                    ) : (
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 text-[11px] font-extrabold uppercase tracking-widest">
+                                    <th className="px-6 py-4">Loại</th>
+                                    <th className="px-6 py-4">Người dùng</th>
+                                    <th className="px-6 py-4">Mô tả</th>
+                                    <th className="px-6 py-4">Credits</th>
+                                    <th className="px-6 py-4">Thời gian</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {transactions.map(t => {
+                                    const tc = TYPE_CONFIG[t.transactionType] || { label: t.transactionType, bg: 'bg-slate-50', text: 'text-slate-600' };
+                                    const isCredit = ['EARN_SESSION', 'WELCOME_BONUS', 'MISSION_REWARD', 'REFUND'].includes(t.transactionType);
+                                    return (
+                                        <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="px-6 py-4">
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold ${tc.bg} ${tc.text}`}>
+                                                    {tc.label}
                                                 </span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`flex items-center gap-1 font-extrabold text-sm ${t.suspicious ? 'text-rose-600' : 'text-amber-600'}`}>
-                                                <Zap size={13} className={t.suspicious ? 'fill-rose-500' : 'fill-amber-500'} />
-                                                {t.amount}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-xs font-bold text-slate-700">{new Date(t.date).toLocaleDateString('vi-VN')}</div>
-                                            <div className="text-xs text-slate-400">{new Date(t.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button className="p-2 rounded-xl hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors"><Eye size={15} /></button>
-                                                {!t.suspicious && <button className="p-2 rounded-xl hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors" title="Đánh dấu nghi ngờ"><Flag size={15} /></button>}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="font-medium text-sm text-slate-800">{t.userName || 'Hệ thống'}</div>
+                                                {t.userEmail && <div className="text-xs text-slate-400">{t.userEmail}</div>}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <p className="text-sm text-slate-600 max-w-xs line-clamp-2">{t.description || '—'}</p>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`flex items-center gap-1 font-extrabold text-sm ${isCredit ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                    <CurrencyCircleDollar size={14} weight="duotone" />
+                                                    {isCredit ? '+' : '-'}{t.amount}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {t.createdAt ? (
+                                                    <>
+                                                        <div className="text-xs font-bold text-slate-700">{new Date(t.createdAt).toLocaleDateString('vi-VN')}</div>
+                                                        <div className="text-xs text-slate-400">{new Date(t.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div>
+                                                    </>
+                                                ) : <span className="text-xs text-slate-300">—</span>}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
-                <div className="p-5 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center text-xs font-bold text-slate-400">
-                    <span>Hiển thị {filtered.length}/{MOCK_TRANSACTIONS.length} giao dịch</span>
-                    <div className="flex gap-2">
-                        <button className="px-4 py-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 text-slate-600 transition-colors">Trước</button>
-                        <button className="px-4 py-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 text-slate-600 transition-colors">Tiếp</button>
+                {!loading && transactions.length > 0 && (
+                    <div className="p-5 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center text-xs font-bold text-slate-400">
+                        <span>{transactions.length} giao dịch</span>
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );

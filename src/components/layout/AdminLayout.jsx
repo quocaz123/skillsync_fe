@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     SquaresFour, CalendarBlank, CurrencyCircleDollar,
-    Users, BookOpen, Flag, ChartBar, GearSix, LockKey,
-    List, SignOut, ShieldCheck, X
+    Users, BookOpen, Flag, ChartBar, LockKey,
+    List, SignOut, ShieldCheck, X, Database
 } from '@phosphor-icons/react';
 import { useStore } from '../../store';
 import { logout as logoutApi } from '../../services/authService';
@@ -47,8 +47,7 @@ const AdminLayout = () => {
         {
             label: 'Hệ thống',
             items: [
-                { path: '/admin/system', label: 'Hệ thống', icon: ChartBar },
-                { path: '/admin/settings', label: 'Cài đặt', icon: GearSix },
+                { path: '/admin/system', label: 'Nhật ký Hoạt động', icon: Database },
             ],
         },
     ];
@@ -62,8 +61,7 @@ const AdminLayout = () => {
         '/admin/users': 'Quản lý Người dùng',
         '/admin/teaching-skills': 'Xét duyệt Kỹ năng Mentor',
         '/admin/paths': 'Quản lý Lộ trình Học',
-        '/admin/system': 'Sức khoẻ Hệ thống',
-        '/admin/settings': 'Cài đặt Hệ thống',
+        '/admin/system': 'Nhật ký Hoạt động Hệ thống',
     };
 
 const SidebarContent = ({ onLinkClick, isCollapsed, location, user, handleLogout, navGroups }) => (

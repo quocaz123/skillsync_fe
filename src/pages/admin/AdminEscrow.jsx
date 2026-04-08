@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getEscrowSessions, getEscrowReport, refundLearner, releaseToMentor } from '../../services/adminEscrowService';
-import { MagnifyingGlass, FunnelSimple, ArrowsDownUp, LockKey, WarningCircle, CheckCircle, XCircle } from '@phosphor-icons/react';
-import { Loader2 } from 'lucide-react';
+import { MagnifyingGlass, FunnelSimple, ArrowsDownUp, LockKey, WarningCircle, CheckCircle, XCircle, CircleNotch } from '@phosphor-icons/react';
 
 const STATUS_COLORS = {
     SCHEDULED: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -210,7 +209,7 @@ const AdminEscrow = () => {
                             {loading ? (
                                 <tr>
                                     <td colSpan="6" className="px-6 py-12 text-center text-slate-500">
-                                        <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-indigo-500" />
+                                        <CircleNotch className="w-8 h-8 animate-spin mx-auto mb-4 text-indigo-500" />
                                         <p>Đang tải dữ liệu Escrow...</p>
                                     </td>
                                 </tr>
@@ -308,7 +307,7 @@ const AdminEscrow = () => {
                                 <h4 className="font-semibold text-slate-800 mb-4">Chi tiết Báo cáo</h4>
                                 {reportLoading ? (
                                     <div className="flex items-center gap-2 text-slate-500">
-                                        <Loader2 className="w-4 h-4 animate-spin" /> Đang tải dữ liệu report...
+                                        <CircleNotch className="w-4 h-4 animate-spin" /> Đang tải dữ liệu report...
                                     </div>
                                 ) : selectedReport ? (
                                     <div className="space-y-3">
@@ -344,7 +343,7 @@ const AdminEscrow = () => {
                                 disabled={isActionLoading || reportLoading}
                                 className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold flex items-center gap-2 rounded-xl transition-colors"
                             >
-                                {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle size={18} weight="bold" />}
+                                {isActionLoading ? <CircleNotch className="w-4 h-4 animate-spin" /> : <XCircle size={18} weight="bold" />}
                                 Báo cáo ĐÚNG - Hoàn tiền Học viên
                             </button>
                             <button
@@ -352,7 +351,7 @@ const AdminEscrow = () => {
                                 disabled={isActionLoading || reportLoading}
                                 className="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-semibold flex items-center gap-2 rounded-xl transition-colors"
                             >
-                                {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle size={18} weight="bold" />}
+                                {isActionLoading ? <CircleNotch className="w-4 h-4 animate-spin" /> : <CheckCircle size={18} weight="bold" />}
                                 Báo cáo SAI - Trả tiền Mentor
                             </button>
                         </div>

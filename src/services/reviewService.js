@@ -10,7 +10,7 @@ export const createSessionReview = async (sessionId, rating, comment) => {
             rating,
             comment
         });
-        return response?.result;
+        return response;
     } catch (error) {
         throw error;
     }
@@ -19,7 +19,7 @@ export const createSessionReview = async (sessionId, rating, comment) => {
 export const getReviewsByUserId = async (userId) => {
     try {
         const response = await httpClient.get(`${REVIEWS.CREATE}/user/${userId}`);
-        return response?.result;
+        return response;
     } catch (error) {
         throw error;
     }
