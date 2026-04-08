@@ -22,6 +22,7 @@ import {
     UserCircle
 } from '@phosphor-icons/react';
 import { AddSkillModal } from '../../components/profile/AddSkillModal.jsx';
+import { SkillDynamicIcon } from '../../components/common/SkillDynamicIcon.jsx';
 import { uploadFile } from '../../services/uploadService.js';
 import { getMyProfile, updateAvatar, updateBio } from '../../services/userService.js';
 import { getMyTeachingSkills, deleteTeachingSkill } from '../../services/skillService.js';
@@ -346,7 +347,7 @@ const Profile = () => {
                                             title={item.learningGoal || ''}
                                             className="flex items-center gap-2.5 px-5 py-3 rounded-2xl border font-bold text-sm transition-all hover:-translate-y-1 bg-gradient-to-br from-blue-50 to-indigo-50/50 border-blue-200/60 shadow-sm text-blue-800 hover:shadow-blue-200 hover:border-blue-300"
                                         >
-                                            {item.skillIcon && <span className="text-base">{item.skillIcon}</span>}
+                                            <SkillDynamicIcon skillName={item.skillName} defaultIcon={item.skillIcon} className="text-base" size={16} />
                                             <span>{item.skillName}</span>
                                             {item.desiredLevel && (
                                                 <span className="text-[10px] bg-white text-blue-600 border border-blue-100 px-2 py-0.5 rounded-md font-black uppercase tracking-wider shadow-sm">
@@ -370,7 +371,7 @@ const Profile = () => {
                                 ) : (
                                     teachingSkills.map((ts) => (
                                         <div key={ts.id} className="group relative pr-10 flex items-center gap-2.5 px-5 py-3 rounded-2xl border font-bold text-sm bg-gradient-to-br from-purple-50 to-fuchsia-50/50 border-purple-200/60 shadow-sm text-purple-800 hover:shadow-purple-200 hover:-translate-y-1 transition-all">
-                                            <span className="text-base">{ts.skillIcon}</span>
+                                            <SkillDynamicIcon skillName={ts.skillName} defaultIcon={ts.skillIcon} className="text-base" size={16} />
                                             <span>{ts.skillName}</span>
                                             <span className="text-[10px] bg-white border border-purple-100 text-purple-600 uppercase tracking-wider px-2 py-0.5 rounded-md font-black shadow-sm">{ts.level}</span>
                                             <button

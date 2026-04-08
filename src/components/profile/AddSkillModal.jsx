@@ -4,6 +4,7 @@ import {
     Briefcase, Certificate, GraduationCap, WarningCircle, CaretDown, CheckCircle, Spinner, LinkSimple, FileText
 } from '@phosphor-icons/react';
 import { useStore } from '../../store';
+import { SkillDynamicIcon } from '../common/SkillDynamicIcon.jsx';
 import { getAllSkills, createTeachingSkill, createEvidence } from '../../services/skillService.js';
 import { uploadFile } from '../../services/uploadService.js';
 
@@ -215,7 +216,7 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                                                 >
                                                     {isSelected && <div className="absolute top-3 right-3 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center"><Check size={12} weight="bold" className="text-white" /></div>}
                                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-2.5 shadow-sm border ${colorClass}`}>
-                                                        {skill.icon}
+                                                        <SkillDynamicIcon skillName={skill.name} defaultIcon={skill.icon} size={24} weight="duotone" />
                                                     </div>
                                                     <p className={`font-bold text-sm mb-0.5 ${isSelected ? 'text-indigo-900' : 'text-slate-800'}`}>{skill.name}</p>
                                                     <p className="text-[11px] text-slate-400 mb-2.5">{categoryLabel[skill.category] || skill.category}</p>
@@ -233,7 +234,7 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                                 <div className="animate-in slide-in-from-bottom-4 fade-in duration-300">
                                     <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                         <div className="flex items-center gap-3">
-                                            <div className="text-3xl">{selectedSkill.icon}</div>
+                                            <div className="text-3xl"><SkillDynamicIcon skillName={selectedSkill.name} defaultIcon={selectedSkill.icon} size={32} weight="duotone" /></div>
                                             <div>
                                                 <p className="font-extrabold text-slate-900 flex items-center gap-1 text-sm">
                                                     Nhóm <span className="text-emerald-600">{categoryLabel[selectedSkill.category]}</span> — hệ thống sẽ hỏi bạn cung cấp:
@@ -269,7 +270,7 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                     {step === 2 && (
                         <div className="space-y-6">
                             <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex items-start gap-3">
-                                <div className="text-2xl shrink-0">{selectedSkill?.icon}</div>
+                                <div className="text-2xl shrink-0"><SkillDynamicIcon skillName={selectedSkill?.name} defaultIcon={selectedSkill?.icon} size={32} /></div>
                                 <div>
                                     <p className="font-extrabold text-indigo-900 text-sm">{selectedSkill?.name} · {selectedLevel?.label}</p>
                                     <p className="text-xs text-indigo-600 mt-0.5">Học viên sẽ thấy những thông tin này trước khi đặt lịch</p>
@@ -460,7 +461,7 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                                         <b className="font-extrabold">{user?.name || 'Nguyễn Văn'}</b>
                                         <span className="text-slate-400 text-sm">dạy</span>
                                         <span className="flex items-center gap-1.5 font-bold text-indigo-600 bg-white px-2 py-0.5 rounded-lg border border-slate-200 shadow-sm text-sm">
-                                            {selectedSkill?.icon} {selectedSkill?.name}
+                                            <SkillDynamicIcon skillName={selectedSkill?.name} defaultIcon={selectedSkill?.icon} size={18} /> {selectedSkill?.name}
                                         </span>
                                         <span className={`px-2 py-0.5 rounded-lg border text-xs font-bold ${selectedLevel?.color}`}>
                                             {selectedLevel?.label}
