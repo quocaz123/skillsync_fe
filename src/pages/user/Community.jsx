@@ -331,7 +331,7 @@ const MyPostCard = ({ post, onEdit, onDelete, onOpen }) => (
             <span
               className={`mt-1 inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full ${post.typeBg}`}
             >
-              {post.typeLabel}
+              {post.categoryLabel}
             </span>
             {post.status && post.status !== "APPROVED" && (
               <span
@@ -491,7 +491,7 @@ const EditPostModal = ({ post, categories, onClose, onSave }) => {
                   onClick={() => setSelectedCategoryId(c.id)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${selectedCategoryId === c.id ? "bg-violet-600 text-white border-violet-600" : "border-slate-200 text-slate-600 hover:border-violet-300"}`}
                 >
-                  {c.icon} {c.name}
+                  {c.name}
                 </button>
               ))}
             </div>
@@ -658,7 +658,7 @@ const PostCard = ({ post, onToggleLike, onToggleSave, onOpen }) => (
           <span
             className={`mt-1 inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full ${post.typeBg}`}
           >
-            {post.typeLabel}
+            {post.categoryLabel}
           </span>
         </div>
       </div>
@@ -722,9 +722,12 @@ const PostCard = ({ post, onToggleLike, onToggleSave, onOpen }) => (
 const CATEGORY_UI_TYPE_BY_NAME = {
   "Mẹo học tập": "tips",
   "Gợi ý giáo viên": "recommend",
-  "Tài nguyên": "resources",
+  "Tài nguyên học tập": "resources",
   "Hỏi đáp": "question",
-  "Chia sẻ": "experience",
+  "Chia sẻ kinh nghiệm": "experience",
+  "Thảo luận chung": "discussion",
+  "Kinh nghiệm học tập": "experience",
+  "Tài liệu tham khảo": "resources",
 };
 
 const NewPostModal = ({ onClose, onSave, categories, defaultCategoryId }) => {
@@ -796,7 +799,7 @@ const NewPostModal = ({ onClose, onSave, categories, defaultCategoryId }) => {
                   onClick={() => setSelectedCategoryId(c.id)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${selectedCategoryId === c.id ? "bg-violet-600 text-white border-violet-600" : "border-slate-200 text-slate-600 hover:border-violet-300"}`}
                 >
-                  {c.icon} {c.name}
+                  {c.name}
                 </button>
               ))}
             </div>
@@ -921,7 +924,7 @@ const PostDetailModal = ({
           <span
             className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${post.typeBg}`}
           >
-            {post.typeLabel}
+            {post.categoryLabel}
           </span>
           <button
             onClick={onClose}
@@ -1707,10 +1710,7 @@ const Community = () => {
     }
   };
 
-  const visibleCategories = [
-    { id: "all", label: "Tất cả", icon: "🌐" },
-    ...categories,
-  ];
+  const visibleCategories = [{ id: "all", label: "Tất cả" }, ...categories];
 
   const filtered = posts.filter((post) => {
     const matchCat =
@@ -1912,7 +1912,7 @@ const Community = () => {
                     onClick={() => setActiveCategory(c.id)}
                     className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all ${activeCategory === c.id ? "bg-violet-600 text-white border-violet-600" : "bg-white border-slate-200 text-slate-600 hover:border-violet-300"}`}
                   >
-                    {c.icon} {c.label}
+                    {c.label}
                   </button>
                 ))}
               </div>
