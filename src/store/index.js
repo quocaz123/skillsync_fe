@@ -39,6 +39,7 @@ export const useStore = create(
             })),
             // Sync credits từ server (gọi sau khi login hoặc khi cần đồng bộ)
             syncCredits: (balance) => set({ credits: balance }),
+            addCredits: (amount) => set((state) => ({ credits: state.credits + amount })),
 
             /** Id lộ trình đã đăng ký (đồng bộ với mock khi API enroll offline) */
             enrolledPathIds: [],
