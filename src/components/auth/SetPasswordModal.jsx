@@ -73,6 +73,16 @@ const SetPasswordModal = ({ onSuccess, onSkip }) => {
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* Hidden username field for browser password managers */}
+                        <input
+                            type="text"
+                            name="username"
+                            autoComplete="username"
+                            className="hidden"
+                            tabIndex={-1}
+                            value=""
+                            readOnly
+                        />
                         {error && (
                             <div className="text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-xl">
                                 {error}
@@ -114,6 +124,7 @@ const SetPasswordModal = ({ onSuccess, onSkip }) => {
                                     value={confirm}
                                     onChange={e => setConfirm(e.target.value)}
                                     placeholder="Nhập lại mật khẩu"
+                                    autoComplete="new-password"
                                     className={`w-full pl-10 pr-11 py-2.5 border rounded-xl focus:ring-2 outline-none placeholder:text-slate-400 bg-white text-sm ${
                                         confirm ? (isMatch ? 'border-emerald-400 focus:ring-emerald-300' : 'border-red-300 focus:ring-red-200') : 'border-slate-200 focus:ring-indigo-400 focus:border-indigo-400'
                                     }`}

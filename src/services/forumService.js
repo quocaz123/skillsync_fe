@@ -205,17 +205,37 @@ function normalizePage(page) {
       size: page.length,
     };
   }
+
+  // Backend có thể trả 1 trong 2 dạng:
+  // - Spring Page JSON: { content, number, size, totalElements, totalPages, ... }
+  // - Custom PageResponse: { data, currentPage, pageSize, totalElements, totalPages }
+  const content = Array.isArray(page.content)
+    ? page.content
+    : Array.isArray(page.data)
+      ? page.data
+      : [];
+
+  const number =
+    page.number ??
+    page.currentPage ??
+    0;
+
+  const size =
+    page.size ??
+    page.pageSize ??
+    0;
+
   return {
-    content: Array.isArray(page.content) ? page.content : [],
-    totalElements: page.totalElements ?? 0,
+    content,
+    totalElements: page.totalElements ?? content.length ?? 0,
     totalPages: page.totalPages ?? 0,
-    number: page.number ?? 0,
-    size: page.size ?? 0,
+    number,
+    size,
     first: page.first,
     last: page.last,
     numberOfElements:
       page.numberOfElements ??
-      (Array.isArray(page.content) ? page.content.length : 0),
+      content.length,
   };
 }
 

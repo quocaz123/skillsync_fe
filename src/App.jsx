@@ -29,6 +29,7 @@ import Community from './pages/user/Community';
 import VideoCallPage from './pages/user/VideoCallPage';
 import Missions from './pages/user/Missions';
 import { useStore } from './store';
+import { Toaster } from "react-hot-toast";
 
 // Mock Pages for now
 const NotFound = () => (
@@ -56,6 +57,13 @@ const ProtectedAdminRoute = ({ children }) => {
 function App() {
   return (
     <BrowserRouter>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3500,
+          style: { fontWeight: 600 },
+        }}
+      />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
