@@ -111,7 +111,14 @@ const AdminCredits = () => {
 
   useEffect(() => {
     setCurrentPage(1);
+    const mainContent = document.querySelector("main");
+    if (mainContent) mainContent.scrollTo({ top: 0, behavior: "smooth" });
   }, [filter, searchQuery, dateFilter]);
+
+  useEffect(() => {
+    const mainContent = document.querySelector("main");
+    if (mainContent) mainContent.scrollTo({ top: 0, behavior: "smooth" });
+  }, [currentPage]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -179,17 +186,10 @@ const AdminCredits = () => {
           </button>
           <button
             type="button"
-            className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-colors"
-            onClick={() => toastSuccess("MVP: Xuất báo cáo sẽ bổ sung sau.")}
-          >
-            <Download size={14} /> Xuất báo cáo
-          </button>
-          <button
-            type="button"
             onClick={() => setIsGrantModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition-colors"
+            className="flex items-center gap-1.5 px-6 py-3 bg-amber-500 text-white rounded-xl font-bold text-sm hover:bg-amber-600 transition-colors shadow-lg shadow-amber-100"
           >
-            <Plus size={14} /> Cấp / Trừ Credit
+            <Plus size={16} /> Cấp / Trừ Credit
           </button>
         </div>
       </div>
@@ -220,11 +220,10 @@ const AdminCredits = () => {
           <button
             key={f.id}
             onClick={() => setFilter(f.id)}
-            className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${
-              filter === f.id
-                ? "bg-[#5A63F6] text-white shadow-md shadow-indigo-200"
-                : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"
-            }`}
+            className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${filter === f.id
+              ? "bg-[#5A63F6] text-white shadow-md shadow-indigo-200"
+              : "bg-white border border-slate-200 text-slate-500 hover:bg-slate-50"
+              }`}
           >
             {f.label}
           </button>
@@ -278,12 +277,14 @@ const AdminCredits = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 text-[11px] font-extrabold uppercase tracking-widest">
+                  <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 text-[11px] font-extrabold uppercase tracking-widest whitespace-nowrap">
                     <th className="px-6 py-4">Loại</th>
+                    <th className="px-6 py-4">ID User</th>
                     <th className="px-6 py-4">Người dùng</th>
-                    <th className="px-6 py-4">Mô tả</th>
-                    <th className="px-6 py-4">Credits</th>
-                    <th className="px-6 py-4">Thời gian</th>
+                    <th className="px-6 py-4 w-1/4">Mô tả</th>
+                    <th className="px-6 py-4 text-right">Giao dịch</th>
+                    <th className="px-6 py-4 text-right">Tổng Ví</th>
+                    <th className="px-6 py-4 text-center">Thời gian</th>
                     <th className="px-6 py-4 text-right">Hành động</th>
                   </tr>
                 </thead>
@@ -293,25 +294,27 @@ const AdminCredits = () => {
                     return (
                       <tr
                         key={t.id}
-                        className={`hover:bg-slate-50/50 transition-colors group ${
-                          t.suspicious ? "bg-rose-50/30" : ""
-                        }`}
+                        className={`hover:bg-slate-50/50 transition-colors group ${t.suspicious ? "bg-rose-50/30" : ""
+                          }`}
                       >
                         <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold ${tc.bg} ${tc.text}`}>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold ${tc.bg} ${tc.text} whitespace-nowrap`}>
                             {tc.label}
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <p className={`text-sm font-bold ${t.suspicious ? "text-rose-700" : "text-slate-800"}`}>
+                          <span
+                            title={t.userId}
+                            className="font-mono text-[10px] text-slate-500 bg-slate-100 px-2 py-1 rounded cursor-text select-all block w-20 truncate hover:w-auto hover:absolute hover:z-10 hover:shadow-lg transition-all"
+                          >
+                            {t.userId || "—"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className={`text-sm font-bold ${t.suspicious ? "text-rose-700" : "text-slate-800"} whitespace-nowrap`}>
                             {t.userName || "Hệ thống"}
                           </p>
-                          <p className="text-xs text-slate-400 truncate">{t.userEmail || ""}</p>
-                          {t.userBalance != null && (
-                            <p className="text-[11px] text-amber-700 font-bold mt-1">
-                              Ví: {Number(t.userBalance || 0).toLocaleString()} C
-                            </p>
-                          )}
+                          <p className="text-xs text-slate-400 truncate max-w-[150px]">{t.userEmail || ""}</p>
                         </td>
                         <td className="px-6 py-4">
                           <p className="text-sm text-slate-600 max-w-xs line-clamp-2">
@@ -323,15 +326,28 @@ const AdminCredits = () => {
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4">
-                          <span className={`flex items-center gap-1 font-extrabold text-sm ${Number(t.amount || 0) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                            <Zap size={14} />
+                        <td className="px-6 py-4 text-right">
+                          <span className={`inline-flex items-center justify-end gap-1 font-extrabold text-sm ${Number(t.amount || 0) >= 0 ? "text-emerald-600" : "text-rose-600"} whitespace-nowrap`}>
                             {(Number(t.amount || 0) > 0 ? "+" : "") + Number(t.amount || 0)}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="text-xs font-bold text-slate-700">
-                            {formatDateTime(t.createdAt)}
+                        <td className="px-6 py-4 text-right">
+                          {t.userBalance != null ? (
+                            <span className="text-[13px] font-bold text-amber-600 whitespace-nowrap">
+                              {Number(t.userBalance || 0).toLocaleString()} C
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex flex-col items-center justify-center whitespace-nowrap">
+                            <span className="text-xs font-bold text-slate-700">
+                              {t.createdAt ? new Date(t.createdAt).toLocaleDateString("vi-VN") : "—"}
+                            </span>
+                            <span className="text-[10px] text-slate-500 mt-0.5">
+                              {t.createdAt ? new Date(t.createdAt).toLocaleTimeString("vi-VN") : ""}
+                            </span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -371,11 +387,10 @@ const AdminCredits = () => {
                   type="button"
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className={`px-4 py-2 border border-slate-200 rounded-xl transition-colors ${
-                    currentPage === 1
-                      ? "bg-slate-100 text-slate-300 cursor-not-allowed"
-                      : "bg-white hover:bg-slate-50 text-slate-600"
-                  }`}
+                  className={`px-4 py-2 border border-slate-200 rounded-xl transition-colors ${currentPage === 1
+                    ? "bg-slate-100 text-slate-300 cursor-not-allowed"
+                    : "bg-white hover:bg-slate-50 text-slate-600"
+                    }`}
                 >
                   Trước
                 </button>
@@ -383,11 +398,10 @@ const AdminCredits = () => {
                   type="button"
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage >= totalPages}
-                  className={`px-4 py-2 border border-slate-200 rounded-xl transition-colors ${
-                    currentPage >= totalPages
-                      ? "bg-slate-100 text-slate-300 cursor-not-allowed"
-                      : "bg-white hover:bg-slate-50 text-slate-600"
-                  }`}
+                  className={`px-4 py-2 border border-slate-200 rounded-xl transition-colors ${currentPage >= totalPages
+                    ? "bg-slate-100 text-slate-300 cursor-not-allowed"
+                    : "bg-white hover:bg-slate-50 text-slate-600"
+                    }`}
                 >
                   Tiếp
                 </button>
@@ -401,37 +415,37 @@ const AdminCredits = () => {
       {isGrantModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl">
-            <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="font-extrabold text-xl text-slate-900 flex items-center gap-2">
-                <Plus size={20} className="text-amber-500" /> Cấp / Trừ Credits
+            <div className="flex justify-between items-center p-8 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="font-extrabold text-2xl text-slate-900 flex items-center gap-2">
+                <Plus size={24} className="text-amber-500" /> Cấp / Trừ Credits
               </h3>
               <button
                 type="button"
                 onClick={() => setIsGrantModalOpen(false)}
-                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-200 transition-colors"
+                className="p-3 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-200 transition-colors"
               >
-                <X size={20} />
+                <X size={24} />
               </button>
             </div>
 
-            <form onSubmit={handleGrantCredit} className="p-6 space-y-5 bg-white">
+            <form onSubmit={handleGrantCredit} className="p-8 space-y-6 bg-white">
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Người dùng nhận / bị trừ
+                <label className="block text-lg font-extrabold text-slate-600 mb-2">
+                  1. Chọn người dùng nhận / bị trừ
                 </label>
                 <input
                   type="text"
                   placeholder="🔍 Tìm nhanh Tên hoặc Email..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
-                  className="w-full border border-slate-200 rounded-t-xl border-b-0 px-4 py-2 text-sm bg-slate-50 text-slate-700 outline-none"
+                  className="w-full border border-slate-200 rounded-t-2xl border-b-0 px-6 py-4 text-base bg-slate-50 text-slate-700 outline-none"
                 />
                 <select
                   required
-                  size={4}
+                  size={6}
                   value={grantForm.userId}
                   onChange={(e) => setGrantForm((prev) => ({ ...prev, userId: e.target.value }))}
-                  className="w-full border border-slate-200 rounded-b-xl px-4 py-2.5 text-sm focus:border-amber-500 outline-none overflow-y-auto"
+                  className="w-full border border-slate-200 rounded-b-2xl px-6 py-4 text-lg font-bold text-slate-800 focus:border-[#5A63F6] outline-none overflow-y-auto"
                 >
                   <option value="" disabled>
                     -- Chọn người dùng ({displayUsers.length}) --
@@ -444,10 +458,10 @@ const AdminCredits = () => {
                 </select>
               </div>
 
-              <div className="flex gap-5 flex-col sm:flex-row">
+              <div className="flex gap-4 flex-col sm:flex-row">
                 <div className="flex-1">
-                  <label className="block text-sm font-bold text-slate-700 mb-2">
-                    Số lượng{" "}
+                  <label className="block text-lg font-extrabold text-slate-600 mb-2">
+                    2. Số lượng{" "}
                     <span className="text-rose-500 font-normal text-xs">
                       (Âm để trừ)
                     </span>
@@ -457,19 +471,19 @@ const AdminCredits = () => {
                     required
                     value={grantForm.amount}
                     onChange={(e) => setGrantForm((prev) => ({ ...prev, amount: e.target.value }))}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-amber-500 outline-none"
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-base font-bold focus:border-amber-500 outline-none shadow-sm"
                   />
                 </div>
                 <div className="flex-1">
-                  <label className="block text-sm font-bold text-slate-700 mb-2">
-                    Loại giao dịch
+                  <label className="block text-lg font-extrabold text-slate-600 mb-2">
+                    3. Loại giao dịch
                   </label>
                   <select
                     value={grantForm.transactionType}
                     onChange={(e) =>
                       setGrantForm((prev) => ({ ...prev, transactionType: e.target.value }))
                     }
-                    className="w-full border border-slate-200 rounded-xl px-5 py-3 text-sm focus:border-amber-500 outline-none shadow-sm"
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-amber-500 outline-none shadow-sm font-semibold"
                   >
                     <option value="WELCOME_BONUS">Tặng thưởng</option>
                     <option value="REFUND">Hoàn tiền</option>
@@ -480,23 +494,23 @@ const AdminCredits = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Lý do / mô tả
+                <label className="block text-lg font-extrabold text-slate-600 mb-2">
+                  4. Lý do / mô tả
                 </label>
                 <textarea
-                  rows={4}
+                  rows={3}
                   value={grantForm.description}
                   onChange={(e) =>
                     setGrantForm((prev) => ({ ...prev, description: e.target.value }))
                   }
-                  className="w-full border border-slate-200 rounded-xl px-5 py-3 text-sm focus:border-amber-500 outline-none shadow-sm resize-none"
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:border-amber-500 outline-none shadow-sm resize-none"
                   placeholder="Ghi rõ lý do cấp/trừ credits..."
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full mt-2 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-base transition-all shadow-lg active:scale-95"
+                className="w-full mt-2 py-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-lg transition-all shadow-lg active:scale-95"
               >
                 Xác nhận {Number(grantForm.amount) > 0 ? "Cộng" : "Trừ"} Credit
               </button>
