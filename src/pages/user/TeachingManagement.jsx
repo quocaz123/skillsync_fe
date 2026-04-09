@@ -12,6 +12,7 @@ import {
     getSlotsBySkill, createSlotsBatch, deleteSlot,
     getMySessions, approveSession, rejectSession
 } from '../../services/sessionService';
+import { toastError, toastSuccess } from "../../utils/toastUtils";
 
 const { TEACHING_SKILLS } = API_ENDPOINTS;
 
@@ -27,8 +28,9 @@ const SlotChip = ({ slot, skillId, onDeleted }) => {
         try {
             await deleteSlot(skillId, slot.id);
             onDeleted(slot.id);
+            toastSuccess("Đã xóa slot.");
         } catch (e) {
-            alert(e?.response?.data?.message || 'Không thể xóa slot đã được đặt.');
+            toastError(e, "Không thể xóa slot đã được đặt.");
         }
     };
 
@@ -105,7 +107,7 @@ const TabSchedule = ({ skills }) => {
         try {
             const data = await getSlotsBySkill(skill.id);
             setSlots(Array.isArray(data) ? data : []);
-        } catch (e) {
+        } catch {
             setSlots([]);
         } finally {
             setLoadingSlots(false);
@@ -141,9 +143,11 @@ const TabSchedule = ({ skills }) => {
             const newSlots = await createSlotsBatch(selectedSkill.id, slotsPayload);
             setSlots(prev => [...prev, ...(Array.isArray(newSlots) ? newSlots : [])]);
             setRows([EMPTY_ROW(selectedSkill?.creditsPerHour || 5)]);
-            setCreateMsg(`✅ Đã tạo ${Array.isArray(newSlots) ? newSlots.length : 0} slot thành công!`);
+            toastSuccess(`Đã tạo ${Array.isArray(newSlots) ? newSlots.length : 0} slot.`);
+            setCreateMsg('');
         } catch (e) {
-            setCreateMsg('❌ ' + (e?.response?.data?.message || 'Tạo slot thất bại.'));
+            toastError(e, "Tạo slot thất bại.");
+            setCreateMsg('');
         } finally {
             setCreating(false);
         }
@@ -372,7 +376,7 @@ const TabRequests = ({ navigate }) => {
             ]);
             setScheduledSessions(Array.isArray(scheduled) ? scheduled : []);
             setPendingSessions(Array.isArray(pending) ? pending : []);
-        } catch (e) {
+        } catch {
             setScheduledSessions([]);
             setPendingSessions([]);
         } finally {
@@ -388,8 +392,9 @@ const TabRequests = ({ navigate }) => {
         try {
             await approveSession(id);
             loadData();
+            toastSuccess("Đã chấp nhận lịch học.");
         } catch (e) {
-            alert(e?.response?.data?.message || 'Không thể duyệt yêu cầu này.');
+            toastError(e, "Không thể duyệt yêu cầu này.");
         }
     };
 
@@ -398,8 +403,9 @@ const TabRequests = ({ navigate }) => {
         try {
             await rejectSession(id);
             loadData();
+            toastSuccess("Đã từ chối lịch học.");
         } catch (e) {
-            alert(e?.response?.data?.message || 'Không thể từ chối yêu cầu này.');
+            toastError(e, "Không thể từ chối yêu cầu này.");
         }
     };
 

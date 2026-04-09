@@ -13,6 +13,7 @@ import {
 import { trackAction } from '../../services/missionService';
 
 import { mapSkillToMentor } from '../../utils/mapperUtils';
+import { toastError, toastSuccess } from "../../utils/toastUtils";
 
 const DATES = ['T2 10/3', 'T3 11/3', 'T4 12/3', 'T5 13/3', 'T6 14/3'];
 const TIMES = ['8:00 SA', '9:00 SA', '10:00 SA', '14:00 CH', '15:00 CH', '16:00 CH', '19:00 CH', '20:00 CH'];
@@ -441,6 +442,7 @@ const Explore = () => {
         setBookingLoading(true);
         try {
             await sessionService.bookSession(selectedSlotId, note);
+            toastSuccess("Đã gửi yêu cầu đặt lịch. Vui lòng chờ mentor xác nhận.");
             setBookingStep(3);
             // Sync updated credits from server
             try {
@@ -451,7 +453,7 @@ const Explore = () => {
             }
         } catch (error) {
             console.error('Lỗi khi book session:', error);
-            alert(error.response?.data?.message || error.message || 'Lỗi đặt lịch. Vui lòng thử lại.');
+            toastError(error, "Lỗi đặt lịch. Vui lòng thử lại.");
         } finally {
             setBookingLoading(false);
         }

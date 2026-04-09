@@ -7,6 +7,7 @@ import {
 import httpClient from '../../configuration/axiosClient';
 import { API_ENDPOINTS } from '../../configuration/apiEndpoints';
 import { createSlotsBatch } from '../../services/sessionService';
+import { toastError, toastSuccess } from "../../utils/toastUtils";
 
 const { TEACHING_SKILLS } = API_ENDPOINTS;
 
@@ -487,9 +488,11 @@ const CreateTeachingSession = () => {
             }));
             const result = await createSlotsBatch(form.teachingSkill.id, slotsPayload);
             setCreatedCount(Array.isArray(result) ? result.length : 0);
+            toastSuccess(`Đã tạo ${Array.isArray(result) ? result.length : 0} slot.`);
             setDone(true);
         } catch (e) {
             setSubmitError(e?.response?.data?.message || 'Tạo slot thất bại. Vui lòng thử lại.');
+            toastError(e, "Tạo slot thất bại.");
         } finally {
             setSubmitting(false);
         }
