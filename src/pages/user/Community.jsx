@@ -104,6 +104,13 @@ const POST_STATUS_META = {
   },
 };
 
+const MY_POST_SORT_OPTIONS = [
+  { id: "newest", label: "Mới nhất" },
+  { id: "oldest", label: "Cũ nhất" },
+  { id: "likes", label: "Nhiều thích" },
+  { id: "comments", label: "Nhiều bình luận" },
+];
+
 const SUGGESTION_ICON_POOL = [BookOpen, ChalkboardTeacher, Lightbulb, Star];
 
 const normalizeKeyword = (value) =>
@@ -1080,6 +1087,10 @@ const Community = () => {
   const [activeCategory, setActiveCategory] = useState("all");
   const [sortBy, setSortBy] = useState("hot");
   const [search, setSearch] = useState("");
+  const [myPostsSearch, setMyPostsSearch] = useState("");
+  const [myPostsStatusFilter, setMyPostsStatusFilter] = useState("ALL");
+  const [myPostsCategoryFilter, setMyPostsCategoryFilter] = useState("all");
+  const [myPostsSort, setMyPostsSort] = useState("newest");
   const [showNewPost, setShowNewPost] = useState(false);
   const [activePost, setActivePost] = useState(null);
   const [editingPost, setEditingPost] = useState(null);
@@ -1680,6 +1691,51 @@ const Community = () => {
 
   const visibleCategories = [{ id: "all", label: "Tất cả" }, ...categories];
 
+  const myPostCategories = [
+    { id: "all", label: "Tất cả" },
+    ...categories.map((category) => ({
+      id: category.id,
+      label: category.name || category.label || "Danh mục",
+    })),
+  ];
+
+  const filteredMyPosts = myPosts
+    .filter((post) => {
+      const searchText = normalizeKeyword(myPostsSearch);
+      const matchesSearch =
+        !searchText ||
+        [post.title, post.content, post.categoryName, ...(post.tags || [])]
+          .filter(Boolean)
+          .some((field) => normalizeKeyword(field).includes(searchText));
+
+      const matchesStatus =
+        myPostsStatusFilter === "ALL" || post.status === myPostsStatusFilter;
+
+      const matchesCategory =
+        myPostsCategoryFilter === "all" ||
+        post.categoryId === myPostsCategoryFilter;
+
+      return matchesSearch && matchesStatus && matchesCategory;
+    })
+    .sort((left, right) => {
+      if (myPostsSort === "oldest") {
+        return new Date(left.createdAt || 0) - new Date(right.createdAt || 0);
+      }
+
+      if (myPostsSort === "likes") {
+        const likeDiff = Number(right.likes || 0) - Number(left.likes || 0);
+        if (likeDiff !== 0) return likeDiff;
+      }
+
+      if (myPostsSort === "comments") {
+        const commentDiff =
+          Number(right.comments || 0) - Number(left.comments || 0);
+        if (commentDiff !== 0) return commentDiff;
+      }
+
+      return new Date(right.createdAt || 0) - new Date(left.createdAt || 0);
+    });
+
   const filtered = posts.filter((post) => {
     const matchCat =
       activeCategory === "all" || post.categoryId === activeCategory;
@@ -2065,8 +2121,68 @@ const Community = () => {
               </button>
             </div>
 
+            <div className="grid gap-4 mb-6 p-4 rounded-2xl border border-slate-100 bg-slate-50/70">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div className="relative">
+                  <MagnifyingGlass
+                    size={16}
+                    weight="regular"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Tìm trong bài viết của bạn..."
+                    value={myPostsSearch}
+                    onChange={(e) => setMyPostsSearch(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 outline-none focus:border-violet-400 transition-all"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2 lg:justify-end">
+                  {MY_POST_SORT_OPTIONS.map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() => setMyPostsSort(option.id)}
+                      className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${myPostsSort === option.id ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:border-violet-300"}`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { id: "ALL", label: "Tất cả trạng thái" },
+                  { id: "PENDING", label: "Chờ duyệt" },
+                  { id: "APPROVED", label: "Đã duyệt" },
+                  { id: "REJECTED", label: "Từ chối" },
+                ].map((option) => (
+                  <button
+                    key={option.id}
+                    onClick={() => setMyPostsStatusFilter(option.id)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all ${myPostsStatusFilter === option.id ? "bg-violet-600 text-white border-violet-600" : "bg-white text-slate-600 border-slate-200 hover:border-violet-300"}`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-2 flex-wrap">
+                {myPostCategories.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setMyPostsCategoryFilter(category.id)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all ${myPostsCategoryFilter === category.id ? "bg-violet-100 text-violet-700 border-violet-200" : "bg-white text-slate-600 border-slate-200 hover:border-violet-300"}`}
+                  >
+                    {category.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Stats on top */}
-            {myPosts.length > 0 && (
+            {filteredMyPosts.length > 0 && (
               <div className="mb-6 pb-6 border-b border-slate-200">
                 <p className="text-sm font-bold text-slate-700 mb-3">
                   📊 Thống kê của bạn
@@ -2117,9 +2233,30 @@ const Community = () => {
                   Đăng bài ngay
                 </button>
               </div>
+            ) : filteredMyPosts.length === 0 ? (
+              <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                <p className="text-3xl mb-3">🔎</p>
+                <p className="font-bold text-slate-700">
+                  Không tìm thấy bài viết phù hợp
+                </p>
+                <p className="text-sm text-slate-400 mt-1">
+                  Hãy thử đổi từ khóa, trạng thái hoặc danh mục
+                </p>
+                <button
+                  onClick={() => {
+                    setMyPostsSearch("");
+                    setMyPostsStatusFilter("ALL");
+                    setMyPostsCategoryFilter("all");
+                    setMyPostsSort("newest");
+                  }}
+                  className="mt-4 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-bold text-sm transition-all"
+                >
+                  Xoá bộ lọc
+                </button>
+              </div>
             ) : (
               <div className="grid gap-4">
-                {myPosts.map((post) => (
+                {filteredMyPosts.map((post) => (
                   <MyPostCard
                     key={post.id}
                     post={post}

@@ -113,17 +113,13 @@ const AdminForumPosts = () => {
         };
 
         setAllPosts((current) => {
+          if (payload.action === "DELETE") {
+            return current.filter((item) => item.id !== payload.postId);
+          }
+
           const withoutCurrent = current.filter(
             (item) => item.id !== payload.postId,
           );
-
-          if (payload.action === "DELETE") {
-            return withoutCurrent;
-          }
-
-          if (payload.action === "CREATE") {
-            return [nextPost, ...withoutCurrent];
-          }
 
           return [nextPost, ...withoutCurrent];
         });
