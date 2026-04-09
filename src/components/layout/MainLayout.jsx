@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     House, Compass, User, BookOpen, Clock, SignOut,
     Question, List, Wallet, Path, Lightning, ChalkboardTeacher, UsersThree,
-    Bell, X, Target, LockKey
+    Bell, X, Target, NotePencil,
 } from '@phosphor-icons/react';
 import { useStore } from '../../store';
 import { logout as logoutApi } from '../../services/authService';
@@ -121,7 +121,13 @@ const SidebarContent = ({ onLinkClick, isCollapsed, location, user, credits, han
 const MainLayout = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, credits, pendingLearnerCredits, pendingTeacherCredits, logout, login: updateUser, showMissionPopup, dismissMissionPopup, syncCredits } = useStore();
+    const {
+        user,
+        credits,
+        syncCredits,
+        logout,
+        login: updateUser,
+    } = useStore();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [skippedPasswordModal, setSkippedPasswordModal] = useState(false);
@@ -135,8 +141,16 @@ const MainLayout = () => {
         if (!user) return;
         const onlineKey = `onlineTime_${user.id}`;
         const dateKey = `lastOnlineDate_${user.id}`;
-        // Initialize
-        setOnlineTime(parseInt(localStorage.getItem(onlineKey) || '0', 10));
+        const readFromStorage = () =>
+            setOnlineTime(parseInt(localStorage.getItem(onlineKey) || '0', 10));
+
+        const handleOnlineTimeUpdated = () => readFromStorage();
+        window.addEventListener('onlineTimeUpdated', handleOnlineTimeUpdated);
+
+        // Initialize (async) to avoid setState sync in effect
+        setTimeout(() => {
+            readFromStorage();
+        }, 0);
 
         const interval = setInterval(() => {
             const today = new Date().toDateString();
@@ -147,15 +161,23 @@ const MainLayout = () => {
                 time = 0;
                 localStorage.setItem(dateKey, today);
             }
-            time += 1; // Cập nhật mỗi 1s
-            localStorage.setItem(onlineKey, time.toString());
-            setOnlineTime(time);
 
-            // Only fire the event occasionally to not overload other components, or every second is fine too
-            if (time % 5 === 0) window.dispatchEvent(new Event('onlineTimeUpdated'));
+            if (time < 1800) {
+                time += 1; // Cập nhật mỗi 1s
+                localStorage.setItem(onlineKey, time.toString());
+                window.dispatchEvent(new Event('onlineTimeUpdated'));
+            } else {
+                if (time !== 1800) {
+                    localStorage.setItem(onlineKey, '1800');
+                }
+                window.dispatchEvent(new Event('onlineTimeUpdated'));
+            }
         }, 1000);
 
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('onlineTimeUpdated', handleOnlineTimeUpdated);
+        };
     }, [user]);
 
     // Sync credits every 30 seconds to ensure sidebar/topbar always show latest balance
@@ -193,18 +215,6 @@ const MainLayout = () => {
         navigate('/login');
     };
 
-    const navItems = [
-        { path: '/app', label: 'Trang chủ', icon: House },
-        { path: '/app/explore', label: 'Khám phá', icon: Compass },
-        { path: '/app/sessions', label: 'Buổi học', icon: Clock },
-        { path: '/app/teaching', label: 'Quản lý dạy', icon: ChalkboardTeacher },
-        { path: '/app/community', label: 'Cộng đồng', icon: UsersThree },
-        { path: '/app/learning-path', label: 'Lộ trình học', icon: Path },
-        { path: '/app/missions', label: 'Nhiệm vụ', icon: Target },
-        { path: '/app/credits', label: 'Lịch sử credits', icon: Wallet },
-        { path: '/app/profile', label: 'Hồ sơ', icon: User },
-    ];
-
     // Bottom nav items (5 most important for mobile)
     const bottomNavItems = [
         { path: '/app', label: 'Trang chủ', icon: House },
@@ -219,8 +229,9 @@ const MainLayout = () => {
         '/app/explore': 'Khám phá',
         '/app/sessions': 'Buổi học',
         '/app/teaching': 'Quản lý dạy',
+        '/mentor/learning-paths': 'Quản lí khóa học',
         '/app/community': 'Cộng đồng',
-        '/app/learning-path': 'Lộ trình học',
+        '/app/learning-path': 'Lộ trình khóa học',
         '/app/missions': 'Nhiệm vụ',
         '/app/credits': 'Lịch sử Credits',
         '/app/profile': 'Hồ sơ',
@@ -304,21 +315,6 @@ const MainLayout = () => {
                             <Wallet size={16} weight="duotone" className="text-violet-600" />
                             <span className="text-sm font-bold text-slate-700">{credits || 0}</span>
                         </Link>
-                        
-                        <Link to="/app/sessions" className="hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-full border border-slate-200 bg-white shadow-sm hover:shadow-md transition-all cursor-pointer">
-                            <div className="flex items-center gap-1" title="Chờ bạn thanh toán (Tạm giữ)">
-                                <LockKey size={14} weight="duotone" className="text-red-500" />
-                                <span className="text-xs font-bold text-red-600">{pendingLearnerCredits || 0}</span>
-                            </div>
-                            
-                            <span className="text-slate-300">|</span>
-                            
-                            <div className="flex items-center gap-1" title="Sắp nhận từ dạy học">
-                                <Clock size={14} weight="duotone" className="text-emerald-500" />
-                                <span className="text-xs font-bold text-emerald-600">+{pendingTeacherCredits || 0}</span>
-                            </div>
-                        </Link>
-                        
                         <NotificationDropdown />
                     </div>
                 </header>

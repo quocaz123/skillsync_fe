@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useStore } from '../../store/index';
 import {
     ChalkboardTeacher, CalendarBlank, BellRinging, CurrencyDollar, ChartBar,
     Plus, Star, Lightning, PencilSimple, CalendarCheck, Clock,

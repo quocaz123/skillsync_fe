@@ -22,9 +22,14 @@ import JoinSessionGuidePage from './pages/user/JoinSessionGuide';
 import Profile from './pages/user/Profile';
 import CreditHistory from './pages/user/CreditHistory';
 import LearningPath from './pages/user/LearningPath';
+import LearningPathDetail from './pages/user/LearningPathDetail';
+import LearningPathStudy from './pages/user/LearningPathStudy';
+import LearningPathLessonPlayer from './pages/user/LearningPathLessonPlayer';
 import TeachingManagement from './pages/user/TeachingManagement';
 import CreateTeachingSession from './pages/user/CreateTeachingSession';
 import CreateLearningPath from './pages/user/CreateLearningPath';
+import MentorLearningPathManagementPage from './pages/user/MentorLearningPathManagementPage';
+import AdminSystemCourseManagementPage from './pages/admin/AdminSystemCourseManagementPage';
 import Community from './pages/user/Community';
 import VideoCallPage from './pages/user/VideoCallPage';
 import Missions from './pages/user/Missions';
@@ -71,6 +76,11 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/auth/google/callback" element={<GoogleAuthCallback />} />
 
+        <Route path="/mentor" element={<ProtectedUserRoute><MainLayout /></ProtectedUserRoute>}>
+          <Route index element={<Navigate to="/mentor/learning-paths" replace />} />
+          <Route path="learning-paths" element={<MentorLearningPathManagementPage />} />
+        </Route>
+
         {/* User Routes (Protected) */}
         <Route
           path="/app"
@@ -86,6 +96,9 @@ function App() {
           <Route path="guide" element={<JoinSessionGuidePage />} />
           <Route path="profile" element={<Profile />} />
           <Route path="credits" element={<CreditHistory />} />
+          <Route path="learning-path/study/:pathId/lesson/:lessonId" element={<LearningPathLessonPlayer />} />
+          <Route path="learning-path/study/:pathId" element={<LearningPathStudy />} />
+          <Route path="learning-path/:pathId" element={<LearningPathDetail />} />
           <Route path="learning-path" element={<LearningPath />} />
           <Route path="teaching" element={<TeachingManagement />} />
           <Route path="teaching/create" element={<CreateTeachingSession />} />
@@ -113,6 +126,8 @@ function App() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="teaching-skills" element={<AdminTeachingSkills />} />
           <Route path="paths" element={<AdminPaths />} />
+          <Route path="paths/create" element={<CreateLearningPath />} />
+          <Route path="system-learning-paths" element={<AdminSystemCourseManagementPage />} />
           <Route path="system" element={<AdminSystem />} />
         </Route>
 
