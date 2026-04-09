@@ -64,7 +64,7 @@ const AdminCredits = () => {
     try {
       const res = await httpClient.get(API_ENDPOINTS.USERS.GET_ALL);
       setUsers(Array.isArray(res) ? res : []);
-    } catch (err) {
+    } catch {
       setUsers([]);
     }
   };
@@ -566,7 +566,7 @@ const AdminCredits = () => {
               </div>
               {selectedTx.suspicious && (
                 <div className="text-sm font-bold text-rose-700 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 flex items-center gap-2">
-                  <AlertTriangle size={16} /> Giao dịch bị gắn cờ nghi ngờ (mức > 500 credits).
+                  <AlertTriangle size={16} /> Giao dịch bị gắn cờ nghi ngờ (mức &gt; 500 credits).
                 </div>
               )}
             </div>

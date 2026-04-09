@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useStore } from '../../store';
-import { useState, useEffect } from 'react';
 import { getMyTransactions } from '../../services/userService';
 import { Zap, TrendingUp, TrendingDown, Clock, BookOpen, Award, Gift, ArrowUpRight, ArrowDownRight, Wallet } from 'lucide-react';
+import { useStore } from '../../store';
 
 const TX_CONFIG = {
     SESSION_BOOKED: { icon: BookOpen, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', label: 'Đặt lịch học', sign: '-' },
@@ -13,7 +12,7 @@ const TX_CONFIG = {
 };
 
 const CreditHistory = () => {
-    const { credits } = useStore();
+    const { credits, syncCredits } = useStore();
     const [creditHistory, setCreditHistory] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -22,6 +21,11 @@ const CreditHistory = () => {
             try {
                 const data = await getMyTransactions();
                 setCreditHistory(Array.isArray(data) ? data : []);
+                // Đồng bộ số dư mới nhất nếu API trả về
+                const latestBalance = Array.isArray(data) && data.length > 0 ? data[0]?.currentBalance : null;
+                if (typeof latestBalance === 'number') {
+                    syncCredits(latestBalance);
+                }
             } catch (error) {
                 console.error("Failed to load credit history from API", error);
             } finally {
@@ -31,25 +35,12 @@ const CreditHistory = () => {
         fetchHistory();
     }, []);
 
-    useEffect(() => {
-        const fetchHistory = async () => {
-            try {
-                const data = await getMyCreditHistory();
-                setHistory(Array.isArray(data) ? data : []);
-                // Sync fresh credits from server
-                const freshUser = await getMyProfile();
-                if (freshUser?.creditsBalance != null) syncCredits(freshUser.creditsBalance);
-            } catch (error) {
-                console.error('Failed to fetch credit history:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchHistory();
-    }, [syncCredits]);
-
-    const totalEarned = history.filter(tx => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0);
-    const totalSpent = history.filter(tx => tx.amount < 0).reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+    const totalEarned = creditHistory
+        .filter((tx) => Number(tx.amount || 0) > 0)
+        .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+    const totalSpent = creditHistory
+        .filter((tx) => Number(tx.amount || 0) < 0)
+        .reduce((sum, tx) => sum + Math.abs(Number(tx.amount || 0)), 0);
 
     return (
         <div className="max-w-4xl mx-auto font-sans pb-4 space-y-5 sm:space-y-8">
@@ -111,7 +102,7 @@ const CreditHistory = () => {
                     <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
                         <Clock size={20} className="text-[#5A63F6]" /> Lịch sử giao dịch
                     </h2>
-                    <span className="text-sm font-bold text-slate-400">{history.length} giao dịch</span>
+                    <span className="text-sm font-bold text-slate-400">{creditHistory.length} giao dịch</span>
                 </div>
 
                 {loading ? (
