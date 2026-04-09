@@ -425,8 +425,12 @@ const EditPostModal = ({ post, categories, onClose, onSave }) => {
   );
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState(post?.tags || []);
-  const effectiveCategoryId =
-    selectedCategoryId || post?.categoryId || categories?.[0]?.id || "";
+
+  useEffect(() => {
+    if (!selectedCategoryId && (post?.categoryId || categories?.[0]?.id)) {
+      setSelectedCategoryId(post?.categoryId || categories?.[0]?.id || "");
+    }
+  }, [categories, post?.categoryId, selectedCategoryId]);
 
   const addTag = () => {
     const t = tagInput.trim();
@@ -437,7 +441,7 @@ const EditPostModal = ({ post, categories, onClose, onSave }) => {
   const handleSave = () => {
     if (title.trim() && content.trim()) {
       const selectedCategory = categories.find(
-        (categoryItem) => categoryItem.id === effectiveCategoryId,
+        (categoryItem) => categoryItem.id === selectedCategoryId,
       );
       const selectedUiType =
         CATEGORY_UI_TYPE_BY_NAME[selectedCategory?.name] ||
@@ -447,7 +451,7 @@ const EditPostModal = ({ post, categories, onClose, onSave }) => {
         ...post,
         title: title.trim(),
         content: content.trim(),
-        categoryId: effectiveCategoryId || post?.categoryId,
+        categoryId: selectedCategoryId || post?.categoryId,
         postType: mapUiPostTypeToBackend(selectedUiType),
         tags: tags,
       });
@@ -485,7 +489,7 @@ const EditPostModal = ({ post, categories, onClose, onSave }) => {
                 <button
                   key={c.id}
                   onClick={() => setSelectedCategoryId(c.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${effectiveCategoryId === c.id ? "bg-violet-600 text-white border-violet-600" : "border-slate-200 text-slate-600 hover:border-violet-300"}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${selectedCategoryId === c.id ? "bg-violet-600 text-white border-violet-600" : "border-slate-200 text-slate-600 hover:border-violet-300"}`}
                 >
                   {c.name}
                 </button>
@@ -734,8 +738,12 @@ const NewPostModal = ({ onClose, onSave, categories, defaultCategoryId }) => {
   );
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState([]);
-  const effectiveCategoryId =
-    selectedCategoryId || defaultCategoryId || categories?.[0]?.id || "";
+
+  useEffect(() => {
+    if (!selectedCategoryId && (defaultCategoryId || categories?.[0]?.id)) {
+      setSelectedCategoryId(defaultCategoryId || categories?.[0]?.id || "");
+    }
+  }, [categories, defaultCategoryId, selectedCategoryId]);
 
   const addTag = () => {
     const t = tagInput.trim();
@@ -747,7 +755,7 @@ const NewPostModal = ({ onClose, onSave, categories, defaultCategoryId }) => {
     if (!title.trim() || !content.trim()) return;
 
     const selectedCategory = categories.find(
-      (categoryItem) => categoryItem.id === effectiveCategoryId,
+      (categoryItem) => categoryItem.id === selectedCategoryId,
     );
     const selectedUiType =
       CATEGORY_UI_TYPE_BY_NAME[selectedCategory?.name] || "tips";
@@ -755,7 +763,7 @@ const NewPostModal = ({ onClose, onSave, categories, defaultCategoryId }) => {
     onSave({
       title: title.trim(),
       content: content.trim(),
-      categoryId: effectiveCategoryId || defaultCategoryId,
+      categoryId: selectedCategoryId || defaultCategoryId,
       postType: mapUiPostTypeToBackend(selectedUiType),
       tags,
     });
@@ -789,7 +797,7 @@ const NewPostModal = ({ onClose, onSave, categories, defaultCategoryId }) => {
                 <button
                   key={c.id}
                   onClick={() => setSelectedCategoryId(c.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${effectiveCategoryId === c.id ? "bg-violet-600 text-white border-violet-600" : "border-slate-200 text-slate-600 hover:border-violet-300"}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${selectedCategoryId === c.id ? "bg-violet-600 text-white border-violet-600" : "border-slate-200 text-slate-600 hover:border-violet-300"}`}
                 >
                   {c.name}
                 </button>
@@ -928,33 +936,6 @@ const PostDetailModal = ({
 
         <div className="flex-1 overflow-y-auto bg-slate-50/30">
           <div className="p-6">
-            {post.status && post.status !== "APPROVED" && (
-              <div
-                className={`mb-5 rounded-2xl border px-4 py-3 ${POST_STATUS_META[post.status]?.bg || "bg-slate-50"} ${POST_STATUS_META[post.status]?.text || "text-slate-600"} ${POST_STATUS_META[post.status]?.border || "border-slate-100"}`}
-              >
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wider">
-                      Trạng thái bài viết
-                    </p>
-                    <p className="text-sm font-semibold mt-0.5">
-                      {POST_STATUS_META[post.status]?.label || post.status}
-                    </p>
-                  </div>
-                  {post.status === "REJECTED" && post.rejectionReason && (
-                    <div className="text-sm font-medium max-w-full sm:max-w-[70%] text-right sm:text-left">
-                      <span className="font-bold">Lý do:</span>{" "}
-                      {post.rejectionReason}
-                    </div>
-                  )}
-                  {post.status === "PENDING" && (
-                    <p className="text-sm font-medium">
-                      Bài viết đang được admin xem xét.
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
             {/* Author Info */}
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
@@ -1114,17 +1095,9 @@ const Community = () => {
   const [commentTimeOverrides, setCommentTimeOverrides] = useState({});
   const [myPostsLoaded, setMyPostsLoaded] = useState(false);
   const [feedMeta, setFeedMeta] = useState({ page: 0, size: 50 });
-  const [feedPaging, setFeedPaging] = useState({
-    currentPage: 0,
-    totalPages: 1,
-    hasMore: false,
-  });
-  const [loadingMore, setLoadingMore] = useState(false);
   const [notice, setNotice] = useState(null);
   const noticeTimerRef = useRef(null);
   const lastMyPostsRef = useRef([]);
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const searchDebounceRef = useRef(null);
 
   const currentCategoryId = defaultPostCategoryId || categories?.[0]?.id || "";
 
@@ -1136,85 +1109,49 @@ const Community = () => {
     noticeTimerRef.current = setTimeout(() => setNotice(null), 4500);
   };
 
-  const buildForumQueryParams = (page) => {
-    const params = { page, size: feedMeta.size };
-    const trimmedSearch = String(debouncedSearch || "").trim();
-    if (trimmedSearch) params.search = trimmedSearch;
-    if (
-      activeCategory &&
-      activeCategory !== "all" &&
-      !String(activeCategory).startsWith("fallback-")
-    ) {
-      params.categoryId = activeCategory;
-    }
-    return params;
-  };
-
-  const mergePostsById = (currentList, nextList) => {
-    const map = new Map();
-    (Array.isArray(currentList) ? currentList : []).forEach((post) =>
-      map.set(post.id, post),
-    );
-    (Array.isArray(nextList) ? nextList : []).forEach((post) =>
-      map.set(post.id, post),
-    );
-    return Array.from(map.values());
-  };
-
-  const fetchForumFeed = async ({
+  const loadFeedByMode = async (
     mode,
-    page = 0,
-    append = false,
     shouldManageLoading = true,
     knownCategories = categories,
-  }) => {
-    if (shouldManageLoading) setLoading(true);
+  ) => {
+    if (shouldManageLoading) {
+      setLoading(true);
+    }
     setError("");
 
     try {
-      if (mode === "hot") {
+      if (mode === "saved") {
+        const [savedPage, categoryList] = await Promise.all([
+          getForumSavedPosts({ page: feedMeta.page, size: feedMeta.size }),
+          knownCategories.length > 0
+            ? Promise.resolve(knownCategories)
+            : getForumCategories(),
+        ]);
+        setPosts(savedPage?.content || []);
+        if (knownCategories.length === 0) {
+          setCategories(categoryList || []);
+        }
+      } else if (mode === "hot") {
         let trendingList = [];
         try {
           trendingList = await getForumTrendingPosts(10);
         } catch {
-          const fallbackPage = await getForumPosts(buildForumQueryParams(0));
+          const fallbackPage = await getForumPosts({
+            page: feedMeta.page,
+            size: feedMeta.size,
+          });
           trendingList = fallbackPage?.content || [];
         }
         setPosts(trendingList || []);
         setTrendingPosts((trendingList || []).slice(0, 5));
-        setFeedPaging({ currentPage: 0, totalPages: 1, hasMore: false });
-      } else if (mode === "saved") {
-        const [savedPage, categoryList] = await Promise.all([
-          getForumSavedPosts({ page, size: feedMeta.size }),
-          knownCategories.length > 0
-            ? Promise.resolve(knownCategories)
-            : getForumCategories(),
-        ]);
-        const content = savedPage?.content || [];
-        setPosts((current) => (append ? mergePostsById(current, content) : content));
-        setFeedPaging({
-          currentPage: savedPage?.number ?? page,
-          totalPages: savedPage?.totalPages ?? 1,
-          hasMore:
-            (savedPage?.totalPages ?? 1) > (savedPage?.number ?? page) + 1,
-        });
-        if (knownCategories.length === 0) {
-          setCategories(categoryList || []);
-        }
       } else {
-        const [pageRes, categoryList] = await Promise.all([
-          getForumPosts(buildForumQueryParams(page)),
+        const [page, categoryList] = await Promise.all([
+          getForumPosts({ page: feedMeta.page, size: feedMeta.size }),
           knownCategories.length > 0
             ? Promise.resolve(knownCategories)
             : getForumCategories(),
         ]);
-        const content = pageRes?.content || [];
-        setPosts((current) => (append ? mergePostsById(current, content) : content));
-        setFeedPaging({
-          currentPage: pageRes?.number ?? page,
-          totalPages: pageRes?.totalPages ?? 1,
-          hasMore: (pageRes?.totalPages ?? 1) > (pageRes?.number ?? page) + 1,
-        });
+        setPosts(page?.content || []);
         if (knownCategories.length === 0) {
           setCategories(categoryList || []);
         }
@@ -1226,22 +1163,10 @@ const Community = () => {
           "Không tải được dữ liệu forum.",
       );
     } finally {
-      if (shouldManageLoading) setLoading(false);
+      if (shouldManageLoading) {
+        setLoading(false);
+      }
     }
-  };
-
-  const loadFeedByMode = async (
-    mode,
-    shouldManageLoading = true,
-    knownCategories = categories,
-  ) => {
-    await fetchForumFeed({
-      mode,
-      page: 0,
-      append: false,
-      shouldManageLoading,
-      knownCategories,
-    });
   };
 
   const loadMyPosts = async (shouldManageLoading = true, options = {}) => {
@@ -1271,12 +1196,12 @@ const Community = () => {
         if (changedPost) {
           if (changedPost.status === "APPROVED") {
             pushNotice(
-              `Bài viết "${changedPost.title}" đã được duyệt và hiển thị công khai.`,
+              `Bài viết \"${changedPost.title}\" đã được duyệt và hiển thị công khai.`,
               "success",
             );
           } else if (changedPost.status === "REJECTED") {
             pushNotice(
-              `Bài viết "${changedPost.title}" đã bị từ chối${changedPost.rejectionReason ? `: ${changedPost.rejectionReason}` : ""}`,
+              `Bài viết \"${changedPost.title}\" đã bị từ chối${changedPost.rejectionReason ? `: ${changedPost.rejectionReason}` : ""}`,
               "error",
             );
           }
@@ -1327,19 +1252,54 @@ const Community = () => {
     setLoading(true);
     setError("");
     try {
-      await fetchForumFeed({
-        mode: sortBy,
-        page: 0,
-        append: false,
-        shouldManageLoading: false,
-        knownCategories: categories,
-      });
+      const feedPromise = (async () => {
+        if (sortBy === "saved") {
+          try {
+            const savedPage = await getForumSavedPosts({
+              page: feedMeta.page,
+              size: feedMeta.size,
+            });
+            return savedPage?.content || [];
+          } catch {
+            return [];
+          }
+        }
+        if (sortBy === "new") {
+          try {
+            const page = await getForumPosts({
+              page: feedMeta.page,
+              size: feedMeta.size,
+            });
+            return page?.content || [];
+          } catch {
+            return [];
+          }
+        }
+        try {
+          const trendingList = await getForumTrendingPosts(10);
+          return trendingList || [];
+        } catch {
+          const fallbackPage = await getForumPosts({
+            page: feedMeta.page,
+            size: feedMeta.size,
+          });
+          return fallbackPage?.content || [];
+        }
+      })();
 
-      if (sortBy !== "hot") {
-        const sidebarTrending = await getForumTrendingPosts(5).catch(() => []);
-        setTrendingPosts((sidebarTrending || []).slice(0, 5));
-      }
-    } catch {
+      const trendingSidebarPromise =
+        sortBy === "hot"
+          ? feedPromise
+          : getForumTrendingPosts(5).catch(() => []);
+
+      const [initialFeed, trendingList] = await Promise.all([
+        feedPromise,
+        trendingSidebarPromise,
+      ]);
+
+      setPosts(initialFeed || []);
+      setTrendingPosts((trendingList || []).slice(0, 5));
+    } catch (err) {
       setPosts([]);
       setTrendingPosts([]);
     } finally {
@@ -1360,7 +1320,7 @@ const Community = () => {
         if (!defaultPostCategoryId) {
           setDefaultPostCategoryId(categoryList?.[0]?.id || "");
         }
-      } catch {
+      } catch (err) {
         const fallbackCategories = FALLBACK_CATEGORIES;
         setCategories(fallbackCategories);
         if (!defaultPostCategoryId) {
@@ -1378,26 +1338,6 @@ const Community = () => {
     loadFeedByMode(sortBy, true, categories);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortBy]);
-
-  useEffect(() => {
-    if (searchDebounceRef.current) {
-      clearTimeout(searchDebounceRef.current);
-    }
-    searchDebounceRef.current = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 450);
-    return () => {
-      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    };
-  }, [search]);
-
-  useEffect(() => {
-    if (activeTab !== "community") return;
-    // Reset về trang đầu khi đổi category/search
-    setFeedMeta((current) => ({ ...current, page: 0 }));
-    loadFeedByMode(sortBy, true, categories);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCategory, debouncedSearch]);
 
   useEffect(() => {
     if (activeTab !== "my-posts" || myPostsLoaded) return;
@@ -1558,7 +1498,7 @@ const Community = () => {
       ];
       setMyPostsLoaded(true);
       pushNotice(
-        `Bài viết "${createdPost.title}" đã được gửi duyệt.`,
+        `Bài viết \"${createdPost.title}\" đã được gửi duyệt.`,
         "info",
       );
       if (activeTab !== "my-posts") {
@@ -1607,8 +1547,8 @@ const Community = () => {
 
       pushNotice(
         savedPost.status === "APPROVED"
-          ? `Bài viết "${savedPost.title}" đã được duyệt và hiển thị công khai.`
-          : `Bài viết "${savedPost.title}" đã được gửi lại để admin duyệt.`,
+          ? `Bài viết \"${savedPost.title}\" đã được duyệt và hiển thị công khai.`
+          : `Bài viết \"${savedPost.title}\" đã được gửi lại để admin duyệt.`,
         savedPost.status === "APPROVED" ? "success" : "info",
       );
 
@@ -1740,29 +1680,19 @@ const Community = () => {
 
   const visibleCategories = [{ id: "all", label: "Tất cả" }, ...categories];
 
-  const sorted = Array.isArray(posts) ? [...posts] : [];
+  const filtered = posts.filter((post) => {
+    const matchCat =
+      activeCategory === "all" || post.categoryId === activeCategory;
+    const searchText = search.trim().toLowerCase();
+    const matchSearch =
+      !searchText ||
+      post.title.toLowerCase().includes(searchText) ||
+      post.content.toLowerCase().includes(searchText) ||
+      post.categoryName.toLowerCase().includes(searchText);
+    return matchCat && matchSearch;
+  });
 
-  const canLoadMore =
-    activeTab === "community" &&
-    (sortBy === "new" || sortBy === "saved") &&
-    Boolean(feedPaging?.hasMore);
-
-  const handleLoadMore = async () => {
-    if (loadingMore || !canLoadMore) return;
-    try {
-      setLoadingMore(true);
-      const nextPage = Number(feedPaging?.currentPage ?? 0) + 1;
-      await fetchForumFeed({
-        mode: sortBy,
-        page: nextPage,
-        append: true,
-        shouldManageLoading: false,
-        knownCategories: categories,
-      });
-    } finally {
-      setLoadingMore(false);
-    }
-  };
+  const sorted = [...filtered];
 
   const suggestedPosts = buildSuggestedPosts(
     user,
@@ -1971,33 +1901,15 @@ const Community = () => {
                   </p>
                 </div>
               ) : (
-                <>
-                  {sorted.map((post) => (
-                    <PostCard
-                      key={post.id}
-                      post={post}
-                      onToggleLike={toggleLike}
-                      onToggleSave={toggleSave}
-                      onOpen={() => handleOpenPost(post)}
-                    />
-                  ))}
-                  {canLoadMore && (
-                    <div className="flex justify-center pt-2">
-                      <button
-                        type="button"
-                        onClick={handleLoadMore}
-                        disabled={loadingMore}
-                        className={`px-5 py-2.5 rounded-xl text-sm font-extrabold border transition-all ${
-                          loadingMore
-                            ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
-                            : "bg-white text-slate-700 border-slate-200 hover:border-violet-300 hover:text-violet-600"
-                        }`}
-                      >
-                        {loadingMore ? "Đang tải..." : "Tải thêm"}
-                      </button>
-                    </div>
-                  )}
-                </>
+                sorted.map((post) => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    onToggleLike={toggleLike}
+                    onToggleSave={toggleSave}
+                    onOpen={() => handleOpenPost(post)}
+                  />
+                ))
               )}
             </div>
 
