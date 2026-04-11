@@ -21,4 +21,7 @@ export const updateBio = async (bio) => {
   const res = await httpClient.patch(USERS.UPDATE_BIO, { bio });
   return mapUserResponse(res.data ?? res);
 };
-
+export const getMyTransactions = async () => {
+  const res = await httpClient.get(USERS.TRANSACTIONS);
+  return res.data ?? res;
+};

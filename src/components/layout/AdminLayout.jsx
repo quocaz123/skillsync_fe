@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     SquaresFour, CalendarBlank, CurrencyCircleDollar,
-    Users, BookOpen, Flag, ChartBar, LockKey,
-    List, SignOut, ShieldCheck, X, Database
+    Users, BookOpen, Flag, ChartBar, GearSix, LockKey, Database,
+    List, SignOut, ShieldCheck, X, NotePencil,
 } from '@phosphor-icons/react';
 import { useStore } from '../../store';
 import { logout as logoutApi } from '../../services/authService';
@@ -31,7 +31,7 @@ const AdminLayout = () => {
             items: [
                 { path: '/admin', label: 'Dashboard', icon: SquaresFour, exact: true },
                 { path: '/admin/reports', label: 'Báo cáo', icon: Flag },
-                { path: "/admin/forum-posts", label: "Bài viết cộng đồng", icon: BookOpen, },
+                { path: '/admin/forum-posts', label: 'Bài viết cộng đồng', icon: BookOpen },
                 { path: '/admin/sessions', label: 'Sessions', icon: CalendarBlank },
                 { path: '/admin/escrow', label: 'Quản lý Escrow', icon: LockKey },
                 { path: '/admin/credits', label: 'Credits & GD', icon: CurrencyCircleDollar },
@@ -48,6 +48,7 @@ const AdminLayout = () => {
         {
             label: 'Hệ thống',
             items: [
+                { path: '/admin/system-learning-paths', label: 'Khóa học hệ thống', icon: NotePencil },
                 { path: '/admin/system', label: 'Nhật ký Hoạt động', icon: Database },
             ],
         },
