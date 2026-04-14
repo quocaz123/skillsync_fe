@@ -159,11 +159,10 @@ export default function MentorLearningPathManagementPage() {
                                 key={f.id}
                                 type="button"
                                 onClick={() => setFilter(f.id)}
-                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${
-                                    active
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${active
                                         ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
                                         : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'
-                                }`}
+                                    }`}
                             >
                                 {Icon && <Icon size={14} className={active ? 'text-white' : 'text-slate-500'} />}
                                 {f.label}

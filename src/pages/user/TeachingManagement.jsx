@@ -290,8 +290,8 @@ const TabSchedule = ({ skills }) => {
                             onClick={handleCreate}
                             disabled={creating || validRows.length === 0}
                             className={`ml-auto flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${!creating && validRows.length > 0
-                                    ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm'
-                                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm'
+                                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                                 }`}
                         >
                             {creating ? <Spinner size={14} className="animate-spin" /> : <Plus size={14} weight="bold" />}
@@ -326,8 +326,8 @@ const TabSubjects = ({ skills, onSelectSkill }) => {
                                 <h3 className="font-extrabold text-slate-900 text-lg">{skill.skillName}</h3>
                                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{skill.level}</span>
                                 <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${skill.verificationStatus === 'APPROVED'
-                                        ? 'bg-emerald-100 text-emerald-600'
-                                        : 'bg-amber-100 text-amber-600'
+                                    ? 'bg-emerald-100 text-emerald-600'
+                                    : 'bg-amber-100 text-amber-600'
                                     }`}>
                                     {skill.verificationStatus === 'APPROVED' ? '✅ Đã duyệt' : '⏳ Chờ duyệt'}
                                 </span>

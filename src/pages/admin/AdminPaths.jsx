@@ -175,11 +175,10 @@ const AdminPaths = () => {
                         key={f.id}
                         type="button"
                         onClick={() => setFilter(f.id)}
-                        className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${
-                            filter === f.id
+                        className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${filter === f.id
                                 ? 'bg-[#5A63F6] text-white shadow-md shadow-indigo-200'
                                 : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'
-                        }`}
+                            }`}
                     >
                         {f.label}
                     </button>
@@ -206,9 +205,8 @@ const AdminPaths = () => {
                             {filtered.map((path) => (
                                 <tr
                                     key={path.id}
-                                    className={`hover:bg-slate-50/50 group transition-colors ${
-                                        path.status === 'pending' ? 'bg-amber-50/20' : ''
-                                    }`}
+                                    className={`hover:bg-slate-50/50 group transition-colors ${path.status === 'pending' ? 'bg-amber-50/20' : ''
+                                        }`}
                                 >
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
