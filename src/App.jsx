@@ -13,10 +13,10 @@ import AdminSessions from './pages/admin/AdminSessions';
 import AdminCredits from './pages/admin/AdminCredits';
 import AdminPaths from './pages/admin/AdminPaths';
 import AdminSystem from './pages/admin/AdminSystem';
-import AdminSettings from './pages/admin/AdminSettings';
 import AdminTeachingSkills from './pages/admin/AdminTeachingSkills';
+import AdminEscrow from './pages/admin/AdminEscrow';
+import AdminForumPosts from './pages/admin/AdminForumPosts';
 import Explore from './pages/user/Explore';
-import Skills from './pages/user/Skills';
 import Sessions from './pages/user/Sessions';
 import JoinSessionGuidePage from './pages/user/JoinSessionGuide';
 import Profile from './pages/user/Profile';
@@ -30,10 +30,12 @@ import CreateTeachingSession from './pages/user/CreateTeachingSession';
 import CreateLearningPath from './pages/user/CreateLearningPath';
 import MentorLearningPathManagementPage from './pages/user/MentorLearningPathManagementPage';
 import AdminSystemCourseManagementPage from './pages/admin/AdminSystemCourseManagementPage';
+import AdminAiConfig from './pages/admin/AdminAiConfig';
 import Community from './pages/user/Community';
 import VideoCallPage from './pages/user/VideoCallPage';
 import Missions from './pages/user/Missions';
 import { useStore } from './store';
+import { Toaster } from "react-hot-toast";
 
 // Mock Pages for now
 const NotFound = () => (
@@ -61,6 +63,13 @@ const ProtectedAdminRoute = ({ children }) => {
 function App() {
   return (
     <BrowserRouter>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3500,
+          style: { fontWeight: 600 },
+        }}
+      />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
@@ -84,7 +93,6 @@ function App() {
         >
           <Route index element={<UserDashboard />} />
           <Route path="explore" element={<Explore />} />
-          <Route path="skills" element={<Skills />} />
           <Route path="sessions" element={<Sessions />} />
           <Route path="guide" element={<JoinSessionGuidePage />} />
           <Route path="profile" element={<Profile />} />
@@ -114,6 +122,7 @@ function App() {
           <Route path="reports" element={<AdminReports />} />
           <Route path="forum-posts" element={<AdminForumPosts />} />
           <Route path="sessions" element={<AdminSessions />} />
+          <Route path="escrow" element={<AdminEscrow />} />
           <Route path="credits" element={<AdminCredits />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="teaching-skills" element={<AdminTeachingSkills />} />
@@ -121,7 +130,7 @@ function App() {
           <Route path="paths/create" element={<CreateLearningPath />} />
           <Route path="system-learning-paths" element={<AdminSystemCourseManagementPage />} />
           <Route path="system" element={<AdminSystem />} />
-          <Route path="settings" element={<AdminSettings />} />
+          <Route path="ai-config" element={<AdminAiConfig />} />
         </Route>
 
         {/* 404 */}

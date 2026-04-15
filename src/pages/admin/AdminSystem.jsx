@@ -1,139 +1,128 @@
-import { Activity, Server, Database, Zap, Users, RefreshCw } from 'lucide-react';
-
-const MOCK_LOGS = [
-    { id: 1, user: 'Trần Thị Bình', action: 'Đăng nhập thành công', time: '12:30:25', ip: '192.168.1.1', level: 'info' },
-    { id: 2, user: 'Nguyễn Văn An', action: 'Tạo session mới: React.js Hooks', time: '12:28:10', ip: '10.0.0.2', level: 'info' },
-    { id: 3, user: 'Ẩn danh', action: 'Báo cáo người dùng #1087', time: '12:25:44', ip: '10.0.0.15', level: 'warning' },
-    { id: 4, user: 'Hệ thống', action: 'Phát hiện giao dịch bất thường #992', time: '12:20:03', ip: 'system', level: 'error' },
-    { id: 5, user: 'Phạm Thị Dung', action: 'Đăng nhập thành công', time: '12:18:57', ip: '172.16.0.5', level: 'info' },
-    { id: 6, user: 'Trần Thị Bình', action: 'Gửi lộ trình mới chờ duyệt: Fullstack Next.js', time: '12:10:22', ip: '192.168.1.1', level: 'info' },
-    { id: 7, user: 'Hệ thống', action: 'Trao phần thưởng mission cho Nguyễn Văn An', time: '12:05:00', ip: 'system', level: 'info' },
-    { id: 8, user: 'Admin', action: 'Khoá tài khoản Hoàng Văn Em #5', time: '11:55:33', ip: 'admin', level: 'warning' },
-];
-
-const weeklyData = [
-    { day: 'T2', dau: 340 },
-    { day: 'T3', dau: 420 },
-    { day: 'T4', dau: 380 },
-    { day: 'T5', dau: 510 },
-    { day: 'T6', dau: 635 },
-    { day: 'T7', dau: 720 },
-    { day: 'CN', dau: 480 },
-];
-const maxDau = Math.max(...weeklyData.map(d => d.dau));
+import { useState, useEffect } from 'react';
+import { Database, CircleNotch, Warning, ArrowsClockwise, HardDrives } from '@phosphor-icons/react';
+import { getSystemLogs } from '../../services/adminLogService';
 
 const levelConfig = {
-    info:    { dot: 'bg-blue-400', text: 'text-slate-600', bg: '' },
-    warning: { dot: 'bg-amber-400', text: 'text-amber-700', bg: 'bg-amber-50/40' },
-    error:   { dot: 'bg-rose-500', text: 'text-rose-700', bg: 'bg-rose-50/40' },
+    INFO: { dot: 'bg-blue-400', text: 'text-slate-600', bg: 'bg-slate-50/50' },
+    WARNING: { dot: 'bg-amber-400', text: 'text-amber-700', bg: 'bg-amber-50/40' },
+    ERROR: { dot: 'bg-rose-500', text: 'text-rose-700', bg: 'bg-rose-50/40' },
 };
 
 const AdminSystem = () => {
-    const metrics = [
-        { label: 'CPU Load', value: 24, color: 'bg-emerald-500', unit: '%' },
-        { label: 'Memory', value: 67, color: 'bg-blue-500', unit: '%' },
-        { label: 'DB Response', value: 42, color: 'bg-emerald-500', unit: 'ms', maxScale: 200 },
-        { label: 'API Latency', value: 38, color: 'bg-emerald-500', unit: 'ms', maxScale: 200 },
-    ];
+    const [logs, setLogs] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [page, setPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+
+    const fetchLogs = async (p = 0) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await getSystemLogs(p, 50);
+            if (res && res.content) {
+                setLogs(res.content);
+                setTotalPages(res.totalPages);
+            }
+        } catch (err) {
+            setError('Lỗi khi tải dữ liệu log từ máy chủ.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchLogs(page);
+    }, [page]);
+
+    const handleRefresh = () => {
+        if (page === 0) fetchLogs(0);
+        else setPage(0);
+    };
 
     return (
         <div className="max-w-7xl mx-auto space-y-5 sm:space-y-6 pb-4">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
-                        <Server size={22} className="text-slate-600" /> Sức khoẻ Hệ thống
+                        <HardDrives size={22} weight="duotone" className="text-slate-600" /> Nhật ký Hoạt động (Activity Logs)
                     </h1>
-                    <p className="text-sm text-slate-400 font-medium mt-1">Theo dõi hiệu suất và hoạt động kỹ thuật của nền tảng</p>
+                    <p className="text-sm text-slate-400 font-medium mt-1">Theo dõi tương tác và sự kiện trên nền tảng theo thời gian thực</p>
                 </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-xl">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <span className="text-sm font-bold text-emerald-700">Hệ thống bình thường</span>
-                </div>
+                <button onClick={handleRefresh} disabled={loading}
+                    className="flex items-center gap-1.5 px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-bold text-sm transition-colors disabled:opacity-50">
+                    <ArrowsClockwise size={14} className={loading ? 'animate-spin' : ''} weight="bold" /> Làm mới
+                </button>
             </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {[
-                    { label: 'DAU (hôm nay)', value: '720', Icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
-                    { label: 'MAU', value: '8,420', Icon: Activity, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100' },
-                    { label: 'Uptime', value: '99.8%', Icon: Server, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
-                    { label: 'Credits phát hành', value: '24.5k', Icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
-                ].map(({ label, value, Icon, color, bg, border }) => (
-                    <div key={label} className={`${bg} border ${border} rounded-2xl p-5`}>
-                        <Icon size={20} className={`${color} mb-2`} />
-                        <div className={`text-2xl font-extrabold ${color}`}>{value}</div>
-                        <div className="text-xs font-semibold text-slate-500 mt-0.5">{label}</div>
-                    </div>
-                ))}
-            </div>
+            {error && (
+                <div className="bg-rose-50 border border-rose-200 rounded-2xl px-5 py-4 flex items-center gap-3">
+                    <Warning size={20} weight="duotone" className="text-rose-500 shrink-0" />
+                    <p className="text-sm text-rose-700 font-medium">{error}</p>
+                </div>
+            )}
 
-            <div className="grid grid-cols-2 gap-6">
-                {/* Health Meters */}
-                <div className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm">
-                    <h3 className="font-extrabold text-slate-900 flex items-center gap-2 mb-5">
-                        <Activity size={18} className="text-emerald-500" /> Performance Metrics
-                        <button className="ml-auto p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
-                            <RefreshCw size={14} />
-                        </button>
+            {/* Activity Log */}
+            <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden min-h-[400px] flex flex-col">
+                <div className="p-6 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4 bg-slate-50/50">
+                    <h3 className="font-extrabold text-slate-900 flex items-center gap-2">
+                        <Database size={18} weight="duotone" className="text-slate-500" /> Toàn bộ sự kiện
                     </h3>
-                    <div className="space-y-5">
-                        {metrics.map(m => {
-                            const barPct = m.maxScale ? (m.value / m.maxScale) * 100 : m.value;
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
+                            <button disabled={page === 0} onClick={() => setPage(page - 1)}
+                                className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 disabled:opacity-50 transition-colors">
+                                Trở lại
+                            </button>
+                            <span className="px-2 font-medium text-slate-400">Trang {page + 1} / {totalPages}</span>
+                            <button disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}
+                                className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 disabled:opacity-50 transition-colors">
+                                Tiếp theo
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                <div className="divide-y divide-slate-50 flex-1">
+                    {loading ? (
+                        <div className="flex items-center justify-center h-64">
+                            <CircleNotch size={28} className="animate-spin text-[#5A63F6]" />
+                        </div>
+                    ) : logs.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+                            <Database size={32} weight="duotone" className="mb-2 text-slate-300" />
+                            <p className="text-sm font-medium">Chưa có nhật ký nào được ghi lại</p>
+                        </div>
+                    ) : (
+                        logs.map(log => {
+                            const lc = levelConfig[log.level] || levelConfig.INFO;
                             return (
-                                <div key={m.label}>
-                                    <div className="flex justify-between text-xs font-bold text-slate-600 mb-2">
-                                        <span>{m.label}</span>
-                                        <span className="text-slate-800">{m.value}{m.unit}</span>
+                                <div key={log.id} className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-6 py-4 hover:bg-slate-50 transition-colors ${lc.bg}`}>
+                                    <div className="flex items-center gap-3 w-40 shrink-0">
+                                        <div className={`w-2 h-2 rounded-full ${lc.dot} shrink-0`} />
+                                        <span className="text-xs text-slate-400 font-mono">
+                                            {new Date(log.createdAt).toLocaleString('vi-VN')}
+                                        </span>
                                     </div>
-                                    <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                                        <div className={`h-full ${m.color} rounded-full`} style={{ width: `${barPct}%` }}></div>
+                                    <div className={`text-sm font-bold flex-1 ${lc.text}`}>
+                                        {log.action}
+                                    </div>
+                                    <div className="flex items-center gap-4 shrink-0 sm:w-64 justify-between sm:justify-end">
+                                        <div className="text-xs font-semibold text-slate-500 truncate" title={log.userEmail}>
+                                            {log.userName || log.userEmail || 'Hệ thống'}
+                                        </div>
+                                        <span className="text-xs font-mono font-medium text-slate-400 w-24 text-right">
+                                            {log.ipAddress || '—'}
+                                        </span>
                                     </div>
                                 </div>
                             );
-                        })}
-                    </div>
+                        })
+                    )}
                 </div>
 
-                {/* DAU Chart */}
-                <div className="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm">
-                    <h3 className="font-extrabold text-slate-900 flex items-center gap-2 mb-5">
-                        <Users size={18} className="text-blue-500" /> DAU — 7 ngày gần nhất
-                    </h3>
-                    <div className="flex items-end gap-3 h-36">
-                        {weeklyData.map(d => (
-                            <div key={d.day} className="flex-1 flex flex-col items-center gap-1">
-                                <span className="text-[10px] font-bold text-slate-500">{d.dau}</span>
-                                <div className="w-full bg-[#5A63F6] rounded-t-lg hover:bg-violet-500 transition-colors"
-                                    style={{ height: `${(d.dau / maxDau) * 100}%` }} />
-                                <span className="text-[10px] font-bold text-slate-400">{d.day}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Activity Log */}
-            <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                    <h3 className="font-extrabold text-slate-900 flex items-center gap-2">
-                        <Database size={18} className="text-slate-500" /> Activity Log
-                    </h3>
-                    <span className="text-xs text-slate-400 font-medium">Cập nhật realtime</span>
-                </div>
-                <div className="divide-y divide-slate-50">
-                    {MOCK_LOGS.map(log => {
-                        const lc = levelConfig[log.level];
-                        return (
-                            <div key={log.id} className={`flex items-center gap-4 px-6 py-3 hover:bg-slate-50/50 ${lc.bg}`}>
-                                <div className={`w-2 h-2 rounded-full ${lc.dot} shrink-0`} />
-                                <span className="text-xs text-slate-400 font-mono w-16 shrink-0">{log.time}</span>
-                                <span className={`text-sm font-medium flex-1 ${lc.text}`}>{log.action}</span>
-                                <span className="text-xs text-slate-400 font-medium">{log.user}</span>
-                                <span className="text-xs font-mono text-slate-300">{log.ip}</span>
-                            </div>
-                        );
-                    })}
-                </div>
             </div>
         </div>
     );

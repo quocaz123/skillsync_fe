@@ -20,7 +20,7 @@ const StatusBadge = ({ status }) => {
     const c = statusConfig[status] || statusConfig.pending;
     return (
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 ${c.bg} ${c.text} border ${c.border} rounded-full text-[11px] font-extrabold`}>
-            <div className={`w-1.5 h-1.5 rounded-full ${c.dot}`}></div>
+            <div className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
             {c.label}
         </span>
     );
@@ -118,6 +118,13 @@ const AdminPaths = () => {
         setRejectReason('');
     };
 
+    const stats = [
+        { Icon: MapTrifold, label: 'Tổng lộ trình', value: MOCK_PATHS.length, color: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-100', weight: 'duotone' },
+        { Icon: HourglassMedium, label: 'Chờ duyệt', value: pending, color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-100', weight: 'duotone' },
+        { Icon: CheckCircle, label: 'Đang hoạt động', value: active, color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-100', weight: 'fill' },
+        { Icon: Users, label: 'Tổng học viên', value: totalStudents, color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-100', weight: 'duotone' },
+    ];
+
     return (
         <div className="max-w-7xl mx-auto space-y-5 sm:space-y-6 pb-4">
             {toast && (
@@ -129,13 +136,13 @@ const AdminPaths = () => {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
-                        <BookOpen size={22} className="text-[#5A63F6]" /> Quản lý Lộ trình Học
+                        <MapTrifold size={22} weight="duotone" className="text-[#5A63F6]" /> Quản lý Lộ trình Học
                     </h1>
                     <p className="text-sm text-slate-400 font-medium mt-1">Duyệt và kiểm soát chất lượng lộ trình do Mentor tạo lên</p>
                 </div>
                 {pending > 0 && (
                     <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl">
-                        <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+                        <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                         <span className="text-sm font-bold text-amber-700">{pending} lộ trình chờ duyệt</span>
                     </div>
                 )}
@@ -148,7 +155,7 @@ const AdminPaths = () => {
                     { label: 'Đang hoạt động', value: active, icon: '✅', bg: 'bg-emerald-50', border: 'border-emerald-100', color: 'text-emerald-700' },
                 ].map((s) => (
                     <div key={s.label} className={`${s.bg} border ${s.border} rounded-2xl p-5 flex items-center gap-4`}>
-                        <span className="text-3xl">{s.icon}</span>
+                        <s.Icon size={28} weight={s.weight} className={s.color} />
                         <div>
                             <div className={`text-2xl font-extrabold ${s.color}`}>{s.value}</div>
                             <div className="text-xs font-semibold text-slate-500 mt-0.5">{s.label}</div>
@@ -206,7 +213,7 @@ const AdminPaths = () => {
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 text-white flex items-center justify-center shrink-0 shadow-sm">
-                                                <BookOpen size={16} />
+                                                <MapTrifold size={16} weight="bold" />
                                             </div>
                                             <div>
                                                 <div className="font-bold text-slate-900 text-sm">{path.title}</div>
@@ -230,7 +237,7 @@ const AdminPaths = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className="flex items-center gap-1 font-extrabold text-amber-600">
-                                            <Zap size={14} className="fill-amber-500" /> {path.price} CR
+                                            <CurrencyCircleDollar size={15} weight="duotone" /> {path.price} CR
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">

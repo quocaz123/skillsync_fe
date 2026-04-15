@@ -27,7 +27,7 @@ const MissionWelcomePopup = () => {
     ];
 
     return (
-        <div className="fixed bottom-6 right-6 z-[100]">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[10000]">
             <div
                 className="w-[360px] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
                 style={{
@@ -92,8 +92,8 @@ const MissionWelcomePopup = () => {
 
             <style>{`
             @keyframes slideIn {
-                from { opacity: 0; transform: translateY(20px) translateX(20px); }
-                to { opacity: 1; transform: translateY(0) translateX(0); }
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
             }
         `}</style>
         </div>

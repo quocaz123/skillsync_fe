@@ -21,13 +21,12 @@ export const getOpenSlotsBySkill = async (skillId) => {
 };
 
 /**
- * Teacher — batch create slots.
- * @param {string} skillId — teaching skill UUID
- * @param {string[]} dates  — ISO date strings e.g. "2025-04-10"
- * @param {string[]} times  — HH:mm strings e.g. "09:00"
+ * Teacher — create slots (mỗi slot có date, time, endTime, creditCost riêng).
+ * @param {string} skillId
+ * @param {Array<{date: string, time: string, endTime?: string, creditCost: number}>} slots
  */
-export const createSlotsBatch = async (skillId, dates, times, endTimes = []) => {
-    const res = await httpClient.post(SLOTS.BATCH_CREATE(skillId), { dates, times, endTimes });
+export const createSlotsBatch = async (skillId, slots) => {
+    const res = await httpClient.post(SLOTS.BATCH_CREATE(skillId), { slots });
     return unwrap(res);
 };
 
@@ -60,6 +59,24 @@ export const getMySessions = async (role = 'all', status) => {
     return unwrap(res);
 };
 
+/**
+ * Teacher — approve a pending session.
+ * @param {string} sessionId
+ */
+export const approveSession = async (sessionId) => {
+    const res = await httpClient.post(SESSIONS.APPROVE(sessionId));
+    return unwrap(res);
+};
+
+/**
+ * Teacher — reject a pending session.
+ * @param {string} sessionId
+ */
+export const rejectSession = async (sessionId) => {
+    const res = await httpClient.post(SESSIONS.REJECT(sessionId));
+    return unwrap(res);
+};
+
 /** Get ZEGO token for a session — backend validates time window */
 export const getZegoToken = async (sessionId) => {
     const res = await httpClient.get(SESSIONS.ZEGO_TOKEN(sessionId));
@@ -74,4 +91,13 @@ export const markJoin = async (sessionId) => {
 /** Mark leave / end session */
 export const markLeave = async (sessionId) => {
     await httpClient.post(SESSIONS.LEAVE(sessionId));
+};
+
+/**
+ * Learner confirms session completion to release funds
+ * @param {string} sessionId
+ */
+export const confirmSession = async (sessionId) => {
+    const res = await httpClient.post(SESSIONS.CONFIRM(sessionId));
+    return unwrap(res);
 };
