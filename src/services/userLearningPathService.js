@@ -1,6 +1,7 @@
 import axiosClient from '../configuration/axiosClient';
 import API_ENDPOINTS from '../configuration/apiEndpoints';
 import { buildUserLearningPathMock } from '../utils/mockData';
+import { normalizePathDetail } from './learningPathService';
 
 function pick(obj, ...keys) {
     for (const k of keys) {
@@ -16,6 +17,7 @@ function normalizeLesson(raw, idx) {
         title: pick(r, 'title', 'name') ?? `Bài ${idx + 1}`,
         durationMinutes: Number(pick(r, 'durationMinutes', 'duration_minutes', 'duration') ?? 0),
         status: pick(r, 'status', 'lessonStatus') ?? 'NOT_STARTED',
+        videoUrl: pick(r, 'videoUrl', 'video_url') ?? '',
     };
 }
 
@@ -102,8 +104,77 @@ export function normalizeUserLearningPath(raw) {
 
 export async function fetchUserLearningPath(pathId) {
     try {
-        const data = await axiosClient.get(API_ENDPOINTS.USER_LEARNING_PATHS.BY_ID(pathId));
-        return normalizeUserLearningPath(data);
+        // Backend hiện chưa có endpoint USER_LEARNING_PATHS riêng.
+        // Dùng chi tiết learning path và chuyển sang workspace tối thiểu để user có thể vào học.
+        const data = await axiosClient.get(API_ENDPOINTS.LEARNING_PATHS.GET_BY_ID(pathId));
+        const detail = normalizePathDetail(data);
+        if (detail?.id) {
+            const modules = (detail.modules || []).map((m, idx) => {
+                const lessons = Array.isArray(m.lessons) && m.lessons.length > 0
+                    ? m.lessons.map((lesson, li) => ({
+                          id: String(lesson.id ?? `${detail.id}-m${idx + 1}-l${li + 1}`),
+                          title: lesson.title || `Bài ${li + 1}`,
+                          durationMinutes: Number(lesson.durationMinutes || 10),
+                          status: idx === 0 && li === 0 ? 'IN_PROGRESS' : 'NOT_STARTED',
+                          videoUrl: lesson.videoUrl || '',
+                      }))
+                    : [{
+                          id: `${detail.id}-m${idx + 1}-l1`,
+                          title: 'Bài mở đầu',
+                          durationMinutes: 10,
+                          status: idx === 0 ? 'IN_PROGRESS' : 'NOT_STARTED',
+                          videoUrl: '',
+                      }];
+                return {
+                    id: `${detail.id}-m${idx + 1}`,
+                    order: m.order ?? idx + 1,
+                    title: m.title || `Module ${idx + 1}`,
+                    shortDescription: m.description || '',
+                    goal: m.description || '',
+                    status: idx === 0 ? 'ONGOING' : 'LOCKED',
+                    lessonsCompleted: 0,
+                    lessonsTotal: lessons.length,
+                    mentorSupport: Boolean(m.mentorSupport),
+                    quiz: { enabled: Boolean(m.hasQuiz), status: 'NOT_ATTEMPTED' },
+                    supportRequest: null,
+                    lessons,
+                };
+            });
+
+            const workspace = {
+                pathId: detail.id,
+                pathTitle: detail.title,
+                pathType: detail.pathType || 'system',
+                emoji: detail.emoji,
+                thumbnailFrom: detail.thumbnailFrom,
+                thumbnailTo: detail.thumbnailTo,
+                progressPercent: 0,
+                completedModulesCount: 0,
+                totalModulesCount: modules.length,
+                currentModuleId: modules[0]?.id || null,
+                lastInProgressLesson: modules[0]?.lessons?.[0]
+                    ? {
+                          lessonId: modules[0].lessons[0].id,
+                          moduleId: modules[0].id,
+                          title: modules[0].lessons[0].title,
+                      }
+                    : null,
+                mentor: detail.mentor,
+                modules,
+                primaryCta: modules[0]?.lessons?.[0]
+                    ? {
+                          type: 'CONTINUE_LESSON',
+                          label: 'Tiếp tục bài học',
+                          moduleId: modules[0].id,
+                          lessonId: modules[0].lessons[0].id,
+                      }
+                    : null,
+                learnerNote: null,
+                nextRecommendedHint: null,
+                missionHint: null,
+            };
+            return normalizeUserLearningPath(workspace);
+        }
     } catch {
         const mock = buildUserLearningPathMock(pathId);
         if (!mock) {

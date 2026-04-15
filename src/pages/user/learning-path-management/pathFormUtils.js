@@ -25,8 +25,9 @@ export const emptyModule = (pathType) => ({
     objective: '',
     estimatedDuration: '',
     hasQuiz: false,
-    quizRequired: false,
+    isQuizMandatory: false,
     enableSupport: pathType === 'MENTOR',
+    sessionsNeeded: 0,
     quizTitle: '',
     quizQuestions: [],
     lessons: [emptyLesson()],
@@ -142,4 +143,56 @@ export function validatePathForm(form, mode = 'full') {
 export function countLessons(modules) {
     if (!Array.isArray(modules)) return 0;
     return modules.reduce((n, m) => n + (m.lessons?.length || 0), 0);
+}
+
+/**
+ * Chuyển đổi dữ liệu Form (Frontend) sang API Payload (Backend)
+ * Tự động chuẩn hóa Enum và Rename field
+ */
+export function mapFormToApiPayload(form) {
+    const levelMap = {
+        'Beginner': 'BEGINNER',
+        'Intermediate': 'INTERMEDIATE',
+        'Advanced': 'ADVANCED'
+    };
+
+    // Phân loại Category tự động dựa trên từ khóa (Skill)
+    const skillLow = (form.skill || '').toLowerCase();
+    let category = 'OTHER';
+    if (/(java|python|react|node|api|data|sql|tech|dev|cloud|web|prog|software|js|next|back)/i.test(skillLow)) category = 'TECH';
+    else if (/(design|ui|ux|figma|graphic|pixel|art|adobe|sketch)/i.test(skillLow)) category = 'DESIGN';
+    else if (/(business|marketing|finance|economic|sale|manage|startup)/i.test(skillLow)) category = 'BUSINESS';
+    else if (/(english|ielts|toeic|japanese|language|korean|french|vnu)/i.test(skillLow)) category = 'LANGUAGE';
+    else if (/(lead|communication|public|soft|career|negotiate|present)/i.test(skillLow)) category = 'SOFT_SKILL';
+    else if (/(health|fit|yoga|medi|doctor)/i.test(skillLow)) category = 'HEALTH';
+
+    return {
+        title: form.title,
+        shortDescription: form.shortDescription || form.description?.slice(0, 150),
+        description: form.description,
+        category: category,
+        level: levelMap[form.level] || 'BEGINNER',
+        duration: form.estimatedDuration || '0',
+        emoji: '📚', // Mặc định vì UI v2 đã thu gọn field này
+        thumbnailUrl: form.thumbnail || null, // Sửa tên trường từ thumbnail -> thumbnailUrl
+        totalCredits: form.priceType === 'PAID' ? (Number(form.totalCreditsCost) || 0) : 0,
+        maxStudents: 999, // Mặc định cho hệ thống
+        registrationType: 'AUTO',
+        modules: (form.modules || []).map(m => ({
+            title: m.title || 'Module',
+            description: m.description || '',
+            objective: m.objective || '',
+            enableSupport: m.enableSupport || false,
+            hasQuiz: m.hasQuiz || false,
+            isQuizMandatory: m.isQuizMandatory || false,
+            sessionsNeeded: Number(m.sessionsNeeded) || 0,
+            lessons: (m.lessons || []).map(l => ({
+                title: l.title || 'Bài học',
+                description: l.description || '',
+                videoUrl: l.videoUrl || '',
+                durationMinutes: l.duration ? (parseInt(l.duration) || 0) : 0,
+                isPreview: l.isPreview || false,
+            })),
+        })),
+    };
 }

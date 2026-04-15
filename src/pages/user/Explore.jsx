@@ -352,7 +352,8 @@ const Explore = () => {
                 const { default: API_ENDPOINTS } = await import('../../configuration/apiEndpoints');
 
                 const res = await axiosClient.get(API_ENDPOINTS.TEACHING_SKILLS.GET_APPROVED);
-                const data = res?.result ?? (Array.isArray(res) ? res : []);
+                // axiosClient đã bóc tách data, nên res là mảng các skill
+                const data = Array.isArray(res) ? res : (res?.result || []);
                 setMentors(data.map(mapSkillToMentor));
             } catch (err) {
                 console.error('Lỗi lấy danh sách khám phá:', err);

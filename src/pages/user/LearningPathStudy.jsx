@@ -204,9 +204,9 @@ export default function LearningPathStudy() {
     const mentorName = data?.mentor?.name ?? 'Mentor';
 
     const goLesson = useCallback(
-        (lessonId, lessonTitle) => {
+        (lessonId, lessonTitle, videoUrl) => {
             navigate(`/app/learning-path/study/${pathId}/lesson/${lessonId}`, {
-                state: { lessonTitle, pathTitle: data?.pathTitle },
+                state: { lessonTitle, pathTitle: data?.pathTitle, videoUrl },
             });
         },
         [navigate, pathId, data?.pathTitle]
@@ -218,7 +218,7 @@ export default function LearningPathStudy() {
         if ((pc.type === 'CONTINUE_LESSON' || pc.type === 'REVIEW_PATH') && pc.lessonId) {
             const mod = data.modules.find((m) => m.id === pc.moduleId);
             const les = mod?.lessons?.find((l) => l.id === pc.lessonId);
-            goLesson(pc.lessonId, les?.title ?? 'Bài học');
+            goLesson(pc.lessonId, les?.title ?? 'Bài học', les?.videoUrl);
         } else if (pc.type === 'TAKE_QUIZ' && pc.quizModuleId) {
             setQuizModuleId(pc.quizModuleId);
             setQuizOpen(true);
@@ -457,7 +457,7 @@ export default function LearningPathStudy() {
                                             {les.status === 'COMPLETED' ? (
                                                 <button
                                                     type="button"
-                                                    onClick={() => goLesson(les.id, les.title)}
+                                                    onClick={() => goLesson(les.id, les.title, les.videoUrl)}
                                                     className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-bold hover:border-indigo-300 shrink-0"
                                                 >
                                                     Xem lại
@@ -465,7 +465,7 @@ export default function LearningPathStudy() {
                                             ) : (
                                                 <button
                                                     type="button"
-                                                    onClick={() => goLesson(les.id, les.title)}
+                                                    onClick={() => goLesson(les.id, les.title, les.videoUrl)}
                                                     className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 shrink-0"
                                                 >
                                                     {les.status === 'NOT_STARTED' ? 'Học bài' : 'Tiếp tục'}

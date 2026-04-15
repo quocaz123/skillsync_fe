@@ -102,7 +102,6 @@ function App() {
           <Route path="learning-path" element={<LearningPath />} />
           <Route path="teaching" element={<TeachingManagement />} />
           <Route path="teaching/create" element={<CreateTeachingSession />} />
-          <Route path="teaching/create-path" element={<CreateLearningPath />} />
           <Route path="call/:sessionId" element={<VideoCallPage />} />
           <Route path="community" element={<Community />} />
           <Route path="missions" element={<Missions />} />
@@ -126,7 +125,6 @@ function App() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="teaching-skills" element={<AdminTeachingSkills />} />
           <Route path="paths" element={<AdminPaths />} />
-          <Route path="paths/create" element={<CreateLearningPath />} />
           <Route path="system-learning-paths" element={<AdminSystemCourseManagementPage />} />
           <Route path="system" element={<AdminSystem />} />
         </Route>

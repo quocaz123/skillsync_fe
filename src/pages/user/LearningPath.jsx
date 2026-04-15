@@ -1,24 +1,81 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
     Map, Star, Target, BookOpen, ChevronRight, Zap, CheckCircle2, Play,
     Clock, Search, Users, Book, SlidersHorizontal,
     X, Sparkles, LayoutGrid, Video, Layers, ChevronDown, BadgeCheck,
 } from 'lucide-react';
-import { MY_PATHS_MOCK as myPaths, EXPLORE_PATHS_MOCK as explorePaths } from '../../utils/mockData';
+import { MY_PATHS_MOCK as myPaths } from '../../utils/mockData';
+import axiosClient from '../../configuration/axiosClient';
+import API_ENDPOINTS from '../../configuration/apiEndpoints';
 
 // ─────────────────────────────────────────────
-// Helper: Level badge color
+// Constants for UI
 // ─────────────────────────────────────────────
-const LEVEL_STYLE = {
-    Beginner: { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-200' },
-    Intermediate: { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-200' },
-    Advanced: { bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-200' },
+
+const CATEGORY_COLORS = {
+    TECH: { from: '#4F46E5', to: '#7C3AED' },
+    DESIGN: { from: '#EC4899', to: '#8B5CF6' },
+    BUSINESS: { from: '#F59E0B', to: '#EF4444' },
+    LANGUAGE: { from: '#10B981', to: '#3B82F6' },
+    SOFT_SKILL: { from: '#8B5CF6', to: '#D946EF' },
+    MARKETING: { from: '#F97316', to: '#F43F5E' },
+    OTHER: { from: '#64748B', to: '#475569' }
 };
-const LEVEL_LABEL = { Beginner: 'Cơ bản', Intermediate: 'Trung cấp', Advanced: 'Nâng cao' };
+
+const CATEGORY_LABEL = {
+    TECH: 'Công nghệ',
+    DESIGN: 'Thiết kế',
+    BUSINESS: 'Kinh doanh',
+    LANGUAGE: 'Ngôn ngữ',
+    SOFT_SKILL: 'Kỹ năng mềm',
+    MARKETING: 'Marketing',
+    OTHER: 'Khác'
+};
+
+const LEVEL_STYLE = {
+    BEGINNER: { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-200' },
+    INTERMEDIATE: { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-200' },
+    ADVANCED: { bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-200' },
+};
+const LEVEL_LABEL = { BEGINNER: 'Cơ bản', INTERMEDIATE: 'Trung cấp', ADVANCED: 'Nâng cao' };
+
+// ─────────────────────────────────────────────
+// Helper: Map Backend DTO to Frontend UI Object
+// ─────────────────────────────────────────────
+const mapBackendPathToLocal = (p) => ({
+    id: p.id,
+    title: p.title,
+    description: p.shortDescription || p.description,
+    skill: CATEGORY_LABEL[p.category] || p.category,
+    level: p.level,
+    duration: p.duration,
+    emoji: p.emoji || '📚',
+    thumbnailFrom: CATEGORY_COLORS[p.category]?.from || '#6366f1',
+    thumbnailTo: CATEGORY_COLORS[p.category]?.to || '#a855f7',
+    totalCredits: p.totalCredits,
+    learnerCount: p.enrollmentCount || 0,
+    progressPercent: Number(p.progressPercent ?? 0),
+    enrollmentStatus: p.enrollmentStatus || null,
+    moduleCount: p.moduleCount ?? p.modules?.length ?? 0,
+    lessonCount: p.lessonCount ?? (p.modules || []).reduce((sum, m) => sum + (m.lessons?.length || 0), 0),
+    type: p.teacherRole === 'ADMIN' ? 'system' : 'mentor',
+    rating: 4.8,
+    featured: p.isFeatured || false,
+    newest: true,
+    mentor: p.teacherName ? {
+        name: p.teacherName,
+        role: p.teacherRole === 'ADMIN' ? 'Hệ thống SkillSync' : 'Mentor chuyên gia',
+        avatarGrad: 'from-violet-500 to-indigo-500',
+        avatarText: p.teacherName.charAt(0),
+        avatarUrl: p.teacherAvatarUrl,
+        rating: 4.9,
+        verified: true
+    } : null
+});
 
 function LevelBadge({ level }) {
-    const s = LEVEL_STYLE[level] || LEVEL_STYLE.Beginner;
+    const s = LEVEL_STYLE[level] || LEVEL_STYLE.BEGINNER;
     return (
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-bold ${s.bg} ${s.text} ${s.border}`}>
             <Target size={10} /> {LEVEL_LABEL[level] || level}
@@ -174,31 +231,54 @@ function PathCard({ path }) {
 // ─────────────────────────────────────────────
 // Explore Tab Content
 // ─────────────────────────────────────────────
-const ALL_SKILLS = ['Tất cả', ...Array.from(new Set(explorePaths.map(p => p.skill)))];
-const ALL_LEVELS = ['Tất cả', 'Beginner', 'Intermediate', 'Advanced'];
-const ALL_TYPES = ['Tất cả', 'mentor', 'system'];
 const SORT_OPTIONS = [
     { value: 'featured', label: 'Nổi bật' },
     { value: 'newest', label: 'Mới nhất' },
     { value: 'popular', label: 'Phổ biến' },
     { value: 'rating', label: 'Rating cao' },
 ];
-const TYPE_LABEL = { 'Tất cả': 'Tất cả', mentor: 'Có mentor hướng dẫn', system: 'Tự học' };
+const TYPE_LABEL_FILTER = { 'Tất cả': 'Tất cả', mentor: 'Có mentor hướng dẫn', system: 'Tự học' };
 
 function ExploreTab() {
+    const [paths, setPaths] = useState([]);
     const [keyword, setKeyword] = useState('');
     const [skillFilter, setSkillFilter] = useState('Tất cả');
     const [levelFilter, setLevelFilter] = useState('Tất cả');
     const [typeFilter, setTypeFilter] = useState('Tất cả');
     const [priceFilter, setPriceFilter] = useState('Tất cả'); // 'Tất cả' | 'free' | 'paid'
     const [sortBy, setSortBy] = useState('featured');
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [showFilter, setShowFilter] = useState(false);
 
-    // Simulate loading when filters change
+    useEffect(() => {
+        fetchPaths();
+    }, []);
+
+    const fetchPaths = async () => {
+        setLoading(true);
+        try {
+            const res = await axiosClient.get(API_ENDPOINTS.LEARNING_PATHS.GET_APPROVED);
+            console.log('Learning Paths Response:', res);
+            // axiosClient đã bóc tách apiRes.data nếu khớp pattern, 
+            // nhưng ta handle thêm cả result hoặc mảng trực tiếp cho an toàn tuyệt đối.
+            const data = Array.isArray(res) ? res : (res?.data || res?.result || []);
+            const mapped = data.map(mapBackendPathToLocal);
+            setPaths(mapped);
+        } catch (error) {
+            console.error('Fetch paths error:', error);
+            setPaths([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const ALL_SKILLS = useMemo(() => ['Tất cả', ...Array.from(new Set(paths.map(p => p.skill)))], [paths]);
+    const ALL_LEVELS = ['Tất cả', 'BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
+    const ALL_TYPES = ['Tất cả', 'mentor', 'system'];
+
     const applyFilters = () => {
         setLoading(true);
-        setTimeout(() => setLoading(false), 600);
+        setTimeout(() => setLoading(false), 400);
     };
 
     const hasActiveFilter = keyword || skillFilter !== 'Tất cả' || levelFilter !== 'Tất cả' || typeFilter !== 'Tất cả' || priceFilter !== 'Tất cả';
@@ -209,7 +289,7 @@ function ExploreTab() {
     };
 
     const filteredPaths = useMemo(() => {
-        let list = [...explorePaths];
+        let list = [...paths];
 
         if (keyword.trim()) {
             const kw = keyword.toLowerCase();
@@ -233,10 +313,11 @@ function ExploreTab() {
             case 'featured': default:
                 return list.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
         }
-    }, [keyword, skillFilter, levelFilter, typeFilter, priceFilter, sortBy]);
+    }, [paths, keyword, skillFilter, levelFilter, typeFilter, priceFilter, sortBy]);
 
     const recommended = useMemo(() =>
-        explorePaths.filter(p => p.featured).slice(0, 3), []);
+        paths.filter(p => p.featured).slice(0, 3), [paths]);
+
 
     return (
         <div className="space-y-8">
@@ -344,7 +425,7 @@ function ExploreTab() {
                                     onChange={e => { setTypeFilter(e.target.value); applyFilters(); }}
                                     className="w-full appearance-none pl-3 pr-7 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 outline-none cursor-pointer"
                                 >
-                                    {ALL_TYPES.map(t => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
+                                    {ALL_TYPES.map(t => <option key={t} value={t}>{TYPE_LABEL_FILTER[t]}</option>)}
                                 </select>
                                 <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                             </div>
@@ -559,11 +640,35 @@ function MyPathCard({ path }) {
 // ─────────────────────────────────────────────
 // My Paths Tab
 // ─────────────────────────────────────────────
-function MyPathsTab({ onExplore }) {
+function MyPathsTab({ onExplore, enrolledPaths = [], explorePaths = [] }) {
     const [subTab, setSubTab] = useState('ongoing'); // 'ongoing' | 'completed'
 
-    const activePaths = myPaths.filter(p => p.status !== 'COMPLETED');
-    const completedPaths = myPaths.filter(p => p.status === 'COMPLETED');
+    const dynamicEnrolled = enrolledPaths
+        .map((p) => p.id)
+        .filter((id) => !myPaths.some((p) => p.id === id))
+        .map((id) => {
+            const p = enrolledPaths.find((e) => e.id === id) || explorePaths.find((e) => e.id === id);
+            if (!p) return null;
+            return {
+                id: p.id,
+                title: p.title,
+                emoji: p.emoji || '📚',
+                thumbnailFrom: p.thumbnailFrom || '#6366f1',
+                thumbnailTo: p.thumbnailTo || '#8b5cf6',
+                status: (p.enrollmentStatus === 'COMPLETED' || (p.progressPercent ?? 0) >= 100) ? 'COMPLETED' : 'ONGOING',
+                progress: Math.max(0, Math.min(100, Number(p.progressPercent ?? 0))),
+                modulesDone: 0,
+                modulesTotal: Math.max(1, p.moduleCount || 1),
+                currentModuleTitle: p.moduleCount > 0 ? 'Module 1' : null,
+                currentLesson: 'Bài mở đầu',
+                completedDate: (p.enrollmentStatus === 'COMPLETED' || (p.progressPercent ?? 0) >= 100) ? new Date().toLocaleDateString('vi-VN') : null,
+            };
+        })
+        .filter(Boolean);
+
+    const myPathsAll = [...myPaths, ...dynamicEnrolled];
+    const activePaths = myPathsAll.filter(p => p.status !== 'COMPLETED');
+    const completedPaths = myPathsAll.filter(p => p.status === 'COMPLETED');
 
     const shownPaths = subTab === 'ongoing' ? activePaths : completedPaths;
 
@@ -634,6 +739,34 @@ function MyPathsTab({ onExplore }) {
 // ─────────────────────────────────────────────
 const LearningPath = () => {
     const [activeTab, setActiveTab] = useState('my_paths'); // 'my_paths' | 'explore'
+    const [explorePaths, setExplorePaths] = useState([]);
+    const [enrolledPaths, setEnrolledPaths] = useState([]);
+
+    useEffect(() => {
+        const fetchExplorePaths = async () => {
+            try {
+                const res = await axiosClient.get(API_ENDPOINTS.LEARNING_PATHS.GET_APPROVED);
+                const data = Array.isArray(res) ? res : (res?.data || res?.result || []);
+                setExplorePaths(data.map(mapBackendPathToLocal));
+            } catch {
+                setExplorePaths([]);
+            }
+        };
+        fetchExplorePaths();
+    }, []);
+
+    useEffect(() => {
+        const fetchEnrolled = async () => {
+            try {
+                const res = await axiosClient.get(API_ENDPOINTS.LEARNING_PATHS.GET_ENROLLED);
+                const data = Array.isArray(res) ? res : (res?.data || res?.result || []);
+                setEnrolledPaths(data.map(mapBackendPathToLocal));
+            } catch {
+                setEnrolledPaths([]);
+            }
+        };
+        fetchEnrolled();
+    }, []);
 
     return (
         <div className="max-w-6xl mx-auto font-sans pb-16 space-y-6">
@@ -663,7 +796,13 @@ const LearningPath = () => {
 
 
             {/* TAB: Lộ trình của tôi */}
-            {activeTab === 'my_paths' && <MyPathsTab onExplore={() => setActiveTab('explore')} />}
+            {activeTab === 'my_paths' && (
+                <MyPathsTab
+                    onExplore={() => setActiveTab('explore')}
+                    enrolledPaths={enrolledPaths}
+                    explorePaths={explorePaths}
+                />
+            )}
 
             {/* TAB: Khám phá */}
             {activeTab === 'explore' && <ExploreTab />}
