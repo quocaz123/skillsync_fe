@@ -302,29 +302,6 @@ const UserDashboard = () => {
                 </div>
             </div>
 
-            {/* ─── AI RECOMMENDATIONS ─── */}
-            <div className="relative pt-2">
-                <div className="flex items-center justify-between mb-5 px-1">
-                    <h2 className="font-black text-slate-800 text-xl flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center shadow-md">
-                            <Robot size={18} weight="fill" className="text-white" />
-                        </div>
-                        Gợi ý xịn dành riêng cho bạn
-                    </h2>
-                    <Link to="/app/explore" className="flex items-center gap-1 text-xs font-extrabold text-violet-600 hover:text-violet-800 transition-colors">
-                        Khám phá thêm <ArrowRight size={13} weight="bold" />
-                    </Link>
-                </div>
-                
-                {loadingData ? (
-                    <div className="flex justify-center py-10"><CircleNotch size={32} className="animate-spin text-violet-500" /></div>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {recommendedMentors.map((t, i) => <TeacherCard key={t.id || i} teacher={t} />)}
-                    </div>
-                )}
-            </div>
-
         </div>
     );
 };

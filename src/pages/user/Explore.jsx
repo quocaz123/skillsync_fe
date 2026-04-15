@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useStore } from '../../store';
 import * as sessionService from '../../services/sessionService';
 import { getAllSkills } from '../../services/skillService';
@@ -322,6 +323,7 @@ const DETAIL_TABS = [
 
 const Explore = () => {
     const { credits, mySkills, user, syncCredits } = useStore();
+    const location = useLocation();
     const currentUserId = user?.id ?? null;
     const [searchTerm, setSearchTerm] = useState('');
     const [mentors, setMentors] = useState([]);
@@ -363,6 +365,25 @@ const Explore = () => {
         };
         load();
     }, []);
+
+    // ── Auto-open từ AI Chat Bubble ──────────────────────────────────────────
+    // Khi navigate từ AiChatBubble với state { openMentorId }, tìm mentor
+    // trong danh sách đã fetch và mở trang chi tiết ngay lập tức.
+    useEffect(() => {
+        const targetId = location.state?.openMentorId;
+        if (!targetId || loadingMentors || mentors.length === 0) return;
+
+        // AI trả về mentorId = User UUID của teacher → map sang m.teacherId trong Explore
+        // m.id là TeachingSkill ID (khác), m.teacherId mới là teacher's user UUID
+        const found = mentors.find(m => String(m.teacherId) === String(targetId));
+        if (found) {
+            setSelectedMentor(found);
+            setBookingStep(0);
+            setActiveTab('intro');
+            // Xoá state khỏi history để không bị re-trigger khi navigate lại
+            window.history.replaceState({}, '');
+        }
+    }, [location.state, mentors, loadingMentors]);
 
     useEffect(() => {
         const loadSkills = async () => {
@@ -789,6 +810,7 @@ const Explore = () => {
     // ─── EXPLORE LIST VIEW ──────────────────────────────────────────────
     return (
         <div className="max-w-6xl mx-auto font-sans pb-12 space-y-8">
+            {/* ── Tìm kiếm thủ công ───────────────────────────────────── */}
             <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
                 <div className="flex flex-col sm:flex-row gap-4">
                     <div className="flex-1 relative">
@@ -877,10 +899,8 @@ const Explore = () => {
             {/* Cards grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredMentors.map(mentor => {
-                    const isHigh = mentor.match >= 90;
                     return (
                         <div key={mentor.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col group relative">
-                            {isHigh && <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-400 to-orange-400" />}
                             <div className="p-6 flex-1">
                                 <div className="flex items-start justify-between mb-5">
                                     <AvatarImg
@@ -891,9 +911,6 @@ const Explore = () => {
                                         textSize="text-xl"
                                         rounded="rounded-2xl"
                                     />
-                                    <span className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-full ${isHigh ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-violet-50 text-violet-700 border border-violet-100'}`}>
-                                        <Sparkle size={11} weight="fill" /> {mentor.match}% Match
-                                    </span>
                                 </div>
                                 <h3 className="font-extrabold text-xl text-slate-900 group-hover:text-violet-600 transition-colors mb-1">{mentor.name}</h3>
                                 <p className="text-sm text-slate-500 mb-3">{mentor.subSkills.slice(0, 2).join(' · ')}</p>

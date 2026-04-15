@@ -11,6 +11,7 @@ import { getMyProfile } from '../../services/userService';
 import SetPasswordModal from '../auth/SetPasswordModal';
 import MissionWelcomePopup from './MissionWelcomePopup';
 import NotificationDropdown from './NotificationDropdown';
+import AiChatBubble from '../ai/AiChatBubble';
 
 const SidebarContent = ({ onLinkClick, isCollapsed, location, user, credits, handleLogout }) => (
     <>
@@ -355,6 +356,9 @@ const MainLayout = () => {
                     onSkip={() => setSkippedPasswordModal(true)}
                 />
             )}
+
+            {/* ── AI CHAT BUBBLE — Global floating widget ── */}
+            <AiChatBubble />
         </div>
     );
 };
