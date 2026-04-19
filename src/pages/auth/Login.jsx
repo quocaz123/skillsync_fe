@@ -118,7 +118,7 @@ const Login = () => {
                                 to="/forgot-password"
                                 className="text-sm font-medium text-primary-600 hover:text-primary-700"
                             >
-                                Quên mật khẩu? / Thiết lập mật khẩu
+                                Forgot password?
                             </Link>
                         </div>
                         <div className="relative">
