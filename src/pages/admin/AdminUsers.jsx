@@ -4,6 +4,7 @@ import {
     CircleNotch, Warning, UserCircle
 } from '@phosphor-icons/react';
 import { getAllUsers, toggleUserBanStatus } from '../../services/adminUserService';
+import ConfirmModal from '../../components/common/ConfirmModal';
 
 const RoleBadge = ({ role }) => {
     const cfg = {
@@ -24,6 +25,7 @@ const AdminUsers = () => {
     const [search, setSearch] = useState('');
     const [togglingId, setTogglingId] = useState(null);
     const [error, setError] = useState(null);
+    const [confirmUserToggle, setConfirmUserToggle] = useState(null);
 
     useEffect(() => {
         fetchUsers();
@@ -43,16 +45,21 @@ const AdminUsers = () => {
         }
     };
 
-    const handleToggleBan = async (userId) => {
-        if (!window.confirm('Xác nhận thay đổi trạng thái người dùng này?')) return;
-        setTogglingId(userId);
+    const handleToggleClick = (u) => {
+        setConfirmUserToggle(u);
+    };
+
+    const executeToggleBan = async () => {
+        if (!confirmUserToggle) return;
+        setTogglingId(confirmUserToggle.id);
         try {
-            const updated = await toggleUserBanStatus(userId);
-            setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updated } : u));
+            const updated = await toggleUserBanStatus(confirmUserToggle.id);
+            setUsers(prev => prev.map(u => u.id === confirmUserToggle.id ? { ...u, ...updated } : u));
         } catch (err) {
             alert('Lỗi cập nhật: ' + (err?.response?.data?.message || err.message));
         } finally {
             setTogglingId(null);
+            setConfirmUserToggle(null);
         }
     };
 
@@ -174,7 +181,7 @@ const AdminUsers = () => {
                                         <td className="px-6 py-4">
                                             <div className="flex justify-end">
                                                 <button
-                                                    onClick={() => handleToggleBan(u.id)}
+                                                    onClick={() => handleToggleClick(u)}
                                                     disabled={togglingId === u.id}
                                                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-50
                                                         ${u.banned
@@ -197,6 +204,18 @@ const AdminUsers = () => {
                     )}
                 </div>
             </div>
+
+            <ConfirmModal
+                isOpen={!!confirmUserToggle}
+                onCancel={() => setConfirmUserToggle(null)}
+                onConfirm={executeToggleBan}
+                title={confirmUserToggle?.banned ? "Gỡ cấm người dùng" : "Cấm người dùng"}
+                message={confirmUserToggle?.banned 
+                    ? `Bạn có chắc muốn khôi phục quyền truy cập cho tài khoản "${confirmUserToggle?.email}"?` 
+                    : `Tài khoản "${confirmUserToggle?.email}" sẽ bị khóa và không thể đăng nhập. Hệ thống sẽ ghi nhận lịch sử xử phạt.`}
+                type={confirmUserToggle?.banned ? "success" : "danger"}
+                confirmText={confirmUserToggle?.banned ? "Xác nhận gỡ cấm" : "Khóa tài khoản"}
+            />
         </div>
     );
 };

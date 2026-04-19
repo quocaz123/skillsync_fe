@@ -3,7 +3,7 @@
  * Dashboard overview with key metrics, charts, and analytics
  */
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
     BarChart3, Users, BookOpen, Zap, TrendingUp, Activity,
     Award, AlertCircle, CheckCircle2, Clock, Target
@@ -11,7 +11,7 @@ import {
 import { useAdminAnalytics } from '../../hooks/useAdmin';
 
 // ─── STAT CARD COMPONENT ──────────────────────────────────────────────────────
-const StatCard = ({ label, value, icon: Icon, color, trend, unit = '' }) => {
+const StatCard = ({ label, value, icon: Icon, color, trend, unit = '' }) => { // eslint-disable-line no-unused-vars
     const colorMap = {
         blue: 'bg-blue-50 text-blue-600',
         emerald: 'bg-emerald-50 text-emerald-600',
@@ -73,7 +73,7 @@ const SimpleBarChart = ({ title, data, unit = '' }) => {
 };
 
 // ─── PERFORMANCE GAUGE ────────────────────────────────────────────────────────
-const PerformanceGauge = ({ title, value, max = 100, color = 'bg-emerald-500' }) => {
+const PerformanceGauge = ({ title, value, max = 100 }) => {
     const percentage = (value / max) * 100;
 
     return (
@@ -216,14 +216,6 @@ export const OverviewTab = ({ users = [], sessions = [], paths = [], missions = 
         { label: 'English', value: 5100, color: 'bg-emerald-500' },
     ];
 
-    const trustScoreData = [
-        { label: 'Excellent (90+)', value: Math.ceil(analytics.trustScore.excellent), color: 'bg-emerald-500' },
-        { label: 'Good (75-89)', value: Math.ceil(analytics.trustScore.good), color: 'bg-blue-500' },
-        { label: 'Fair (60-74)', value: Math.ceil(analytics.trustScore.fair), color: 'bg-amber-500' },
-        { label: 'Warning (45-59)', value: Math.ceil(analytics.trustScore.warning), color: 'bg-orange-500' },
-        { label: 'Low (0-44)', value: Math.ceil(analytics.trustScore.low), color: 'bg-red-500' },
-    ];
-
     return (
         <div className="space-y-6">
             {/* Main Stats */}
@@ -293,11 +285,6 @@ export const OverviewTab = ({ users = [], sessions = [], paths = [], missions = 
                     </div>
                 </div>
 
-                <SimpleBarChart
-                    title="Trust Score Distribution"
-                    data={trustScoreData}
-                    unit="users"
-                />
             </div>
 
             {/* Mentor Performance & Recent Activity */}
@@ -335,15 +322,6 @@ export const OverviewTab = ({ users = [], sessions = [], paths = [], missions = 
                     </div>
                 </div>
 
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-                    <AlertCircle size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                        <p className="font-bold text-red-900">High-Risk Users</p>
-                        <p className="text-sm text-red-800 mt-1">
-                            5 users with trust score below 40 - review recommended
-                        </p>
-                    </div>
-                </div>
             </div>
         </div>
     );

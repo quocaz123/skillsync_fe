@@ -12,18 +12,17 @@ export const mapSkillToMentor = (ts) => {
         name: name,
         avatar: initials,
         avatarBg: color,
-        avatarUrl: ts.teacherAvatar || null, // ảnh thật từ S3
+        avatarUrl: ts.teacherAvatar || null, // ảnh từ R2 (URL công khai)
         skill: ts.skillName,
         subSkills: [ts.skillCategory, ts.level],
         level: ts.level,
         rating: 5.0,
         totalReviews: 0,
-        totalSessions: 0,
+        totalSessions: ts.totalSessions || 0,
         responseTime: '<1h',
         price: ts.creditsPerHour,
         match: 95,
-        slots: 0,
-        trustScore: 90,
+        slots: ts.openSlotsCount || 0,
         isTopRated: false,
         // "Về tôi" — ưu tiên Bio của user, nếu chưa có thì dùng experienceDesc
         bio: ts.teacherBio || ts.experienceDesc,
@@ -34,10 +33,19 @@ export const mapSkillToMentor = (ts) => {
         outcomes: ts.outcomeDesc
             ? ts.outcomeDesc.split('\n').map(s => s.trim()).filter(Boolean)
             : [],
-        certs: [],
-        evidences: [{ type: 'veteran', label: 'Verified Teacher', verified: true }],
-        portfolio: [],
-        reviews: [],
+        certs: (ts.evidences || []).filter(e => e.evidenceType === 'CERTIFICATE' || e.evidenceType === 'TEACHING_CERTIFICATE'),
+        evidences: ts.evidences || [],
+        portfolio: (ts.evidences || []).filter(e => e.evidenceType === 'PORTFOLIO' || e.evidenceType === 'LINKEDIN' || e.evidenceType === 'GITHUB' || e.evidenceType === 'BEHANCE' || e.evidenceType === 'WORK_PROOF'),
+        reviews: (ts.reviews || []).map(r => ({
+            id: r.id,
+            name: r.reviewerName,
+            initials: (r.reviewerName || 'T').substring(0, 1).toUpperCase(),
+            color: colors[(r.reviewerName?.length || 0) % colors.length],
+            avatar: r.reviewerAvatar,
+            rating: r.rating,
+            comment: r.comment,
+            date: r.createdAt
+        })),
         availableSlots: [],
     };
 };

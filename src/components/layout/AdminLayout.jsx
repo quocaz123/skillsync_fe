@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     SquaresFour, CalendarBlank, CurrencyCircleDollar,
     Users, BookOpen, Flag, ChartBar, GearSix, LockKey, Database,
-    List, SignOut, ShieldCheck, X, NotePencil,
+    List, SignOut, ShieldCheck, X, NotePencil, Brain,
 } from '@phosphor-icons/react';
 import { useStore } from '../../store';
 import { logout as logoutApi } from '../../services/authService';
@@ -41,8 +41,8 @@ const AdminLayout = () => {
             label: 'Người dùng',
             items: [
                 { path: '/admin/users', label: 'Quản lý Người dùng', icon: Users },
-                { path: '/admin/teaching-skills', label: 'Xét duyệt Mentor', icon: ShieldCheck },
-                { path: '/admin/paths', label: 'Lộ trình Học', icon: BookOpen },
+                { path: '/admin/teaching-skills', label: 'Xét duyệt Mentor', icon: ShieldCheck }
+               
             ],
         },
         {
@@ -50,6 +50,7 @@ const AdminLayout = () => {
             items: [
                 { path: '/admin/system-learning-paths', label: 'Khóa học hệ thống', icon: NotePencil },
                 { path: '/admin/system', label: 'Nhật ký Hoạt động', icon: Database },
+                { path: '/admin/ai-config', label: 'Cấu hình AI', icon: Brain },
             ],
         },
     ];
@@ -65,6 +66,7 @@ const AdminLayout = () => {
         '/admin/teaching-skills': 'Xét duyệt Kỹ năng Mentor',
         '/admin/paths': 'Quản lý Lộ trình Học',
         '/admin/system': 'Nhật ký Hoạt động Hệ thống',
+        '/admin/ai-config': 'Cấu hình AI',
     };
 
     const SidebarContent = ({ onLinkClick, isCollapsed, location, user, handleLogout, navGroups }) => (

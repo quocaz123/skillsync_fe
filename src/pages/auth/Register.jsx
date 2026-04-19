@@ -16,8 +16,6 @@ const Register = () => {
     const [showConfirm, setShowConfirm] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState(false);
-
     const passwordsMatch = password && confirmPassword && password === confirmPassword;
     const passwordStrong = password.length >= 8;
 
@@ -38,11 +36,7 @@ const Register = () => {
         setLoading(true);
         try {
             await apiRegister(email, password, name.trim());
-            setSuccess(true);
-            // Show success state briefly, then redirect to login
-            setTimeout(() => {
-                navigate('/login');
-            }, 1500);
+            navigate('/verify-email', { state: { email: email.trim() }, replace: true });
         } catch (err) {
             const msg =
                 err.response?.data?.message ||
@@ -78,12 +72,6 @@ const Register = () => {
                 {error && (
                     <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
                         {error}
-                    </div>
-                )}
-
-                {success && (
-                    <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 flex items-center gap-2">
-                        <CheckCircle2 size={16} /> Tạo tài khoản thành công! Đang chuyển hướng…
                     </div>
                 )}
 
@@ -188,7 +176,7 @@ const Register = () => {
 
                     <button
                         type="submit"
-                        disabled={loading || success}
+                        disabled={loading}
                         className="w-full flex items-center justify-center bg-indigo-600 text-white font-semibold py-3.5 px-4 rounded-xl hover:bg-indigo-700 transition-all duration-200 shadow-md shadow-indigo-500/20 active:scale-[0.98] mt-2 disabled:opacity-60 disabled:pointer-events-none"
                     >
                         {loading ? 'Đang tạo tài khoản…' : 'Đăng ký'}

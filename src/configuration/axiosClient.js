@@ -60,8 +60,8 @@ axiosClient.interceptors.response.use(
 
         // Token hết hạn / thiếu quyền thường có thể trả 401 hoặc 403 → thử refresh một lần
         if ((error.response.status === 401 || error.response.status === 403) && !originalRequest._retry) {
-            // Tránh retry loop cho chính request /auth/refresh
-            if (originalRequest.url?.includes('/auth/refresh')) {
+            // Tránh retry loop cho chính request /auth/refresh, và KHÔNG refresh nếu đang login/register bị sai pass
+            if (originalRequest.url?.includes('/auth/refresh') || originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/register')) {
                 useStore.getState().logout();
                 return Promise.reject(error);
             }

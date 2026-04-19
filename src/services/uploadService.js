@@ -4,7 +4,7 @@ import { API_ENDPOINTS } from '../configuration/apiEndpoints';
 const { UPLOADS, USERS } = API_ENDPOINTS;
 
 /**
- * Upload một file lên S3 qua presigned URL.
+ * Upload một file lên Cloudflare R2 qua presigned URL (S3-compatible API).
  * Dùng chung cho avatar và teaching evidence.
  *
  * @param {File} file - File object từ input
@@ -21,7 +21,8 @@ export const uploadFile = async (file, uploadType) => {
 
   const { uploadUrl, fileKey, fileUrl } = presigned.data ?? presigned;
 
-  // Bước 2: PUT file trực tiếp lên S3 (không qua BE, không cần token)
+  // uploadUrl → chỉ dùng cho PUT. fileUrl → hiển thị / lưu (pub-*.r2.dev hoặc custom domain).
+  // Bước 2: PUT file trực tiếp lên R2 (không qua BE, không cần token)
   await fetch(uploadUrl, {
     method: 'PUT',
     headers: { 'Content-Type': file.type },

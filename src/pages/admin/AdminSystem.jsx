@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Database, CircleNotch, Warning, ArrowsClockwise, HardDrives } from '@phosphor-icons/react';
+import { Database, CircleNotch, Warning, ArrowsClockwise, HardDrives, EnvelopeSimple, PaperPlaneRight } from '@phosphor-icons/react';
 import { getSystemLogs } from '../../services/adminLogService';
+import { getDlqMessageCount, retryAllDlqMessages } from '../../services/adminDlqService';
 
 const levelConfig = {
     INFO: { dot: 'bg-blue-400', text: 'text-slate-600', bg: 'bg-slate-50/50' },
@@ -14,6 +15,12 @@ const AdminSystem = () => {
     const [error, setError] = useState(null);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
+
+    // DQL State
+    const [dlqCount, setDlqCount] = useState(0);
+    const [loadingDlq, setLoadingDlq] = useState(false);
+    const [retrying, setRetrying] = useState(false);
+    const [dlqMessage, setDlqMessage] = useState(null);
 
     const fetchLogs = async (p = 0) => {
         setLoading(true);
@@ -31,13 +38,46 @@ const AdminSystem = () => {
         }
     };
 
+    const fetchDlqCount = async () => {
+        setLoadingDlq(true);
+        setDlqMessage(null);
+        try {
+            const res = await getDlqMessageCount();
+            if (res) setDlqCount(res.count || 0);
+        } catch (err) {
+            console.error("Lỗi khi tải DLQ count", err);
+        } finally {
+            setLoadingDlq(false);
+        }
+    };
+
     useEffect(() => {
         fetchLogs(page);
     }, [page]);
 
+    useEffect(() => {
+        fetchDlqCount();
+    }, []);
+
     const handleRefresh = () => {
+        fetchDlqCount();
         if (page === 0) fetchLogs(0);
         else setPage(0);
+    };
+
+    const handleRetryDlq = async () => {
+        if (dlqCount === 0) return;
+        setRetrying(true);
+        setDlqMessage(null);
+        try {
+            const res = await retryAllDlqMessages();
+            setDlqMessage(`Thành công: Đã gửi lại ${res?.retried || 0} email bị lỗi.`);
+            setDlqCount(0);
+        } catch (err) {
+            setDlqMessage('Lỗi: Không thể gửi lại email do sự cố kết nối.');
+        } finally {
+            setRetrying(false);
+        }
     };
 
     return (
@@ -49,10 +89,47 @@ const AdminSystem = () => {
                     </h1>
                     <p className="text-sm text-slate-400 font-medium mt-1">Theo dõi tương tác và sự kiện trên nền tảng theo thời gian thực</p>
                 </div>
-                <button onClick={handleRefresh} disabled={loading}
+                <button onClick={handleRefresh} disabled={loading || retrying}
                     className="flex items-center gap-1.5 px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-bold text-sm transition-colors disabled:opacity-50">
                     <ArrowsClockwise size={14} className={loading ? 'animate-spin' : ''} weight="bold" /> Làm mới
                 </button>
+            </div>
+
+            {/* DLQ Recovery Card */}
+            <div className="bg-white border border-rose-200 rounded-[2rem] shadow-sm overflow-hidden p-6 relative">
+                <div className="absolute top-0 left-0 w-2 h-full bg-rose-500"></div>
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6 pl-4">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 shrink-0">
+                            <EnvelopeSimple size={28} weight="duotone" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-slate-900">Khôi phục Email lỗi (DLQ)</h3>
+                            <p className="text-sm text-slate-500 mt-1">
+                                {loadingDlq ? 'Đang kiểm tra...' : 
+                                    (dlqCount > 0 
+                                        ? `Hệ thống ghi nhận có ${dlqCount} email gửi thất bại đang nằm trong bộ nhớ tạm.`
+                                        : 'Hiện tại hệ thống không có email nào bị kẹt lại.')}
+                            </p>
+                            {dlqMessage && (
+                                <p className={`text-sm mt-2 font-medium ${dlqMessage.startsWith('Lỗi') ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                    {dlqMessage}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                    <button 
+                        onClick={handleRetryDlq} 
+                        disabled={dlqCount === 0 || retrying || loadingDlq}
+                        className={`shrink-0 flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shadow-sm ${dlqCount > 0 && !retrying ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-200' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
+                    >
+                        {retrying ? (
+                            <><CircleNotch size={20} className="animate-spin" /> Đang xử lý...</>
+                        ) : (
+                            <><PaperPlaneRight size={20} weight="fill" /> Gửi lại toàn bộ ({dlqCount})</>
+                        )}
+                    </button>
+                </div>
             </div>
 
             {error && (

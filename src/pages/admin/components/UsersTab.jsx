@@ -3,12 +3,12 @@
  * Manage all users, verification, ban status, and trust scores
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
-    Search, Filter, ChevronDown, Eye, Shield, Trash2, CheckCircle2,
-    AlertCircle, XCircle, Clock, TrendingUp, Users
+    Search, Filter, Eye, Shield, CheckCircle2,
+    XCircle, Clock, Users
 } from 'lucide-react';
-import { useUserManagement, useTrustScore } from '../../hooks/useAdmin';
+import { useUserManagement } from '../../hooks/useAdmin';
 
 // ─── USER STATUS BADGE ─────────────────────────────────────────────────────
 const UserStatusBadge = ({ status }) => {
@@ -49,39 +49,10 @@ const VerificationBadge = ({ status, onReview }) => {
     );
 };
 
-// ─── TRUST SCORE PROGRESS ────────────────────────────────────────────────────
-const TrustScoreDisplay = ({ user }) => {
-    const { trustScore, tier } = useTrustScore(user);
-
-    const colorMap = {
-        Excellent: 'bg-emerald-500',
-        Good: 'bg-emerald-400',
-        Fair: 'bg-amber-400',
-        Warning: 'bg-orange-500',
-        Low: 'bg-red-500',
-    };
-
-    return (
-        <div className="flex items-center gap-2">
-            <div className="w-20 h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                    className={`h-full ${colorMap[tier.tier]} rounded-full transition-all`}
-                    style={{ width: `${trustScore}%` }}
-                />
-            </div>
-            <span className="text-xs font-bold text-slate-700">{trustScore}</span>
-            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${tier.color === 'emerald' ? 'bg-emerald-100 text-emerald-700' : tier.color === 'light-green' ? 'bg-lime-100 text-lime-700' : tier.color === 'amber' ? 'bg-amber-100 text-amber-700' : tier.color === 'orange' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
-                {tier.tier}
-            </span>
-        </div>
-    );
-};
-
 // ─── USER DETAIL MODAL ────────────────────────────────────────────────────────
 const UserDetailModal = ({ user, onClose, onAction }) => {
     const [actionType, setActionType] = useState(null);
     const [reason, setReason] = useState('');
-    const { trustScore, canTeach } = useTrustScore(user);
 
     if (!user) return null;
 
@@ -122,16 +93,7 @@ const UserDetailModal = ({ user, onClose, onAction }) => {
                     <div className="bg-slate-50 rounded-xl p-4 space-y-3">
                         <h3 className="font-bold text-slate-900">Trust & Verification</h3>
                         <div className="space-y-2">
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm font-medium text-slate-600">Trust Score:</span>
-                                <TrustScoreDisplay user={user} />
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm font-medium text-slate-600">Can Teach:</span>
-                                <span className={`px-2 py-1 rounded text-xs font-bold ${canTeach ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                                    {canTeach ? '✓ Yes' : '✗ No'}
-                                </span>
-                            </div>
+
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-medium text-slate-600">Verification:</span>
                                 <VerificationBadge status={user.verificationStatus} />
@@ -330,7 +292,7 @@ export const UsersTab = ({ users: mockUsers }) => {
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-200">
-                                {['User', 'Role', 'Verification', 'Trust Score', 'Status', 'Action'].map(header => (
+                                {['User', 'Role', 'Verification', 'Status', 'Action'].map(header => (
                                     <th key={header} className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">
                                         {header}
                                     </th>
@@ -342,9 +304,13 @@ export const UsersTab = ({ users: mockUsers }) => {
                                 <tr key={user.id} className="border-b border-slate-100 hover:bg-slate-50 transition group">
                                     <td className="px-4 py-3">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-400 to-purple-500 text-white flex items-center justify-center font-bold">
-                                                {user.name.charAt(0)}
-                                            </div>
+                                            <Avatar
+                                                src={user.avatarUrl}
+                                                fallback={user.name.charAt(0)}
+                                                size="w-10 h-10"
+                                                rounded="rounded-lg"
+                                                extra="bg-gradient-to-br from-indigo-400 to-purple-500 font-bold"
+                                            />
                                             <div>
                                                 <p className="font-bold text-slate-900">{user.name}</p>
                                                 <p className="text-xs text-slate-500">{user.email}</p>
@@ -362,9 +328,7 @@ export const UsersTab = ({ users: mockUsers }) => {
                                     <td className="px-4 py-3">
                                         <VerificationBadge status={user.verificationStatus} />
                                     </td>
-                                    <td className="px-4 py-3">
-                                        <TrustScoreDisplay user={user} />
-                                    </td>
+
                                     <td className="px-4 py-3">
                                         <UserStatusBadge status={user.status} />
                                     </td>

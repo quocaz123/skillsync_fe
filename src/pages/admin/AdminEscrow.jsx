@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { getEscrowSessions, getEscrowReport, refundLearner, releaseToMentor } from '../../services/adminEscrowService';
-import { MagnifyingGlass, FunnelSimple, ArrowsDownUp, LockKey, WarningCircle, CheckCircle, XCircle, CircleNotch } from '@phosphor-icons/react';
+import { useNavigate } from 'react-router-dom';
+import { getEscrowSessions } from '../../services/adminEscrowService';
+import { MagnifyingGlass, FunnelSimple, ArrowsDownUp, LockKey, WarningCircle, CircleNotch } from '@phosphor-icons/react';
 
 const STATUS_COLORS = {
     SCHEDULED: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -19,17 +20,11 @@ const STATUS_LABELS = {
 };
 
 const AdminEscrow = () => {
+    const navigate = useNavigate();
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
-
-    // Dispute Modal States
-    const [selectedSession, setSelectedSession] = useState(null);
-    const [selectedReport, setSelectedReport] = useState(null);
-    const [adminNotes, setAdminNotes] = useState('');
-    const [isActionLoading, setIsActionLoading] = useState(false);
-    const [reportLoading, setReportLoading] = useState(false);
 
     useEffect(() => {
         loadEscrowSessions();
@@ -44,59 +39,6 @@ const AdminEscrow = () => {
             console.error('Failed to load escrow sessions:', error);
         } finally {
             setLoading(false);
-        }
-    };
-
-    const handleOpenDispute = async (session) => {
-        setSelectedSession(session);
-        setAdminNotes('');
-        setReportLoading(true);
-        try {
-            const report = await getEscrowReport(session.id);
-            setSelectedReport(report);
-        } catch (error) {
-            console.error('Failed to load report for session:', error);
-            setSelectedReport({ reason: 'UNKNOWN', description: 'Không tìm thấy chi tiết báo cáo.' });
-        } finally {
-            setReportLoading(false);
-        }
-    };
-
-    const handleCloseDispute = () => {
-        setSelectedSession(null);
-        setSelectedReport(null);
-        setAdminNotes('');
-    };
-
-    const handleRefundLearner = async () => {
-        if (!window.confirm('Bạn có chắc chắn muốn HOÀN TIỀN cho học viên? Mentor sẽ không nhận được credits này.')) return;
-        setIsActionLoading(true);
-        try {
-            await refundLearner(selectedSession.id, adminNotes);
-            alert('Đã hoàn tiền thành công!');
-            handleCloseDispute();
-            loadEscrowSessions();
-        } catch (error) {
-            console.error(error);
-            alert('Lỗi khi hoàn tiền!');
-        } finally {
-            setIsActionLoading(false);
-        }
-    };
-
-    const handleReleaseMentor = async () => {
-        if (!window.confirm('Bạn có chắc chắn muốn TRẢ TIỀN cho Mentor? Report sẽ bị từ chối.')) return;
-        setIsActionLoading(true);
-        try {
-            await releaseToMentor(selectedSession.id, adminNotes);
-            alert('Đã giải ngân cho Mentor thành công!');
-            handleCloseDispute();
-            loadEscrowSessions();
-        } catch (error) {
-            console.error(error);
-            alert('Lỗi khi giải ngân!');
-        } finally {
-            setIsActionLoading(false);
         }
     };
 
@@ -261,11 +203,11 @@ const AdminEscrow = () => {
                                         <td className="px-6 py-4">
                                             {session.status === 'DISPUTED' && (
                                                 <button
-                                                    onClick={() => handleOpenDispute(session)}
+                                                    onClick={() => navigate('/admin/reports')}
                                                     className="px-4 py-2 bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors rounded-lg font-semibold text-xs flex items-center gap-2"
                                                 >
                                                     <WarningCircle size={16} weight="fill" />
-                                                    Phán xử
+                                                    Xem Báo cáo
                                                 </button>
                                             )}
                                         </td>
@@ -276,88 +218,6 @@ const AdminEscrow = () => {
                     </table>
                 </div>
             </div>
-
-            {/* Dispute Resolution Modal */}
-            {selectedSession && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-                            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                                <WarningCircle className="text-rose-500" size={24} weight="fill" />
-                                Phán xử Tranh chấp
-                            </h3>
-                            <button onClick={handleCloseDispute} className="text-slate-400 hover:text-slate-600">
-                                <XCircle size={24} />
-                            </button>
-                        </div>
-
-                        <div className="p-6 overflow-y-auto flex-1 space-y-6">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4">
-                                    <p className="text-xs font-semibold text-blue-500 uppercase tracking-wider mb-1">Học viên (Nguồn tiền)</p>
-                                    <p className="font-bold text-slate-800 text-lg">{selectedSession.learnerName}</p>
-                                </div>
-                                <div className="bg-purple-50/50 border border-purple-100 rounded-xl p-4">
-                                    <p className="text-xs font-semibold text-purple-500 uppercase tracking-wider mb-1">Mentor (Đích đến)</p>
-                                    <p className="font-bold text-slate-800 text-lg">{selectedSession.teacherName}</p>
-                                </div>
-                            </div>
-
-                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
-                                <h4 className="font-semibold text-slate-800 mb-4">Chi tiết Báo cáo</h4>
-                                {reportLoading ? (
-                                    <div className="flex items-center gap-2 text-slate-500">
-                                        <CircleNotch className="w-4 h-4 animate-spin" /> Đang tải dữ liệu report...
-                                    </div>
-                                ) : selectedReport ? (
-                                    <div className="space-y-3">
-                                        <p className="text-sm">
-                                            <span className="text-slate-500 w-24 inline-block">Mã lý do:</span> 
-                                            <span className="font-mono bg-rose-100 text-rose-700 px-2 py-0.5 rounded text-xs font-bold">{selectedReport.reason}</span>
-                                        </p>
-                                        <p className="text-sm">
-                                            <span className="text-slate-500 w-24 inline-block align-top">Mô tả:</span> 
-                                            <span className="text-slate-800 font-medium whitespace-pre-wrap flex-1">{selectedReport.description}</span>
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-slate-500 italic">Không tìm thấy báo cáo.</p>
-                                )}
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">Ghi chú của Admin (Lý do xử lý):</label>
-                                <textarea
-                                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-                                    rows="3"
-                                    placeholder="Nhập lý do tại sao bạn lại chọn hoàn tiền hoặc giải ngân..."
-                                    value={adminNotes}
-                                    onChange={(e) => setAdminNotes(e.target.value)}
-                                ></textarea>
-                            </div>
-                        </div>
-
-                        <div className="p-6 border-t border-slate-200 bg-slate-50 flex justify-end gap-3 shrink-0">
-                            <button
-                                onClick={handleRefundLearner}
-                                disabled={isActionLoading || reportLoading}
-                                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold flex items-center gap-2 rounded-xl transition-colors"
-                            >
-                                {isActionLoading ? <CircleNotch className="w-4 h-4 animate-spin" /> : <XCircle size={18} weight="bold" />}
-                                Báo cáo ĐÚNG - Hoàn tiền Học viên
-                            </button>
-                            <button
-                                onClick={handleReleaseMentor}
-                                disabled={isActionLoading || reportLoading}
-                                className="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-semibold flex items-center gap-2 rounded-xl transition-colors"
-                            >
-                                {isActionLoading ? <CircleNotch className="w-4 h-4 animate-spin" /> : <CheckCircle size={18} weight="bold" />}
-                                Báo cáo SAI - Trả tiền Mentor
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
