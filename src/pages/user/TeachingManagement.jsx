@@ -17,8 +17,28 @@ import { toastError, toastSuccess } from "../../utils/toastUtils";
 import ConfirmModal from '../../components/common/ConfirmModal';
 import Avatar from '../../components/common/Avatar';
 import SessionStatusBadge from '../../components/common/SessionStatusBadge';
+import { SkillDynamicIcon } from '../../components/common/SkillDynamicIcon';
+import UserSkillCard from '../../components/common/UserSkillCard';
+import { getTodayYMD, getMinTimeHHMMForDate } from '../../utils/dateUtils';
+
 
 const { TEACHING_SKILLS } = API_ENDPOINTS;
+
+/** So sánh giờ "HH:mm" — phút từ nửa đêm */
+function timeToMinutes(t) {
+    if (!t || typeof t !== 'string') return NaN;
+    const [h, m] = t.split(':').map(Number);
+    if (Number.isNaN(h) || Number.isNaN(m)) return NaN;
+    return h * 60 + m;
+}
+
+/** Giờ kết thúc mặc định = bắt đầu + 1h (cùng ngày) */
+function addOneHourTime(timeStr) {
+    const [h, m] = timeStr.split(':').map(Number);
+    const d = new Date(2000, 0, 1, h, m || 0, 0, 0);
+    d.setHours(d.getHours() + 1);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
 
 // â”€â”€ SlotChip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SlotChip = ({ slot, onDeleted }) => {
@@ -62,8 +82,8 @@ const SlotChip = ({ slot, onDeleted }) => {
 // â”€â”€ Skill Description Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SkillCard = ({ skill }) => (
     <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 flex items-start gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-white border border-violet-200 flex items-center justify-center text-2xl shrink-0 shadow-sm">
-            {skill.skillIcon || 'ðŸ“˜'}
+        <div className="w-12 h-12 rounded-2xl bg-white border border-violet-200 flex items-center justify-center text-xl shrink-0 shadow-sm overflow-hidden text-violet-600">
+            <SkillDynamicIcon skillName={skill.skillName} defaultIcon={skill.skillIcon} size={22} />
         </div>
         <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -99,7 +119,8 @@ const TabSchedule = ({ skills, onToggleVisibility }) => {
     // Modal state
     const [confirmDeleteSlotId, setConfirmDeleteSlotId] = useState(null);
 
-    const today = new Date().toISOString().split('T')[0];
+    /** Từ hôm nay trở đi (không chọn ngày đã qua) */
+    const minSlotDate = getTodayYMD();
 
     const loadSlots = useCallback(async (skill) => {
         if (!skill) return;
@@ -117,7 +138,7 @@ const TabSchedule = ({ skills, onToggleVisibility }) => {
     useEffect(() => {
         if (selectedSkill) {
             loadSlots(selectedSkill);
-            setRows([EMPTY_ROW(selectedSkill.creditsPerHour || 5)]);
+            setRows([EMPTY_ROW()]);
         }
     }, [selectedSkill, loadSlots]);
 
@@ -130,7 +151,25 @@ const TabSchedule = ({ skills, onToggleVisibility }) => {
     }, [skills]);
 
     const updateRow = (i, field, value) =>
-        setRows(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: value } : r));
+        setRows(prev => prev.map((r, idx) => {
+            if (idx !== i) return r;
+            const next = { ...r, [field]: value };
+            if (field === 'date') {
+                const minT = getMinTimeHHMMForDate(value);
+                if (minT && next.startTime && timeToMinutes(next.startTime) <= timeToMinutes(minT)) {
+                    next.startTime = '';
+                    next.endTime = '';
+                }
+            }
+            if (field === 'startTime' && next.endTime) {
+                const endM = timeToMinutes(next.endTime);
+                const startM = timeToMinutes(next.startTime);
+                if (!Number.isNaN(endM) && !Number.isNaN(startM) && endM <= startM) {
+                    next.endTime = addOneHourTime(next.startTime);
+                }
+            }
+            return next;
+        }));
 
     const addRow = () => setRows(prev => [...prev, EMPTY_ROW(selectedSkill?.creditsPerHour || 5)]);
     const removeRow = (i) => setRows(prev => prev.filter((_, idx) => idx !== i));
@@ -139,6 +178,24 @@ const TabSchedule = ({ skills, onToggleVisibility }) => {
 
     const handleCreate = async () => {
         if (!selectedSkill || validRows.length === 0) return;
+
+        for (const r of validRows) {
+            if (r.endTime) {
+                const sm = timeToMinutes(r.startTime);
+                const em = timeToMinutes(r.endTime);
+                if (!Number.isNaN(sm) && !Number.isNaN(em) && em <= sm) {
+                    toastError(null, 'Giờ kết thúc phải sau giờ bắt đầu (ví dụ không thể bắt đầu 5:00 mà kết thúc 4:00).');
+                    return;
+                }
+            }
+            const tStr = r.startTime.length === 5 ? `${r.startTime}:00` : r.startTime;
+            const startAt = new Date(`${r.date}T${tStr}`);
+            if (Number.isFinite(startAt.getTime()) && startAt.getTime() <= Date.now()) {
+                toastError(null, 'Không thể tạo slot trong quá khứ. Chọn ngày/giờ sau thời điểm hiện tại.');
+                return;
+            }
+        }
+
         setCreating(true);
         setCreateMsg('');
         try {
@@ -172,39 +229,25 @@ const TabSchedule = ({ skills, onToggleVisibility }) => {
     return (
         <div className="flex flex-col lg:flex-row gap-5">
             {/* Skill picker */}
-            <div className="lg:w-52 shrink-0 space-y-3">
+            <div className="lg:w-60 shrink-0 space-y-2">
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Chọn kỹ năng dạy:</p>
                 {skills.map(s => (
-                    <div
+                    <UserSkillCard
                         key={s.id}
-                        className={`rounded-2xl border-2 transition-all ${selectedSkill?.id === s.id ? 'border-violet-400 bg-violet-50' : 'border-slate-100 bg-white'} ${s.hidden ? 'opacity-75' : ''}`}
-                    >
-                        <button
-                            type="button"
-                            onClick={() => { setSelectedSkill(s); setCreateMsg(''); }}
-                            className="w-full text-left p-4 rounded-t-2xl"
-                        >
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="text-base">{s.skillIcon || '📘'}</span>
-                                <span className={`font-bold text-sm ${selectedSkill?.id === s.id ? 'text-violet-700' : 'text-slate-700'}`}>{s.skillName}</span>
-                            </div>
-                            <p className="text-[11px] text-slate-400">
-                                {slots.filter(sl => sl.teachingSkillId === s.id && sl.status === 'OPEN').length} slot trống
-                            </p>
-                        </button>
-                        <div className="px-4 pb-3 flex items-center justify-between gap-2 border-t border-slate-100/80">
-                            <span className={`text-[10px] font-bold uppercase tracking-wide ${s.hidden ? 'text-slate-400' : 'text-emerald-600'}`}>
-                                {s.hidden ? 'Đang ẩn công khai' : 'Đang hiện Explore'}
-                            </span>
+                        skill={s}
+                        selected={selectedSkill?.id === s.id}
+                        onClick={() => { setSelectedSkill(s); setCreateMsg(''); }}
+                        showStatusBadge={false}
+                        actionButtons={
                             <button
                                 type="button"
-                                onClick={() => onToggleVisibility?.(s)}
+                                onClick={(e) => { e.stopPropagation(); onToggleVisibility?.(s); }}
                                 className={`text-[11px] font-extrabold px-2.5 py-1 rounded-lg transition-colors ${s.hidden ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}
                             >
                                 {s.hidden ? 'Bật hiện' : 'Tạm ẩn'}
                             </button>
-                        </div>
-                    </div>
+                        }
+                    />
                 ))}
             </div>
 
@@ -290,13 +333,14 @@ const TabSchedule = ({ skills, onToggleVisibility }) => {
                             <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center">
                                 <input
                                     type="date"
-                                    min={today}
+                                    min={minSlotDate}
                                     value={row.date}
                                     onChange={e => updateRow(i, 'date', e.target.value)}
                                     className="px-3 py-2.5 rounded-xl border-2 border-slate-100 bg-slate-50 text-sm font-semibold text-slate-700 focus:border-violet-400 focus:bg-white outline-none transition-all w-full"
                                 />
                                 <input
                                     type="time"
+                                    min={getMinTimeHHMMForDate(row.date) ?? undefined}
                                     value={row.startTime}
                                     onChange={e => updateRow(i, 'startTime', e.target.value)}
                                     className="px-3 py-2.5 rounded-xl border-2 border-slate-100 bg-slate-50 text-sm font-semibold text-slate-700 focus:border-violet-400 focus:bg-white outline-none transition-all w-full"
@@ -361,8 +405,8 @@ const TabSubjects = ({ skills, onSelectSkill }) => {
             {skills.map(skill => (
                 <div key={skill.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                     <div className="p-6 pb-4 flex flex-col md:flex-row md:items-start gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-violet-100 flex items-center justify-center text-2xl shrink-0">
-                            {skill.skillIcon || '📘'}
+                        <div className="w-12 h-12 rounded-2xl bg-violet-100 flex items-center justify-center text-xl shrink-0 text-violet-600">
+                            <SkillDynamicIcon skillName={skill.skillName} defaultIcon={skill.skillIcon} size={22} />
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -494,7 +538,9 @@ const TabRequests = ({ navigate }) => {
                                             <div className="flex flex-wrap items-center gap-2 mb-1.5">
                                                 <span className="font-extrabold text-slate-900 text-sm">{session.learnerName}</span>
                                                 <span className="text-[11px] text-slate-500">muốn học</span>
-                                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-xl bg-slate-100 text-slate-700">{session.skillIcon} {session.skillName}</span>
+                                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-xl bg-slate-100 text-slate-700 flex items-center gap-1">
+                                                    <SkillDynamicIcon skillName={session.skillName} defaultIcon={session.skillIcon} size={12} /> {session.skillName}
+                                                </span>
                                             </div>
                                             <div className="flex flex-wrap gap-3 text-xs text-slate-600 font-medium bg-slate-50 border border-slate-100 px-3 py-2 rounded-xl inline-flex mb-3">
                                                 <span className="flex items-center gap-1"><CalendarCheck size={14} weight="duotone" className="text-violet-500" />
@@ -557,7 +603,9 @@ const TabRequests = ({ navigate }) => {
                                                 <span className="font-bold text-slate-800 text-sm">{session.learnerName}</span>
                                                 <SessionStatusBadge status="SCHEDULED" extra="text-[10px] px-2 py-0.5 rounded-full" />
                                             </div>
-                                            <p className="text-xs text-slate-500 mb-1">Dạy: {session.skillIcon} {session.skillName}</p>
+                                            <div className="text-xs text-slate-500 mb-1 flex items-center gap-1">
+                                                Dạy: <SkillDynamicIcon skillName={session.skillName} defaultIcon={session.skillIcon} size={12} /> {session.skillName}
+                                            </div>
                                             <div className="flex gap-3 text-xs text-slate-500 font-semibold">
                                                 <span>Ngày: {dt.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}</span>
                                                 <span>Giờ: {dt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>

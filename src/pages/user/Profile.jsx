@@ -22,8 +22,8 @@ import {
     UserCircle
 } from '@phosphor-icons/react';
 import { AddSkillModal } from '../../components/profile/AddSkillModal.jsx';
-import { SkillDynamicIcon } from '../../components/common/SkillDynamicIcon.jsx';
 import Avatar from '../../components/common/Avatar';
+import UserSkillCard from '../../components/common/UserSkillCard';
 import { uploadFile } from '../../services/uploadService.js';
 import { getMyProfile, updateAvatar, updateBio } from '../../services/userService.js';
 import { getMyTeachingSkills, deleteTeachingSkill, updateSkillPrice, toggleTeachingSkillVisibility } from '../../services/skillService.js';
@@ -370,37 +370,15 @@ const Profile = () => {
                                         <p className="text-slate-400 font-medium">Bạn chưa thiết lập Kỹ năng giảng dạy. Thêm ngay!</p>
                                     </div>
                                 ) : (
-                                    teachingSkills.map((ts) => {
-                                        let cfg = {};
-                                        if (ts.verificationStatus === 'APPROVED' && ts.hidden) {
-                                            cfg = { bg: 'bg-gradient-to-br from-slate-100 to-slate-50 border-slate-200/80 text-slate-700 hover:shadow-slate-200', badge: 'bg-slate-200 text-slate-600 border-slate-300', badgeText: '🔕 Tạm ẩn' };
-                                        } else if (ts.verificationStatus === 'APPROVED') {
-                                            cfg = { bg: 'bg-gradient-to-br from-purple-50 to-fuchsia-50/50 border-purple-200/60 text-purple-800 hover:shadow-purple-200', badge: 'bg-emerald-100 text-emerald-700 border-emerald-200', badgeText: '✅ Đã duyệt' };
-                                        } else if (ts.verificationStatus === 'REJECTED') {
-                                            cfg = { bg: 'bg-gradient-to-br from-red-50 to-rose-50/50 border-red-200/60 text-red-800 hover:shadow-red-200 opacity-90', badge: 'bg-red-100 text-red-700 border-red-200', badgeText: '❌ Bị từ chối' };
-                                        } else {
-                                            cfg = { bg: 'bg-gradient-to-br from-amber-50 to-yellow-50/50 border-amber-200/60 text-amber-800 hover:shadow-amber-200 opacity-90', badge: 'bg-amber-100 text-amber-700 border-amber-200', badgeText: '⏳ Đang chờ' };
-                                        }
-
-                                        return (
-                                        <div key={ts.id} className={`group relative pr-10 flex flex-col items-start gap-2.5 px-5 py-4 rounded-2xl border font-bold text-sm shadow-sm hover:-translate-y-1 transition-all ${cfg.bg}`}>
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <SkillDynamicIcon skillName={ts.skillName} defaultIcon={ts.skillIcon} className="text-base" size={16} />
-                                                <span className="text-[15px]">{ts.skillName}</span>
-                                                <span className="text-[10px] bg-white border border-slate-200 text-slate-500 uppercase tracking-wider px-2 py-0.5 rounded-md font-black shadow-sm ml-1">{ts.level}</span>
-                                                <span className={`text-[10px] border px-2 py-0.5 rounded-md font-black shadow-sm ml-1 ${cfg.badge}`}>{cfg.badgeText}</span>
-                                            </div>
-                                            
-                                            {ts.verificationStatus === 'REJECTED' && ts.rejectionReason && (
-                                                <p className="text-[11px] text-red-600 bg-white/70 p-2.5 rounded-xl italic font-medium w-full border border-red-100/50">Phản hồi từ Admin: {ts.rejectionReason}</p>
-                                            )}
-
-                                            <div className="flex items-center gap-2 mt-1 -ml-1">
-                                                <span className="text-[12px] text-slate-700 bg-white/80 px-2.5 py-1 rounded-xl shadow-sm flex items-center gap-1 border border-slate-200/40">
-                                                    <Coin size={14} weight="fill" className="text-amber-500" />
-                                                    {ts.creditsPerHour || 5} cr/h
-                                                </span>
-                                                {ts.verificationStatus === 'APPROVED' && (
+                                    teachingSkills.map((ts) => (
+                                        <UserSkillCard
+                                            key={ts.id}
+                                            skill={ts}
+                                            showDelete={true}
+                                            onDelete={handleDeleteSkill}
+                                            className="w-full sm:w-[calc(50%-0.375rem)]"
+                                            actionButtons={
+                                                ts.verificationStatus === 'APPROVED' ? (
                                                     <>
                                                         <button type="button" onClick={() => handleToggleSkillVisibility(ts)} className="text-[11px] text-slate-600 hover:bg-slate-100 px-2 py-1 rounded-lg transition-colors flex items-center gap-1 opacity-80 group-hover:opacity-100">
                                                             {ts.hidden ? 'Hiện Explore' : 'Tạm ẩn'}
@@ -409,17 +387,10 @@ const Profile = () => {
                                                             <PencilSimple size={12} weight="bold" /> Đổi giá
                                                         </button>
                                                     </>
-                                                )}
-                                            </div>
-                                            <button
-                                                onClick={() => handleDeleteSkill(ts.id)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-lg p-1.5 transition-all shadow-sm"
-                                                title="Xóa kỹ năng"
-                                            >
-                                                <X size={14} weight="bold" />
-                                            </button>
-                                        </div>
-                                    )})
+                                                ) : null
+                                            }
+                                        />
+                                    ))
                                 )
                             ) : (
                                 <div className="w-full flex flex-col gap-4">

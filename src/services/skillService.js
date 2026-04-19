@@ -29,7 +29,7 @@ export const getApprovedTeachingSkills = async (params = {}) => {
  */
 export const getExploreTeachingSkills = async (params = {}) => {
   const res = await httpClient.get(TEACHING_SKILLS.EXPLORE, { params });
-  return res.data ?? res;
+  return res;
 };
 
 /**
