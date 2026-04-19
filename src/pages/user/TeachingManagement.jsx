@@ -281,7 +281,7 @@ const TabSchedule = ({ skills, onToggleVisibility }) => {
                         <p className="text-sm text-slate-400">Chưa có slot nào. Hãy thêm bên dưới.</p>
                     ) : (
                         <div className="flex flex-wrap gap-2 max-h-56 overflow-y-auto custom-scrollbar p-1 border border-slate-100 rounded-xl bg-slate-50/30">
-                            {slots.map(sl => (
+                            {slots.filter(sl => sl.status !== 'CANCELLED').map(sl => (
                                 <SlotChip
                                     key={sl.id}
                                     slot={sl}

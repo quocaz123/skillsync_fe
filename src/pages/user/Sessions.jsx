@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
 import SessionStatusBadge from "../../components/common/SessionStatusBadge";
+import { SkillDynamicIcon } from '../../components/common/SkillDynamicIcon';
 import { getMySessions, confirmSession } from '../../services/sessionService';
 import { createSessionReport, submitCounterEvidence } from '../../services/reportService';
 import { createSessionReview } from '../../services/reviewService';
@@ -226,8 +227,13 @@ const Sessions = () => {
                                     )}
                                     <div className="p-6 md:p-8 flex flex-col md:flex-row gap-6 items-start md:items-center">
                                         <div className="relative shrink-0">
-                                            <div className="w-20 h-20 rounded-[1.5rem] bg-indigo-100 flex items-center justify-center text-3xl font-black text-indigo-600 overflow-hidden border-4 border-white shadow-sm">
-                                                {session.skillIcon || session.skillName?.charAt(0) || '📘'}
+                                            <div className="w-20 h-20 rounded-[1.5rem] bg-gradient-to-br from-indigo-50 to-indigo-100 flex items-center justify-center border-4 border-white shadow-sm overflow-hidden group-hover:scale-105 transition-transform duration-300">
+                                                <SkillDynamicIcon 
+                                                    skillName={session.skillName} 
+                                                    defaultIcon={session.skillIcon} 
+                                                    size={40} 
+                                                    className="text-indigo-600"
+                                                />
                                             </div>
                                             <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center z-20 shadow-sm border border-slate-100">
                                                 <div className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center">
@@ -237,7 +243,14 @@ const Sessions = () => {
                                         </div>
 
                                         <div className="flex-1 min-w-0 md:pl-2">
-                                            <h3 className="text-2xl font-black text-slate-900 mb-1 truncate">{session.skillName || 'Buổi học Kỹ năng (1-kèm-1)'}</h3>
+                                            <div className="flex items-center gap-3 mb-1 flex-wrap">
+                                                <h3 className="text-2xl font-black text-slate-900 truncate">{session.skillName || 'Buổi học (1-kèm-1)'}</h3>
+                                                {session.skillLevel && (
+                                                    <span className="text-[10px] bg-white border border-slate-200 text-slate-500 uppercase tracking-wider px-2 py-0.5 rounded-md font-black shadow-sm">
+                                                        {session.skillLevel}
+                                                    </span>
+                                                )}
+                                            </div>
                                             <p className="text-slate-500 font-medium mb-4 flex items-center gap-2">
                                                 <span>{isTeacher(session) ? 'Học viên:' : 'Giảng viên:'}</span>
                                                 <span className="text-slate-800 font-bold bg-slate-100 px-2.5 py-0.5 rounded-lg">
@@ -332,11 +345,23 @@ const Sessions = () => {
                                 <div key={session.id} className="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 flex flex-col">
                                     <div className="bg-slate-50/50 p-6 border-b border-slate-100 flex items-start justify-between gap-4">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-2xl font-black text-slate-700 shadow-sm shrink-0">
-                                                {session.skillIcon || session.skillName?.charAt(0) || '📘'}
+                                            <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm shrink-0 overflow-hidden">
+                                                <SkillDynamicIcon 
+                                                    skillName={session.skillName} 
+                                                    defaultIcon={session.skillIcon} 
+                                                    size={28} 
+                                                    className="text-slate-700"
+                                                />
                                             </div>
                                             <div>
-                                                <h3 className="font-black text-slate-900 text-lg leading-tight mb-1">{session.skillName || 'Buổi học Kỹ năng (1-kèm-1)'}</h3>
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    <h3 className="font-black text-slate-900 text-lg leading-tight truncate max-w-[200px]">{session.skillName || 'Buổi học (1-kèm-1)'}</h3>
+                                                    {session.skillLevel && (
+                                                        <span className="text-[9px] bg-white border border-slate-200 text-slate-400 uppercase tracking-wider px-1.5 py-0.5 rounded font-black">
+                                                            {session.skillLevel}
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <p className="text-slate-500 font-semibold text-sm">
                                                     {isTeacher(session) ? `Học viên: ${session.learnerName}` : `Với ${session.teacherName}`}
                                                 </p>
