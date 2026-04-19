@@ -317,7 +317,7 @@ const Explore = () => {
 
     const [availableSkills, setAvailableSkills] = useState([]);
     const [activeSkillId, setActiveSkillId] = useState('all');
-    const [sortBy, setSortBy] = useState('experience');
+    const [sortBy, setSortBy] = useState('newest');
     const [showSortDropdown, setShowSortDropdown] = useState(false);
 
     const [selectedMentor, setSelectedMentor] = useState(null);
@@ -342,10 +342,9 @@ const Explore = () => {
     const mapSortToApi = (sb) => {
         switch (sb) {
             case 'experience': return 'experience';
-            case 'price_asc': return 'credits_asc';
-            case 'price_desc': return 'credits_desc';
-            case 'match':
-            case 'rating':
+            case 'credits_asc': return 'credits_asc';
+            case 'credits_desc': return 'credits_desc';
+            case 'newest':
             default:
                 return 'newest';
         }
@@ -449,20 +448,8 @@ const Explore = () => {
 
     const learningInterests = mySkills.filter(s => s.type === 'learn').map(s => s.name.toLowerCase());
 
-    /** Sắp xếp chỉ trên trang hiện tại: phù hợp (match) & đánh giá — backend chưa có điểm rating trung bình theo teaching skill */
-    const displayMentors = useMemo(() => {
-        const list = [...mentors];
-        if (sortBy === 'match') {
-            list.sort((a, b) => {
-                const aBoost = learningInterests.includes(a.skill.toLowerCase()) ? 20 : 0;
-                const bBoost = learningInterests.includes(b.skill.toLowerCase()) ? 20 : 0;
-                return (b.match + bBoost) - (a.match + aBoost);
-            });
-        } else if (sortBy === 'rating') {
-            list.sort((a, b) => b.rating - a.rating);
-        }
-        return list;
-    }, [mentors, sortBy, learningInterests]);
+    /** Sắp xếp được phụ trách 100% bởi backend */
+    const displayMentors = mentors;
 
     const resetAll = () => {
         setSelectedMentor(null);
@@ -899,11 +886,10 @@ const Explore = () => {
                                     <span className="absolute bottom-0 right-0 w-2 h-2 bg-sky-400 rounded-sm"></span>
                                     <span className="absolute bottom-0 left-0 w-2 h-2 bg-violet-400 rounded-sm"></span>
                                 </span>
-                                {sortBy === 'match' && 'Phù hợp nhất'}
+                                {sortBy === 'newest' && 'Mới nhất'}
                                 {sortBy === 'experience' && 'Nhiều kinh nghiệm'}
-                                {sortBy === 'rating' && 'Đánh giá cao'}
-                                {sortBy === 'price_asc' && 'Giá thấp nhất'}
-                                {sortBy === 'price_desc' && 'Giá cao nhất'}
+                                {sortBy === 'credits_asc' && 'Credits tăng dần'}
+                                {sortBy === 'credits_desc' && 'Credits giảm dần'}
                             </span>
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" className={`transition-transform duration-200 ${showSortDropdown ? 'rotate-180' : ''}`}>
                                 <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -915,11 +901,10 @@ const Explore = () => {
                                 <div className="fixed inset-0 z-10" onClick={() => setShowSortDropdown(false)}></div>
                                 <div className="absolute right-0 top-full mt-2 w-full bg-white rounded-xl border border-slate-100 shadow-lg py-2 z-20 animate-in fade-in slide-in-from-top-2">
                                     {[
-                                        { id: 'match', label: 'Phù hợp nhất' },
+                                        { id: 'newest', label: 'Mới nhất' },
                                         { id: 'experience', label: 'Nhiều kinh nghiệm' },
-                                        { id: 'rating', label: 'Đánh giá cao' },
-                                        { id: 'price_asc', label: 'Giá thấp nhất' },
-                                        { id: 'price_desc', label: 'Giá cao nhất' },
+                                        { id: 'credits_asc', label: 'Credits tăng dần' },
+                                        { id: 'credits_desc', label: 'Credits giảm dần' },
                                     ].map(option => (
                                         <button
                                             key={option.id}
@@ -974,7 +959,7 @@ const Explore = () => {
                         <div key={mentor.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col group relative">
                             <div className="p-6 flex-1">
                                 <div className="flex items-start justify-between mb-5">
-                                    <AvatarImg
+                                    <Avatar
                                         src={mentor.avatarUrl}
                                         fallback={mentor.avatar}
                                         fallbackBg={mentor.avatarBg}

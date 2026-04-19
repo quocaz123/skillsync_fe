@@ -8,6 +8,8 @@ import httpClient from '../../configuration/axiosClient';
 import { API_ENDPOINTS } from '../../configuration/apiEndpoints';
 import { createSlotsBatch } from '../../services/sessionService';
 import { toastError, toastSuccess } from "../../utils/toastUtils";
+import { getNextDaysFromToday, formatDateYMDLocal, getMinTimeHHMMForDate } from '../../utils/dateUtils';
+import UserSkillCard from '../../components/common/UserSkillCard';
 
 const { TEACHING_SKILLS } = API_ENDPOINTS;
 
@@ -29,22 +31,41 @@ const TIME_OPTIONS = [
     '19:00', '20:00', '21:00',
 ];
 
-// Tạo 30 ngày tiếp theo
-const getNext30Days = () =>
-    Array.from({ length: 30 }, (_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() + i + 1);
-        return d.toISOString().split('T')[0];
-    });
-
-const ALL_DATES = getNext30Days();
-
-// Tự động tính giờ kết thúc = bắt đầu + 1 tiếng
+// Tự động tính giờ kết thúc = bắt đầu + 1 tiếng (cùng ngày)
 const calcEndTime = (startTime) => {
     const [h, m] = startTime.split(':').map(Number);
-    const end = (h + 1) % 24;
-    return `${String(end).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    const d = new Date(2000, 0, 1, h, m || 0, 0, 0);
+    d.setHours(d.getHours() + 1);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
+
+const timeToMinutes = (t) => {
+    if (!t || typeof t !== 'string') return NaN;
+    const [h, m] = t.split(':').map(Number);
+    if (Number.isNaN(h) || Number.isNaN(m)) return NaN;
+    return h * 60 + m;
+};
+
+/** Các giờ kết thúc hợp lệ: sau giờ bắt đầu (gợi ý +1h và các mốc trong TIME_OPTIONS) */
+const getEndTimeOptionsForStart = (startTime, currentEnd) => {
+    const suggested = calcEndTime(startTime);
+    const later = TIME_OPTIONS.filter((x) => x > startTime);
+    const merged = [...new Set([suggested, ...later])];
+    if (currentEnd && !merged.includes(currentEnd)) merged.push(currentEnd);
+    return merged.sort();
+};
+
+/** Giờ bắt đầu khả dụng: nếu chọn hôm nay thì chỉ sau thời điểm hiện tại */
+const getStartTimeOptionsForDate = (isoDate) => {
+    const today = formatDateYMDLocal(new Date());
+    if (isoDate !== today) return TIME_OPTIONS;
+    const min = getMinTimeHHMMForDate(isoDate);
+    if (!min) return TIME_OPTIONS;
+    return TIME_OPTIONS.filter((t) => timeToMinutes(t) > timeToMinutes(min));
+};
+
+// 30 ngày từ hôm nay (gồm hôm nay), theo giờ local
+const ALL_DATES = getNextDaysFromToday(30);
 
 // Format ngày hiển thị
 const formatDate = (iso) => {
@@ -52,14 +73,19 @@ const formatDate = (iso) => {
     return d.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'numeric' });
 };
 
-// Tạo slot mới rỗng
-const newSlot = () => ({
-    id: crypto.randomUUID(),
-    date: ALL_DATES[0],
-    time: '09:00',
-    endTime: '10:00',
-    creditCost: 5,
-});
+// Tạo slot mới — giờ mặc định theo các mốc còn hợp lệ trong ngày đầu tiên
+const newSlot = () => {
+    const date = ALL_DATES[0];
+    const starts = getStartTimeOptionsForDate(date);
+    const time = starts[0] ?? '19:00';
+    return {
+        id: crypto.randomUUID(),
+        date,
+        time,
+        endTime: calcEndTime(time),
+        creditCost: 5,
+    };
+};
 
 // ── Step Indicator ────────────────────────────────
 const StepBar = ({ step }) => {
@@ -126,33 +152,16 @@ const Step1 = ({ approvedSkills, loading, data, setData, onNext }) => {
             <p className="text-xs text-slate-400 mb-5">Chỉ hiển thị kỹ năng đã được Admin duyệt ✅</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-7">
-                {approvedSkills.map(skill => {
-                    const s = categoryStyle(skill.skillCategory);
-                    const selected = data.teachingSkill?.id === skill.id;
-                    return (
-                        <button
-                            key={skill.id}
-                            onClick={() => setData(d => ({ ...d, teachingSkill: skill }))}
-                            className={`rounded-2xl border-2 p-4 flex items-center gap-4 transition-all hover:shadow-md text-left ${selected ? `border-violet-500 ${s.bg} shadow-sm` : `border-transparent ${s.bg} hover:border-slate-200`}`}
-                        >
-                            <span className="text-3xl shrink-0">{skill.skillIcon || '📘'}</span>
-                            <div className="flex-1 min-w-0">
-                                <p className={`font-extrabold text-sm truncate ${selected ? 'text-violet-700' : s.text}`}>
-                                    {skill.skillName}
-                                </p>
-                                <p className="text-[11px] text-slate-400 mt-0.5">{skill.skillCategory} · {skill.level}</p>
-                                <p className="text-[11px] text-amber-600 font-bold mt-1 flex items-center gap-1">
-                                    <Lightning size={10} weight="fill" /> {skill.creditsPerHour} credits/giờ (gợi ý)
-                                </p>
-                            </div>
-                            {selected && (
-                                <div className="w-6 h-6 bg-violet-600 rounded-full flex items-center justify-center shrink-0">
-                                    <Check size={13} weight="bold" className="text-white" />
-                                </div>
-                            )}
-                        </button>
-                    );
-                })}
+                {approvedSkills.map(skill => (
+                    <UserSkillCard
+                        key={skill.id}
+                        skill={skill}
+                        selected={data.teachingSkill?.id === skill.id}
+                        onClick={() => setData(d => ({ ...d, teachingSkill: skill }))}
+                        showStatusBadge={false}
+                        showDesc={true}
+                    />
+                ))}
             </div>
 
             {data.teachingSkill && (
@@ -188,7 +197,24 @@ const Step2 = ({ data, setData, onNext, onBack }) => {
         setSlots(prev => prev.map(s => {
             if (s.id !== id) return s;
             const updated = { ...s, [field]: value };
-            if (field === 'time') updated.endTime = calcEndTime(value);
+            if (field === 'date') {
+                const opts = getStartTimeOptionsForDate(value);
+                if (opts.length === 0) {
+                    updated.time = '';
+                    updated.endTime = '';
+                } else if (!opts.includes(updated.time)) {
+                    updated.time = opts[0];
+                    updated.endTime = calcEndTime(opts[0]);
+                }
+            }
+            if (field === 'time') {
+                updated.endTime = calcEndTime(value);
+            }
+            if (field === 'time' || field === 'endTime') {
+                if (timeToMinutes(updated.endTime) <= timeToMinutes(updated.time)) {
+                    updated.endTime = calcEndTime(updated.time);
+                }
+            }
             return updated;
         }));
     };
@@ -198,7 +224,13 @@ const Step2 = ({ data, setData, onNext, onBack }) => {
         onNext();
     };
 
-    const isValid = slots.length > 0 && slots.every(s => s.date && s.time && s.creditCost > 0);
+    const isValid = slots.length > 0 && slots.every(s => {
+        if (!s.date || !s.time || s.creditCost <= 0) return false;
+        if (timeToMinutes(s.endTime) <= timeToMinutes(s.time)) return false;
+        const opts = getStartTimeOptionsForDate(s.date);
+        if (opts.length === 0 || !opts.includes(s.time)) return false;
+        return true;
+    });
 
     return (
         <div>
@@ -250,9 +282,13 @@ const Step2 = ({ data, setData, onNext, onBack }) => {
                                 onChange={e => updateSlot(slot.id, 'time', e.target.value)}
                                 className="w-full text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all cursor-pointer"
                             >
-                                {TIME_OPTIONS.map(t => (
-                                    <option key={t} value={t}>{t}</option>
-                                ))}
+                                {getStartTimeOptionsForDate(slot.date).length === 0 ? (
+                                    <option value="">Hết khung giờ — chọn ngày khác</option>
+                                ) : (
+                                    getStartTimeOptionsForDate(slot.date).map(t => (
+                                        <option key={t} value={t}>{t}</option>
+                                    ))
+                                )}
                             </select>
                         </div>
 
@@ -264,7 +300,7 @@ const Step2 = ({ data, setData, onNext, onBack }) => {
                                 onChange={e => updateSlot(slot.id, 'endTime', e.target.value)}
                                 className="w-full text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all cursor-pointer"
                             >
-                                {TIME_OPTIONS.map(t => (
+                                {getEndTimeOptionsForStart(slot.time, slot.endTime).map(t => (
                                     <option key={t} value={t}>{t}</option>
                                 ))}
                             </select>
@@ -320,7 +356,7 @@ const Step2 = ({ data, setData, onNext, onBack }) => {
             )}
 
             {!isValid && (
-                <p className="text-xs text-amber-600 font-semibold mb-4">⚠️ Mỗi buổi cần có ngày, giờ và số credits hợp lệ (≥ 1).</p>
+                <p className="text-xs text-amber-600 font-semibold mb-4">⚠️ Mỗi buổi cần có ngày, giờ bắt đầu — kết thúc (kết thúc phải sau giờ bắt đầu), và credits ≥ 1.</p>
             )}
 
             <div className="flex justify-between mt-2">
@@ -464,7 +500,7 @@ const CreateTeachingSession = () => {
                 const res = await httpClient.get(TEACHING_SKILLS.GET_MY);
                 const all = res?.result ?? (Array.isArray(res) ? res : []);
                 setApprovedSkills(all.filter(s => s.verificationStatus === 'APPROVED'));
-            } catch (_) {
+            } catch {
                 setApprovedSkills([]);
             } finally {
                 setLoadingSkills(false);
@@ -477,6 +513,22 @@ const CreateTeachingSession = () => {
     const [submitError, setSubmitError] = useState('');
 
     const handleSubmit = async () => {
+        const list = form.slots ?? [];
+        for (const s of list) {
+            if (timeToMinutes(s.endTime) <= timeToMinutes(s.time)) {
+                setSubmitError('Giờ kết thúc phải sau giờ bắt đầu.');
+                toastError(null, 'Giờ kết thúc phải sau giờ bắt đầu.');
+                return;
+            }
+            const tStr = s.time.length === 5 ? `${s.time}:00` : s.time;
+            const startAt = new Date(`${s.date}T${tStr}`);
+            if (Number.isFinite(startAt.getTime()) && startAt.getTime() <= Date.now()) {
+                setSubmitError('Không thể tạo slot trong quá khứ.');
+                toastError(null, 'Không thể tạo slot trong quá khứ.');
+                return;
+            }
+        }
+
         setSubmitting(true);
         setSubmitError('');
         try {
