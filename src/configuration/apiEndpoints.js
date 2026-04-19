@@ -6,6 +6,8 @@ export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: "/auth/login",
     REGISTER: "/auth/register",
+    VERIFY_EMAIL: "/auth/verify-email",
+    RESEND_VERIFICATION: "/auth/resend-verification",
     FORGOT_PASSWORD: "/auth/forgot-password",
     RESET_PASSWORD: "/auth/reset-password",
     GOOGLE_EXCHANGE: "/auth/google/exchange",
@@ -29,8 +31,12 @@ export const API_ENDPOINTS = {
   TEACHING_SKILLS: {
     GET_MY: "/api/teaching-skills/me",
     GET_APPROVED: "/api/teaching-skills/approved",
+    /** Tìm kiếm + lọc + phân trang (q, skillId, category, sort, page, size) */
+    EXPLORE: "/api/teaching-skills/explore",
     CREATE: "/api/teaching-skills",
     DELETE: (id) => `/api/teaching-skills/${id}`,
+    UPDATE_PRICE: (id) => `/api/teaching-skills/${id}/price`,
+    TOGGLE_VISIBILITY: (id) => `/api/teaching-skills/${id}/toggle-visibility`,
   },
 
   SLOTS: {
@@ -42,6 +48,7 @@ export const API_ENDPOINTS = {
 
   SESSIONS: {
     BOOK: "/api/sessions/book",
+    PROPOSE: "/api/sessions/propose",
     MINE: "/api/sessions/mine",
     APPROVE: (id) => `/api/sessions/${id}/approve`,
     REJECT: (id) => `/api/sessions/${id}/reject`,

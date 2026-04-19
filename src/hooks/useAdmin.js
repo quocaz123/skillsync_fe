@@ -5,7 +5,6 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import {
-    TrustScoreService,
     UserManagementService,
     SessionManagementService,
     LearningPathService,
@@ -22,10 +21,9 @@ export const useUserManagement = (users) => {
         status: null,
         role: null,
         verification: null,
-        trustScoreMin: null,
         search: '',
     });
-    const [sortBy, setSortBy] = useState('trustScore');
+    const [sortBy, setSortBy] = useState('name');
     const [sortOrder, setSortOrder] = useState('desc');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
@@ -80,22 +78,6 @@ export const useUserManagement = (users) => {
             pending: users.filter(u => u.verificationStatus === 'pending').length,
         }
     };
-};
-
-export const useTrustScore = (user) => {
-    const trustScore = useMemo(() => {
-        return TrustScoreService.calculateTrustScore(user);
-    }, [user]);
-
-    const tier = useMemo(() => {
-        return TrustScoreService.getTrustScoreTier(trustScore);
-    }, [trustScore]);
-
-    const canTeach = useMemo(() => {
-        return TrustScoreService.canTeach(trustScore);
-    }, [trustScore]);
-
-    return { trustScore, tier, canTeach };
 };
 
 export const useUserBan = () => {
@@ -360,10 +342,6 @@ export const useAdminAnalytics = (users, sessions, paths, missions) => {
         return AnalyticsService.calculateVerificationMetrics(users);
     }, [users]);
 
-    const trustScoreDistribution = useMemo(() => {
-        return AnalyticsService.calculateTrustScoreDistribution(users);
-    }, [users]);
-
     const revenueByCategory = useMemo(() => {
         return AnalyticsService.calculateRevenueByCategory(sessions);
     }, [sessions]);
@@ -376,7 +354,6 @@ export const useAdminAnalytics = (users, sessions, paths, missions) => {
         overview: overviewStats,
         userCohort: userCohortAnalysis,
         verification: verificationMetrics,
-        trustScore: trustScoreDistribution,
         revenue: revenueByCategory,
         mentorPerformance,
     };
@@ -414,7 +391,6 @@ export const useAdminDashboard = (users = [], sessions = [], paths = [], mission
 
 export default {
     useUserManagement,
-    useTrustScore,
     useUserBan,
     useSessionManagement,
     useSessionModeration,

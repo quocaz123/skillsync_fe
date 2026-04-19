@@ -19,11 +19,11 @@ import MissionsTab from './components/MissionsTab';
 // ─── MOCK DATA ────────────────────────────────────────────────────────────────
 // (Re-use from original AdminDash.jsx - truncated for brevity in actual implementation)
 const MOCK_USERS = [
-    { id: 1, name: 'Nguyễn Văn An', email: 'an@example.com', credits: 180, status: 'active', role: 'both', sessions: 12, joined: '2026-01-05', rating: 4.7, trustScore: 85, verificationStatus: 'verified', completedSessions: 12 },
-    { id: 2, name: 'Trần Thị Bình', email: 'binh@example.com', credits: 340, status: 'active', role: 'teach', sessions: 28, joined: '2025-12-20', rating: 4.9, trustScore: 98, verificationStatus: 'verified', completedSessions: 28 },
-    { id: 3, name: 'Lê Hoàng Cường', email: 'cuong@example.com', credits: 50, status: 'inactive', role: 'learn', sessions: 3, joined: '2026-02-10', rating: null, trustScore: 40, verificationStatus: 'none', completedSessions: 3 },
-    { id: 4, name: 'Phạm Thị Dung', email: 'dung@example.com', credits: 220, status: 'active', role: 'both', sessions: 17, joined: '2026-01-15', rating: 4.5, trustScore: 70, verificationStatus: 'pending', completedSessions: 17 },
-    { id: 5, name: 'Hoàng Văn Em', email: 'em@example.com', credits: 10, status: 'banned', role: 'learn', sessions: 1, joined: '2026-03-01', rating: null, trustScore: 10, verificationStatus: 'rejected', completedSessions: 0 },
+    { id: 1, name: 'Nguyễn Văn An', email: 'an@example.com', credits: 180, status: 'active', role: 'both', sessions: 12, joined: '2026-01-05', rating: 4.7, verificationStatus: 'verified', completedSessions: 12 },
+    { id: 2, name: 'Trần Thị Bình', email: 'binh@example.com', credits: 340, status: 'active', role: 'teach', sessions: 28, joined: '2025-12-20', rating: 4.9, verificationStatus: 'verified', completedSessions: 28 },
+    { id: 3, name: 'Lê Hoàng Cường', email: 'cuong@example.com', credits: 50, status: 'inactive', role: 'learn', sessions: 3, joined: '2026-02-10', rating: null, verificationStatus: 'none', completedSessions: 3 },
+    { id: 4, name: 'Phạm Thị Dung', email: 'dung@example.com', credits: 220, status: 'active', role: 'both', sessions: 17, joined: '2026-01-15', rating: 4.5, verificationStatus: 'pending', completedSessions: 17 },
+    { id: 5, name: 'Hoàng Văn Em', email: 'em@example.com', credits: 10, status: 'banned', role: 'learn', sessions: 1, joined: '2026-03-01', rating: null, verificationStatus: 'rejected', completedSessions: 0 },
 ];
 
 const MOCK_SESSIONS = [

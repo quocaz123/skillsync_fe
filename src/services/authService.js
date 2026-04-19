@@ -39,7 +39,6 @@ export function mapUserResponse(payload) {
         hasPassword: payload.hasPassword !== false, // default true if not provided
         // Gamification
         creditsBalance: payload.creditsBalance ?? null,
-        trustScore: payload.trustScore ?? null,
         // Stats
         totalTeachingSessions: payload.totalTeachingSessions ?? 0,
         totalLearningSessions: payload.totalLearningSessions ?? 0,
@@ -165,4 +164,24 @@ export const logout = async () => {
 export const refreshSession = async () => {
     const res = await httpClient.post(AUTH.REFRESH);
     return mapAuthUser(unwrapData(res));
+};
+
+/** Xác minh email sau đăng ký — backend set cookie, trả user đã đăng nhập */
+export const verifyEmail = async (email, otpCode) => {
+    const res = await httpClient.post(AUTH.VERIFY_EMAIL, { email, otpCode });
+    return mapAuthUser(unwrapData(res));
+};
+
+export const resendVerificationOtp = async (email) => {
+    await httpClient.post(AUTH.RESEND_VERIFICATION, { email });
+};
+
+/** Gửi mã OTP đặt lại / thiết lập mật khẩu (email tồn tại trong hệ thống) */
+export const requestPasswordReset = async (email) => {
+    await httpClient.post(AUTH.FORGOT_PASSWORD, { email });
+};
+
+/** OTP + mật khẩu mới — Google-only user cũng dùng để hasPassword = true */
+export const resetPasswordWithOtp = async (email, otpCode, newPassword) => {
+    await httpClient.post(AUTH.RESET_PASSWORD, { email, otpCode, newPassword });
 };

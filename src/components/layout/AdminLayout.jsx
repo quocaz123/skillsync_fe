@@ -41,8 +41,8 @@ const AdminLayout = () => {
             label: 'Người dùng',
             items: [
                 { path: '/admin/users', label: 'Quản lý Người dùng', icon: Users },
-                { path: '/admin/teaching-skills', label: 'Xét duyệt Mentor', icon: ShieldCheck },
-                { path: '/admin/paths', label: 'Lộ trình Học', icon: BookOpen },
+                { path: '/admin/teaching-skills', label: 'Xét duyệt Mentor', icon: ShieldCheck }
+               
             ],
         },
         {

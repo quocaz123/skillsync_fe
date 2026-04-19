@@ -48,6 +48,25 @@ export const bookSession = async (slotId, learnerNotes = '') => {
 };
 
 /**
+ * Learner — propose a session when no slots are available.
+ * @param {string} teachingSkillId
+ * @param {string} slotDate
+ * @param {string} slotTime
+ * @param {string} slotEndTime 
+ * @param {string} [learnerNotes]
+ */
+export const proposeSession = async (teachingSkillId, slotDate, slotTime, slotEndTime, learnerNotes = '') => {
+    const res = await httpClient.post(SESSIONS.PROPOSE, {
+        teachingSkillId,
+        slotDate,
+        slotTime,
+        slotEndTime,
+        learnerNotes
+    });
+    return unwrap(res);
+};
+
+/**
  * Get my sessions.
  * @param {'learner'|'teacher'|'all'} role
  * @param {'SCHEDULED'|'COMPLETED'|'CANCELLED'|undefined} status
