@@ -350,8 +350,12 @@ const Profile = () => {
                                     {activeTab === 'mentor' ? 'Chứng minh năng lực của bạn với cộng đồng' : 'Những lời nhận xét mang lại động lực phát triển'}
                                 </p>
                             </div>
-                            {/* Section edit button removed */}
-                        </div>
+                                {activeTab === 'mentor' && (
+                                    <button onClick={() => setBioEditing(false)} className="p-2 hover:bg-purple-50 rounded-xl text-purple-400 hover:text-purple-600 transition-all active:scale-90">
+                                        <PencilSimple size={22} weight="duotone" />
+                                    </button>
+                                )}
+                            </div>
 
                         <div className="flex flex-wrap gap-3 relative z-10">
                             {activeTab === 'mentor' ? (
@@ -396,8 +400,24 @@ const Profile = () => {
                                                     <Coin size={14} weight="fill" className="text-amber-500" />
                                                     {ts.creditsPerHour || 5} cr/h
                                                 </span>
+                                                {ts.verificationStatus === 'APPROVED' && (
+                                                    <>
+                                                        <button type="button" onClick={() => handleToggleSkillVisibility(ts)} className="text-[11px] text-slate-600 hover:bg-slate-100 px-2 py-1 rounded-lg transition-colors flex items-center gap-1 opacity-80 group-hover:opacity-100">
+                                                            {ts.hidden ? 'Hiện Explore' : 'Tạm ẩn'}
+                                                        </button>
+                                                        <button onClick={() => handleEditPrice(ts)} className="text-[11px] text-purple-600 hover:bg-purple-100 px-2 py-1 rounded-lg transition-colors flex items-center gap-1 opacity-80 group-hover:opacity-100">
+                                                            <PencilSimple size={12} weight="bold" /> Đổi giá
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
-                                            {/* Skill management buttons removed */}
+                                            <button
+                                                onClick={() => handleDeleteSkill(ts.id)}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-lg p-1.5 transition-all shadow-sm"
+                                                title="Xóa kỹ năng"
+                                            >
+                                                <X size={14} weight="bold" />
+                                            </button>
                                         </div>
                                     )})
                                 )
@@ -449,7 +469,17 @@ const Profile = () => {
                                 </div>
                             )}
 
-                            {/* Add New button removed */}
+                             {activeTab === 'mentor' && (
+                                <button
+                                    onClick={() => setShowAddSkillModal(true)}
+                                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 text-slate-500 font-bold hover:bg-purple-50 hover:border-purple-200 hover:text-purple-600 transition-all group/add"
+                                >
+                                    <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm group-hover/add:bg-purple-600 group-hover/add:text-white transition-all">
+                                        <X size={16} weight="bold" className="rotate-45" />
+                                    </div>
+                                    Thêm kỹ năng mới
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -463,7 +493,9 @@ const Profile = () => {
                             <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
                                 <UserCircle className="text-indigo-500" weight="duotone" size={24} /> Giới thiệu
                             </h3>
-                            {/* Bio edit button removed */}
+                            <button onClick={() => setBioEditing(true)} className="p-2 hover:bg-indigo-50 rounded-xl text-indigo-400 hover:text-indigo-600 transition-all active:scale-90">
+                                <PencilSimple size={20} weight="duotone" />
+                            </button>
                         </div>
 
                         {bioEditing ? (
@@ -494,7 +526,7 @@ const Profile = () => {
                             </div>
                         ) : (
                             <p className="text-slate-600 leading-relaxed text-sm font-medium">
-                                {profile?.bio || <span className="italic text-slate-400 font-normal">Thông tin đang chờ được tỏa sáng.</span>}
+                                {profile?.bio || <span className="italic text-slate-400 font-normal">Thông tin đang chờ được tỏa sáng. Bấm biểu tượng ✏️ để chỉnh sửa.</span>}
                             </p>
                         )}
 
