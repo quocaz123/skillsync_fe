@@ -166,10 +166,9 @@ export const refreshSession = async () => {
     return mapAuthUser(unwrapData(res));
 };
 
-/** Xác minh email sau đăng ký — backend set cookie, trả user đã đăng nhập */
+/** Xác minh email — không tạo phiên; người dùng đăng nhập sau tại trang đăng nhập */
 export const verifyEmail = async (email, otpCode) => {
-    const res = await httpClient.post(AUTH.VERIFY_EMAIL, { email, otpCode });
-    return mapAuthUser(unwrapData(res));
+    await httpClient.post(AUTH.VERIFY_EMAIL, { email, otpCode });
 };
 
 export const resendVerificationOtp = async (email) => {

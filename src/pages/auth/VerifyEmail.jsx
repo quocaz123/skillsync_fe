@@ -1,15 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { useStore } from '../../store';
 import { verifyEmail, resendVerificationOtp } from '../../services/authService';
-import { getMyProfile } from '../../services/userService';
 import { Mail, KeyRound, CheckCircle2 } from 'lucide-react';
+
+/** Đồng bộ với AuthConstants.OTP_VALID_MINUTES (backend skill_be) */
+const OTP_VALID_MINUTES = 15;
 
 const VerifyEmail = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const setSession = useStore((s) => s.login);
-    const syncCredits = useStore((s) => s.syncCredits);
 
     const [email, setEmail] = useState(location.state?.email || '');
     const [otp, setOtp] = useState('');
@@ -30,15 +29,14 @@ const VerifyEmail = () => {
         setError('');
         setLoading(true);
         try {
-            const user = await verifyEmail(email.trim(), otp.trim());
-            setSession(user);
-            try {
-                const fresh = await getMyProfile();
-                if (fresh?.creditsBalance != null) syncCredits(fresh.creditsBalance);
-            } catch {
-                /* ignore */
-            }
-            navigate('/app', { replace: true });
+            await verifyEmail(email.trim(), otp.trim());
+            navigate('/login', {
+                replace: true,
+                state: {
+                    message: 'Email đã được xác minh. Vui lòng đăng nhập bằng email và mật khẩu của bạn.',
+                    email: email.trim(),
+                },
+            });
         } catch (err) {
             setError(
                 err.response?.data?.message ||
@@ -77,6 +75,9 @@ const VerifyEmail = () => {
                     <h1 className="text-2xl font-bold text-slate-900">Xác minh email</h1>
                     <p className="text-slate-500 text-sm mt-2">
                         Nhập mã 6 số đã gửi tới email của bạn để kích hoạt tài khoản.
+                    </p>
+                    <p className="text-slate-400 text-xs mt-1.5">
+                        Mã có hiệu lực trong {OTP_VALID_MINUTES} phút kể từ khi gửi email.
                     </p>
                 </div>
 
@@ -126,7 +127,7 @@ const VerifyEmail = () => {
                         disabled={loading || otp.length !== 6}
                         className="w-full py-3.5 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-50"
                     >
-                        {loading ? 'Đang xác minh…' : 'Xác minh và đăng nhập'}
+                        {loading ? 'Đang xác minh…' : 'Xác minh email'}
                     </button>
                 </form>
 

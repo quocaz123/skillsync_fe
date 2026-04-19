@@ -22,6 +22,9 @@ const Login = () => {
             setInfo(location.state.message);
             window.history.replaceState({}, document.title);
         }
+        if (location.state?.email) {
+            setEmail(location.state.email);
+        }
     }, [location.state]);
 
     const handleEmailLogin = async (e) => {
