@@ -118,6 +118,18 @@ export const API_ENDPOINTS = {
     CREDIT_TRANSACTIONS: "/api/admin/credits/transactions",
     GRANT_CREDIT: "/api/admin/credits/grant",
   },
+
+  LEARNING_PATHS: {
+    GET_ALL: "/api/learning-paths",             // Admin: tất cả
+    GET_APPROVED: "/api/learning-paths/approved", // Public: Khám phá
+    GET_MY: "/api/learning-paths/my",            // Mentor: lộ trình của mình
+    GET_ENROLLED: "/api/learning-paths/enrolled", // User: lộ trình đã đăng ký
+    GET_BY_ID: (id) => `/api/learning-paths/${id}`,
+    ENROLL: (id) => `/api/learning-paths/${id}/enroll`,
+    CREATE: "/api/learning-paths",               // POST ?mentorId=
+    ADMIN_APPROVE: (id) => `/api/learning-paths/${id}/approve`,
+    ADMIN_REJECT: (id) => `/api/learning-paths/${id}/reject`,
+  },
 };
 
 export default API_ENDPOINTS;

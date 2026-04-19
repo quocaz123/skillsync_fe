@@ -12,9 +12,18 @@ function pick(obj, ...keys) {
 
 function normalizeModule(m, idx) {
     const r = m || {};
-    const order = pick(r, 'order', 'sequence', 'index') ?? idx + 1;
+    const order = pick(r, 'order', 'sequence', 'index', 'orderIndex') ?? idx + 1;
     const videoLessonCount = pick(r, 'videoLessonCount', 'video_lesson_count', 'lessonCount') ?? 0;
     const totalVideoMinutes = pick(r, 'totalVideoMinutes', 'total_video_minutes', 'videoMinutes') ?? 0;
+    const lessonsRaw = pick(r, 'lessons', 'lessonList') ?? [];
+    const lessons = Array.isArray(lessonsRaw)
+        ? lessonsRaw.map((lesson, li) => ({
+              id: String(pick(lesson, 'id', 'lessonId') ?? `l-${idx + 1}-${li + 1}`),
+              title: pick(lesson, 'title', 'name') ?? `Bài ${li + 1}`,
+              videoUrl: pick(lesson, 'videoUrl', 'video_url') ?? '',
+              durationMinutes: Number(pick(lesson, 'durationMinutes', 'duration_minutes', 'duration') ?? 0),
+          }))
+        : [];
     return {
         order: Number(order),
         title: pick(r, 'title', 'name') ?? `Module ${order}`,
@@ -22,9 +31,12 @@ function normalizeModule(m, idx) {
         videoLessonCount: Number(videoLessonCount),
         totalVideoMinutes: Number(totalVideoMinutes),
         hasQuiz: Boolean(pick(r, 'hasQuiz', 'has_quiz', 'quiz')),
-        mentorSupport: Boolean(pick(r, 'mentorSupport', 'mentor_support', 'hasMentorSupport')),
+        mentorSupport: Boolean(pick(r, 'mentorSupport', 'mentor_support', 'hasMentorSupport', 'enableSupport')),
         practiceSessionLabel: pick(r, 'practiceSessionLabel', 'practice_session_label') ?? null,
-        lessonTitlesPreview: pick(r, 'lessonTitlesPreview', 'lesson_titles_preview', 'lessonPreviews') ?? [],
+        lessonTitlesPreview:
+            pick(r, 'lessonTitlesPreview', 'lesson_titles_preview', 'lessonPreviews')
+            ?? lessons.map((lesson) => lesson.title).filter(Boolean),
+        lessons,
     };
 }
 
@@ -49,7 +61,10 @@ export function normalizePathDetail(raw) {
     if (!raw) return null;
     const r = raw;
     const modulesRaw = pick(r, 'modules', 'curriculum', 'courseModules') ?? [];
-    const pathType = pick(r, 'pathType', 'path_type', 'type') ?? 'system';
+    const pathType = pick(r, 'pathType', 'path_type', 'type')
+        ?? (pick(r, 'teacherRole', 'teacher_role') === 'ADMIN' ? 'SYSTEM' : 'MENTOR');
+    const level = pick(r, 'level', 'difficulty') ?? 'Beginner';
+    const levelMap = { BEGINNER: 'Beginner', INTERMEDIATE: 'Intermediate', ADVANCED: 'Advanced' };
 
     return {
         id: String(pick(r, 'id', 'pathId', 'learningPathId')),
@@ -57,7 +72,7 @@ export function normalizePathDetail(raw) {
         shortDescription: pick(r, 'shortDescription', 'short_description', 'subtitle') ?? '',
         description: pick(r, 'description', 'fullDescription', 'overview') ?? '',
         skill: pick(r, 'skill', 'skillName', 'category') ?? '',
-        level: pick(r, 'level', 'difficulty') ?? 'Beginner',
+        level: levelMap[level] ?? level,
         duration: pick(r, 'duration', 'estimatedDuration', 'estimated_duration') ?? '',
         totalModules: Number(pick(r, 'totalModules', 'total_modules', 'moduleCount') ?? 0),
         totalLessons: Number(pick(r, 'totalLessons', 'total_lessons', 'lessonCount') ?? 0),
@@ -94,7 +109,7 @@ function mergeLocalEnrollment(detail) {
  */
 export async function fetchLearningPathById(pathId) {
     try {
-        const data = await axiosClient.get(API_ENDPOINTS.LEARNING_PATHS.BY_ID(pathId));
+        const data = await axiosClient.get(API_ENDPOINTS.LEARNING_PATHS.GET_BY_ID(pathId));
         const normalized = normalizePathDetail(data);
         if (normalized && normalized.id) return mergeLocalEnrollment(normalized);
     } catch {
