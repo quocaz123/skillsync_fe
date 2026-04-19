@@ -4,6 +4,7 @@ import { useStore } from '../../store';
 import { register as apiRegister } from '../../services/authService';
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 import { Mail, Lock, User as UserIcon, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { BRAND } from '../../configuration/branding';
 
 const Register = () => {
     const navigate = useNavigate();
@@ -39,9 +40,9 @@ const Register = () => {
         try {
             await apiRegister(email, password, name.trim());
             setSuccess(true);
-            // Show success state briefly, then redirect to login
+            // Show success state briefly, then redirect to email verification
             setTimeout(() => {
-                navigate('/login');
+                navigate(`/verify-email?email=${encodeURIComponent(email)}`);
             }, 1500);
         } catch (err) {
             const msg =
@@ -69,7 +70,7 @@ const Register = () => {
             <div className="w-full max-w-md bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 p-8 relative z-10 my-8">
                 <div className="text-center mb-8">
                     <Link to="/" className="inline-block w-16 h-16 mb-4 mx-auto transition-transform hover:scale-105">
-                        <img src="/logo.png" alt="SkillSync Logo" className="w-full h-full object-contain" />
+                        <img src={BRAND.logoUrl} alt={`${BRAND.name} Logo`} className="w-full h-full object-contain" />
                     </Link>
                     <h2 className="text-3xl font-bold text-slate-900">Tạo tài khoản</h2>
                     <p className="text-slate-500 mt-2 font-medium">Tham gia cộng đồng học tập toàn cầu</p>

@@ -5,6 +5,8 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import GoogleAuthCallback from './pages/auth/GoogleAuthCallback';
 import LandingPage from './pages/auth/LandingPage';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import VerifyEmail from './pages/auth/VerifyEmail';
 import UserDashboard from './pages/user/UserDashboard';
 import AdminDash from './pages/admin/AdminDash';
 import AdminReports from './pages/admin/AdminReports';
@@ -61,6 +63,8 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/auth/google/callback" element={<GoogleAuthCallback />} />
 
         {/* User Routes (Protected) */}

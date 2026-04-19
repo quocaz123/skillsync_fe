@@ -5,6 +5,7 @@ import { login as apiLogin } from '../../services/authService';
 import { getMyProfile } from '../../services/userService';
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 import { Mail, Lock } from 'lucide-react';
+import { BRAND } from '../../configuration/branding';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -62,10 +63,10 @@ const Login = () => {
             <div className="w-full max-w-md bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 p-8 relative z-10">
                 <div className="text-center mb-8">
                     <Link to="/" className="inline-block w-16 h-16 mb-4 mx-auto transition-transform hover:scale-105">
-                        <img src="/logo.png" alt="SkillSync Logo" className="w-full h-full object-contain" />
+                        <img src={BRAND.logoUrl} alt={`${BRAND.name} Logo`} className="w-full h-full object-contain" />
                     </Link>
-                    <h2 className="text-3xl font-bold text-slate-900">Welcome back</h2>
-                    <p className="text-slate-500 mt-2 font-medium">Log in to your SkillSync account</p>
+                    <h2 className="text-3xl font-bold text-slate-900">Chào mừng bạn quay lại</h2>
+                    <p className="text-slate-500 mt-2 font-medium">Đăng nhập vào tài khoản {BRAND.name} của bạn</p>
                 </div>
 
                 {error && (
@@ -79,7 +80,7 @@ const Login = () => {
 
                 <form onSubmit={handleEmailLogin} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
                         <div className="relative">
                             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                             <input
@@ -96,8 +97,10 @@ const Login = () => {
 
                     <div>
                         <div className="flex items-center justify-between mb-1">
-                            <label className="block text-sm font-medium text-slate-700">Password</label>
-                            <a href="#" className="text-sm font-medium text-primary-600 hover:text-primary-700">Forgot password?</a>
+                            <label className="block text-sm font-medium text-slate-700">Mật khẩu</label>
+                            <Link to="/forgot-password" className="text-sm font-medium text-primary-600 hover:text-primary-700">
+                                Quên mật khẩu?
+                            </Link>
                         </div>
                         <div className="relative">
                             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
@@ -118,13 +121,13 @@ const Login = () => {
                         disabled={loading}
                         className="w-full flex items-center justify-center bg-primary-600 text-white font-semibold py-3.5 px-4 rounded-xl hover:bg-primary-700 transition-all duration-200 shadow-md shadow-primary-500/20 active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none"
                     >
-                        {loading ? 'Đang đăng nhập…' : 'Sign In'}
+                        {loading ? 'Đang đăng nhập…' : 'Đăng nhập'}
                     </button>
                 </form>
 
                 <div className="relative flex items-center py-6">
                     <div className="flex-grow border-t border-slate-200"></div>
-                    <span className="flex-shrink-0 mx-4 text-slate-400 text-sm font-medium">or continue with</span>
+                    <span className="flex-shrink-0 mx-4 text-slate-400 text-sm font-medium">hoặc tiếp tục với</span>
                     <div className="flex-grow border-t border-slate-200"></div>
                 </div>
 
@@ -136,9 +139,9 @@ const Login = () => {
                 />
 
                 <div className="mt-8 text-center text-sm text-slate-600 font-medium">
-                    Don't have an account?{' '}
+                    Chưa có tài khoản?{' '}
                     <Link to="/register" className="text-primary-600 hover:text-primary-700 font-bold hover:underline">
-                        Sign up
+                        Đăng ký
                     </Link>
                 </div>
 

@@ -1,7 +1,13 @@
 import httpClient from '../configuration/axiosClient';
 import { API_ENDPOINTS } from '../configuration/apiEndpoints';
+import axios from 'axios';
 
 const { AUTH } = API_ENDPOINTS;
+const NOTIFICATION_BASE_URL = import.meta.env.VITE_NOTIFICATION_BASE_URL || 'http://localhost:8081/notification';
+const notificationClient = axios.create({
+    baseURL: NOTIFICATION_BASE_URL,
+    headers: { 'Content-Type': 'application/json' },
+});
 
 /**
  * Chuẩn hóa user từ ApiResponse.data (UserAuthResponse) sang state FE (role: admin|user)
@@ -88,6 +94,31 @@ export const login = async (email, password) => {
 export const register = async (email, password, displayName) => {
     const res = await httpClient.post(AUTH.REGISTER, { email, password, fullName: displayName || '' });
     return mapAuthUser(unwrapData(res), displayName);
+};
+
+export const verifyEmail = async (email, code) => {
+    const res = await notificationClient.post('/otp/verify', { email, code });
+    return unwrapData(res);
+};
+
+export const resendVerification = async (email) => {
+    const res = await notificationClient.post('/otp/send', { email });
+    return unwrapData(res);
+};
+
+export const requestPasswordResetOtp = async (email) => {
+    const res = await notificationClient.post('/password/forgot', { email });
+    return unwrapData(res);
+};
+
+export const resetPasswordWithOtp = async (email, code, newPassword) => {
+    const res = await notificationClient.post('/password/reset-otp', { email, code, newPassword });
+    return unwrapData(res);
+};
+
+export const verifyPasswordResetOtp = async (email, code) => {
+    const res = await notificationClient.post('/password/verify-otp', { email, code });
+    return unwrapData(res);
 };
 
 /**

@@ -11,6 +11,7 @@ import {
     Star,
     CheckCircle2
 } from 'lucide-react';
+import { BRAND } from '../../configuration/branding';
 
 export default function LandingPage() {
     const [hoveredFeature, setHoveredFeature] = useState(null)
@@ -82,8 +83,8 @@ export default function LandingPage() {
             <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b border-slate-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <img src="/logo.png" alt="SkillSync logo" className="w-8 h-8 object-contain" />
-                        <span className="font-bold text-xl text-slate-900 hidden sm:inline">SkillSync</span>
+                        <img src={BRAND.logoUrl} alt={`${BRAND.name} logo`} className="w-8 h-8 object-contain" />
+                        <span className="font-bold text-xl text-slate-900 hidden sm:inline">{BRAND.name}</span>
                     </div>
 
                     <div className="hidden md:flex items-center gap-8">
@@ -340,8 +341,8 @@ export default function LandingPage() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
                         <div>
                             <div className="flex items-center gap-3 mb-4">
-                                <img src="/logo.png" alt="SkillSync logo" className="w-8 h-8 object-contain grayscale opacity-70" />
-                                <span className="font-bold text-slate-900">SkillSync</span>
+                                <img src={BRAND.logoUrl} alt={`${BRAND.name} logo`} className="w-8 h-8 object-contain grayscale opacity-70" />
+                                <span className="font-bold text-slate-900">{BRAND.name}</span>
                             </div>
                             <p className="text-sm text-slate-500">Peer-to-peer learning platform for skill sharing and growth.</p>
                         </div>
