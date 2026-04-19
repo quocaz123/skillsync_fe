@@ -227,13 +227,18 @@ const TabSchedule = ({ mentor, onBook, isOwner }) => (
 
 // ─── TAB: Đánh giá ───────────────────────────────────────────────────────
 const TabReviews = ({ mentor }) => {
-    const ratingDist = [
-        { star: 5, pct: 75 },
-        { star: 4, pct: 20 },
-        { star: 3, pct: 4 },
-        { star: 2, pct: 1 },
-        { star: 1, pct: 0 },
-    ];
+    const ratingDist = useMemo(() => {
+        const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+        mentor.reviews.forEach(r => {
+            const star = Math.round(r.rating);
+            if (counts[star] !== undefined) counts[star]++;
+        });
+        const total = mentor.reviews.length || 1;
+        return [5, 4, 3, 2, 1].map(star => ({
+            star,
+            pct: Math.round((counts[star] / total) * 100)
+        }));
+    }, [mentor.reviews]);
     return (
         <div className="space-y-5">
             {/* Rating overview */}

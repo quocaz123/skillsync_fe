@@ -45,6 +45,7 @@ const SlotChip = ({ slot, onDeleted }) => {
     const cfg = {
         OPEN: { border: 'border-emerald-300 bg-emerald-50', label: '⏳ Trống', labelCls: 'text-emerald-600' },
         BOOKED: { border: 'border-sky-300 bg-sky-50', label: 'Đã đặt', labelCls: 'text-sky-600' },
+        PENDING: { border: 'border-amber-300 bg-amber-50', label: '⏳ Yêu cầu', labelCls: 'text-amber-600' },
     }[slot.status] ?? { border: 'border-slate-200 bg-slate-50', label: slot.status, labelCls: 'text-slate-500' };
 
     const handleDelete = () => {
@@ -280,7 +281,7 @@ const TabSchedule = ({ skills, onToggleVisibility }) => {
                         <p className="text-sm text-slate-400">Chưa có slot nào. Hãy thêm bên dưới.</p>
                     ) : (
                         <div className="flex flex-wrap gap-2 max-h-56 overflow-y-auto custom-scrollbar p-1 border border-slate-100 rounded-xl bg-slate-50/30">
-                            {slots.map(sl => (
+                            {slots.filter(sl => sl.status !== 'CANCELLED').map(sl => (
                                 <SlotChip
                                     key={sl.id}
                                     slot={sl}
