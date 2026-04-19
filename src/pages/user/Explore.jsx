@@ -183,7 +183,7 @@ const TabCredentials = ({ mentor }) => (
 );
 
 // ─── TAB: Lịch trống ─────────────────────────────────────────────────────
-const TabSchedule = ({ mentor, onBook }) => (
+const TabSchedule = ({ mentor, onBook, isOwner }) => (
     <div className="bg-white rounded-2xl border border-slate-100 p-6">
         <h3 className="font-extrabold text-slate-900 text-base mb-1 flex items-center gap-2">
             📅 Lịch rảnh hiện có
@@ -206,12 +206,14 @@ const TabSchedule = ({ mentor, onBook }) => (
                         </div>
                     ))}
                 </div>
-                <button
-                    onClick={onBook}
-                    className="w-full py-3.5 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl shadow-md shadow-violet-200 active:scale-95 transition-all flex items-center justify-center gap-2"
-                >
-                    <CalendarCheck size={18} weight="duotone" /> Đặt lịch ngay ({mentor.availableSlots.length} slot trống)
-                </button>
+                {!isOwner && (
+                    <button
+                        onClick={onBook}
+                        className="w-full py-3.5 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl shadow-md shadow-violet-200 active:scale-95 transition-all flex items-center justify-center gap-2"
+                    >
+                        <CalendarCheck size={18} weight="duotone" /> Đặt lịch ngay ({mentor.availableSlots.length} slot trống)
+                    </button>
+                )}
             </>
         ) : (
             <div className="text-center py-10 text-slate-400">
@@ -502,6 +504,7 @@ const Explore = () => {
     if (selectedMentor && bookingStep === 0) {
         const m = selectedMentor;
         const tabCount = m.reviews?.length ?? 0;
+        const isOwner = currentUserId && currentUserId === m.teacherId;
 
         return (
             <div className="max-w-5xl mx-auto font-sans pb-14">
@@ -582,7 +585,7 @@ const Explore = () => {
                         {/* Tab content */}
                         {activeTab === 'intro' && <TabIntro mentor={m} />}
                         {activeTab === 'creds' && <TabCredentials mentor={m} />}
-                        {activeTab === 'schedule' && <TabSchedule mentor={m} onBook={() => setBookingStep(1)} />}
+                        {activeTab === 'schedule' && <TabSchedule mentor={m} onBook={() => setBookingStep(1)} isOwner={isOwner} />}
                         {activeTab === 'reviews' && <TabReviews mentor={m} />}
                     </div>
 
@@ -790,7 +793,7 @@ const Explore = () => {
                     <div className="max-w-lg mx-auto bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
                         <h2 className="text-2xl font-extrabold text-slate-900 mb-6 pb-4 border-b border-slate-100">Xác nhận đặt lịch</h2>
                         <div className="bg-slate-50 rounded-xl p-4 flex items-center gap-4 mb-6 border border-slate-100">
-                            <AvatarImg
+                            <Avatar
                                 src={m.avatarUrl}
                                 fallback={m.avatar}
                                 fallbackBg={m.avatarBg}
