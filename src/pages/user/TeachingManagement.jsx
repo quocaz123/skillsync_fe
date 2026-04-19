@@ -45,6 +45,7 @@ const SlotChip = ({ slot, onDeleted }) => {
     const cfg = {
         OPEN: { border: 'border-emerald-300 bg-emerald-50', label: '⏳ Trống', labelCls: 'text-emerald-600' },
         BOOKED: { border: 'border-sky-300 bg-sky-50', label: 'Đã đặt', labelCls: 'text-sky-600' },
+        PENDING: { border: 'border-amber-300 bg-amber-50', label: '⏳ Yêu cầu', labelCls: 'text-amber-600' },
     }[slot.status] ?? { border: 'border-slate-200 bg-slate-50', label: slot.status, labelCls: 'text-slate-500' };
 
     const handleDelete = () => {

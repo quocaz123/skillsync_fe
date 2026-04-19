@@ -5,6 +5,13 @@ import {
 } from '@phosphor-icons/react';
 
 const STATUS_CONFIGS = {
+    PENDING_APPROVAL: {
+        label: 'Chờ duyệt',
+        bg: 'bg-violet-50',
+        text: 'text-violet-700',
+        border: 'border-violet-100',
+        icon: <Clock size={16} weight="bold" />
+    },
     SCHEDULED: {
         label: 'Sắp diễn ra',
         bg: 'bg-amber-50',
