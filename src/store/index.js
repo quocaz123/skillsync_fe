@@ -1,22 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-// Mock Tasks System for Welcome Credit
-const MOCK_TASKS = [
-    { id: 1, title: 'Complete your profile details', reward: 50, completed: false },
-    { id: 2, title: 'Add your first teaching skill', reward: 100, completed: false },
-    { id: 3, title: 'Verify your email address', reward: 20, completed: true },
-];
-
-// Mock initial credit history is disabled, we fetch from API now
-const INITIAL_CREDIT_HISTORY = [];
-
-// Mock learning progress
-const INITIAL_LEARNING_PROGRESS = [
-    { id: 'lp1', skill: 'UI/UX Design', mentor: 'Maria Garcia', level: 'Beginner', goal: 'Intermediate', totalSessions: 8, completedSessions: 3, lastSession: '2026-03-08T10:00:00' },
-    { id: 'lp2', skill: 'Public Speaking', mentor: null, level: 'Beginner', goal: 'Advanced', totalSessions: 5, completedSessions: 0, lastSession: null },
-];
-
 export const useStore = create(
     persist(
         (set) => ({
@@ -30,8 +14,6 @@ export const useStore = create(
                 user: userData,
                 isAuthenticated: true,
                 role: userData.role || 'user',
-                // Chỉ update credits nếu backend trả về giá trị hợp lệ (không null/undefined)
-                // Tránh overwrite credits về 0 khi creditsBalance bị thiếu trong response
                 credits: (userData.creditsBalance !== undefined && userData.creditsBalance !== null)
                     ? userData.creditsBalance
                     : state.credits,
@@ -39,7 +21,6 @@ export const useStore = create(
                 pendingTeacherCredits: userData.pendingTeacherCredits || 0,
                 showMissionPopup: true,
             })),
-            // Sync credits từ server (gọi sau khi login hoặc khi cần đồng bộ)
             syncCredits: (balance, pendingLearner = 0, pendingTeacher = 0) => set({
                 credits: balance,
                 pendingLearnerCredits: pendingLearner,
@@ -48,7 +29,6 @@ export const useStore = create(
             addCredits: (amount) => set((state) => ({ credits: state.credits + amount })),
             deductCredits: (amount) => set((state) => ({ credits: state.credits - amount })),
 
-            /** Id lộ trình đã đăng ký (đồng bộ với mock khi API enroll offline) */
             enrolledPathIds: [],
             addEnrolledPath: (pathId) =>
                 set((state) =>
@@ -57,7 +37,6 @@ export const useStore = create(
                         : { enrolledPathIds: [...state.enrolledPathIds, pathId] }
                 ),
 
-            // Hàm logout đã gộp cả 2 bên: reset cả credits và enrolledPathIds
             logout: () => set({
                 user: null,
                 isAuthenticated: false,
@@ -68,17 +47,16 @@ export const useStore = create(
             }),
 
             // CREDIT & PROFILE STATE
-            credits: 180, // 200 welcome - 20 spent = 180 after initial tx
+            credits: 0,
             pendingLearnerCredits: 0,
             pendingTeacherCredits: 0,
-            // CREDIT HISTORY
-            creditHistory: INITIAL_CREDIT_HISTORY,
+            creditHistory: [],
             addCreditTransaction: (tx) => set((state) => ({
                 creditHistory: [{ ...tx, id: `h_${Date.now()}`, date: new Date().toISOString() }, ...state.creditHistory]
             })),
 
-            // TASKS STATE (For Welcome Credit System)
-            tasks: MOCK_TASKS,
+            // TASKS STATE
+            tasks: [],
             completeTask: (taskId) => set((state) => {
                 const taskIndex = state.tasks.findIndex(t => t.id === taskId);
                 if (taskIndex === -1 || state.tasks[taskIndex].completed) return state;
@@ -102,7 +80,6 @@ export const useStore = create(
                 };
             }),
 
-            // ADMIN TASK MANAGEMENT
             addTask: (task) => set((state) => ({
                 tasks: [...state.tasks, { ...task, id: Date.now(), completed: false }]
             })),
@@ -111,10 +88,7 @@ export const useStore = create(
             })),
 
             // SKILLS LOGIC
-            mySkills: [
-                { id: 1, name: 'ReactJS', type: 'teach', level: 'Advanced' },
-                { id: 2, name: 'UI/UX Design', type: 'learn', level: 'Beginner' },
-            ],
+            mySkills: [],
             addSkill: (skill) => set((state) => ({
                 mySkills: [...state.mySkills, { ...skill, id: Date.now() }]
             })),
@@ -123,10 +97,7 @@ export const useStore = create(
             })),
 
             // SESSIONS & MATCHING
-            sessions: [
-                { id: 101, topic: 'UI/UX Basics', mentor: 'Maria Garcia', date: '2026-03-10T10:00:00', status: 'upcoming', cost: 40 },
-                { id: 102, topic: 'ReactJS Hooks', mentor: 'Alex Johnson', date: '2026-02-20T14:00:00', status: 'completed', cost: 50, rating: 5, review: 'Rất tuyệt vời! Mentor giải thích rõ ràng.' },
-            ],
+            sessions: [],
             bookSession: (sessionDetails) => set((state) => {
                 if (state.credits < sessionDetails.cost) return state;
                 const newTx = {
@@ -147,7 +118,7 @@ export const useStore = create(
                 const session = state.sessions.find(s => s.id === sessionId);
                 if (!session) return state;
 
-                const mentorEarned = Math.round(session.cost * 0.8); // mentor gets 80% back as credits
+                const mentorEarned = Math.round(session.cost * 0.8);
                 const newTxEarned = {
                     id: `h_${Date.now() + 1}`,
                     type: 'session_completed',
@@ -177,15 +148,13 @@ export const useStore = create(
             }),
 
             // REVIEWS
-            reviews: [
-                { id: 'r1', sessionId: 102, mentorName: 'Alex Johnson', topic: 'ReactJS Hooks', rating: 5, review: 'Rất tuyệt vời! Mentor giải thích rõ ràng.', date: '2026-02-20T16:00:00' }
-            ],
+            reviews: [],
             addReview: (review) => set((state) => ({
                 reviews: [...state.reviews, { ...review, id: `r_${Date.now()}`, date: new Date().toISOString() }]
             })),
 
             // LEARNING PROGRESS
-            learningProgress: INITIAL_LEARNING_PROGRESS,
+            learningProgress: [],
             updateProgress: (skillId, increment) => set((state) => ({
                 learningProgress: state.learningProgress.map(lp =>
                     lp.id === skillId

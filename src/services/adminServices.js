@@ -1,117 +1,11 @@
 
-export class TrustScoreService {
-   
-    static calculateTrustScore(userData) {
-        const ratingScore = this.calculateRatingScore(userData);
-        const verificationScore = this.calculateVerificationScore(userData);
-        const activityScore = this.calculateActivityScore(userData);
-        const reputationScore = this.calculateReputationScore(userData);
-
-        const trustScore = Math.round(
-            (ratingScore * 0.4) +
-            (verificationScore * 0.3) +
-            (activityScore * 0.2) +
-            (reputationScore * 0.1)
-        );
-
-        return Math.min(100, Math.max(0, trustScore));
-    }
-
-    static calculateRatingScore(userData) {
-        if (!userData.averageRating || userData.ratingCount === 0) return 0;
-
-        let score = (userData.averageRating / 5) * 100;
-        // Bonus for excellent ratings
-        if (userData.averageRating > 4.5) score = Math.min(100, score + 10);
-
-        return Math.min(100, score);
-    }
-
-    static calculateVerificationScore(userData) {
-        if (userData.verificationStatus === 'none') return 0;
-        if (userData.verificationStatus === 'pending') return 20;
-        if (userData.verificationStatus === 'rejected') return 0;
-
-        // Verified status - calculate from evidence points
-        if (userData.verificationStatus === 'verified') {
-            let score = 0;
-            const evidence = userData.verificationEvidence || {};
-
-            if (evidence.certification) score += 40;
-            if (evidence.video) score += 30;
-            if (evidence.linkedinProfile) score += 10;
-            if (evidence.portfolio) score += 15;
-            if (evidence.teachingCert) score += 5;
-
-            return Math.min(100, score);
-        }
-
-        return 0;
-    }
-
-    static calculateActivityScore(userData) {
-        const { completedSessions = 0, totalSessions = 0 } = userData;
-
-        if (totalSessions === 0) return 0;
-
-        let score = (completedSessions / totalSessions) * 100;
-
-        // Bonus for high activity
-        if (completedSessions > 10) score = Math.min(100, score + 5);
-        if (completedSessions > 50) score = Math.min(100, score + 10);
-
-        return Math.min(100, score);
-    }
-
-    static calculateReputationScore(userData) {
-        let score = 10; // Base score
-
-        // Penalties
-        const warningCount = userData.warningCount || 0;
-        score -= warningCount * 8;
-
-        // Dispute rate
-        const disputeRate = userData.disputeRate || 0;
-        if (disputeRate > 0.2) score -= 15;
-
-        // Ban history
-        if (userData.banHistory && userData.banHistory.length > 0) {
-            score -= 50;
-        }
-
-        return Math.max(0, Math.min(100, score));
-    }
-
-    static getTrustScoreTier(score) {
-        if (score >= 90) return { tier: 'Excellent', color: 'emerald', badge: '⭐⭐⭐⭐⭐' };
-        if (score >= 75) return { tier: 'Good', color: 'light-green', badge: '⭐⭐⭐⭐' };
-        if (score >= 60) return { tier: 'Fair', color: 'amber', badge: '⭐⭐⭐' };
-        if (score >= 45) return { tier: 'Warning', color: 'orange', badge: '⭐⭐' };
-        return { tier: 'Low', color: 'red', badge: '⭐' };
-    }
-
-    static canTeach(trustScore) {
-        return trustScore >= 70;
-    }
-
-    static canLearn(trustScore) {
-        return trustScore >= 40;
-    }
-}
 
 // ─── USER MANAGEMENT SERVICE ───────────────────────────────────────────────────
 export class UserManagementService {
     static formatUserForAdmin(user) {
         return {
             ...user,
-            trustScore: TrustScoreService.calculateTrustScore(user),
-            trustTier: TrustScoreService.getTrustScoreTier(
-                TrustScoreService.calculateTrustScore(user)
-            ),
-            canTeach: TrustScoreService.canTeach(
-                TrustScoreService.calculateTrustScore(user)
-            ),
-            isHighRisk: TrustScoreService.calculateTrustScore(user) < 40,
+            isHighRisk: (user.warningCount || 0) > 3,
             sessionCompletionRate: user.totalSessions > 0
                 ? Math.round((user.completedSessions / user.totalSessions) * 100)
                 : null,
@@ -125,11 +19,6 @@ export class UserManagementService {
 
             if (filters.verification && user.verificationStatus !== filters.verification) {
                 return false;
-            }
-
-            if (filters.trustScoreMin) {
-                const trust = TrustScoreService.calculateTrustScore(user);
-                if (trust < filters.trustScoreMin) return false;
             }
 
             if (filters.search) {
@@ -149,10 +38,7 @@ export class UserManagementService {
             let aVal, bVal;
 
             switch (sortBy) {
-                case 'trustScore':
-                    aVal = TrustScoreService.calculateTrustScore(a);
-                    bVal = TrustScoreService.calculateTrustScore(b);
-                    break;
+
                 case 'rating':
                     aVal = a.averageRating || 0;
                     bVal = b.averageRating || 0;
@@ -539,26 +425,7 @@ export class AnalyticsService {
         };
     }
 
-    static calculateTrustScoreDistribution(users) {
-        const distribution = {
-            'excellent': 0,  // 90-100
-            'good': 0,       // 75-89
-            'fair': 0,       // 60-74
-            'warning': 0,    // 45-59
-            'low': 0,        // 0-44
-        };
 
-        users.forEach(user => {
-            const score = TrustScoreService.calculateTrustScore(user);
-            if (score >= 90) distribution.excellent++;
-            else if (score >= 75) distribution.good++;
-            else if (score >= 60) distribution.fair++;
-            else if (score >= 45) distribution.warning++;
-            else distribution.low++;
-        });
-
-        return distribution;
-    }
 
     static calculateRevenueByCategory(sessions) {
         const categoryRevenue = {};
@@ -590,7 +457,6 @@ export class AnalyticsService {
                 completedSessions,
                 averageRating: mentor.averageRating,
                 earnings,
-                trustScore: TrustScoreService.calculateTrustScore(mentor),
             };
         }).sort((a, b) => b.earnings - a.earnings);
     }
@@ -598,7 +464,6 @@ export class AnalyticsService {
 
 // ─── EXPORT ───────────────────────────────────────────────────────────────────
 export const AdminServices = {
-    TrustScoreService,
     UserManagementService,
     SessionManagementService,
     LearningPathService,

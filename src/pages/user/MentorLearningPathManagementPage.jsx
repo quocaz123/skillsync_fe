@@ -18,6 +18,7 @@ import CreatePathModal from './learning-path-management/CreatePathModal';
 import PathPreviewModal from './learning-path-management/PathPreviewModal';
 import { validatePathForm, countLessons } from './learning-path-management/pathFormUtils';
 import { seedMentorPaths } from './learning-path-management/managementMockData';
+import ConfirmModal from '../../components/common/ConfirmModal';
 
 const STATUS_META = {
     DRAFT: { label: 'Nháp', className: 'bg-slate-100 text-slate-700 border-slate-200', dot: 'bg-slate-400' },
@@ -49,6 +50,7 @@ export default function MentorLearningPathManagementPage() {
     const [editPath, setEditPath] = useState(null);
     const [previewPath, setPreviewPath] = useState(null);
     const [rejectModal, setRejectModal] = useState(null);
+    const [confirmDeletePath, setConfirmDeletePath] = useState(null);
 
     const sorted = useMemo(
         () => [...paths].sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || '')),
@@ -84,8 +86,13 @@ export default function MentorLearningPathManagementPage() {
     };
 
     const deletePath = (path) => {
-        if (!window.confirm(`Xóa khóa học "${path.title}"? Hành động này không thể hoàn tác.`)) return;
-        setPaths((prev) => prev.filter((p) => p.id !== path.id));
+        setConfirmDeletePath(path);
+    };
+
+    const executeDeletePath = () => {
+        if (!confirmDeletePath) return;
+        setPaths((prev) => prev.filter((p) => p.id !== confirmDeletePath.id));
+        setConfirmDeletePath(null);
     };
 
     const handleSaveDraft = (payload) => {
@@ -370,6 +377,16 @@ export default function MentorLearningPathManagementPage() {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal 
+                isOpen={!!confirmDeletePath} 
+                onCancel={() => setConfirmDeletePath(null)} 
+                onConfirm={executeDeletePath} 
+                title="Xóa Khóa Học" 
+                message={`Bạn có chắc muốn xóa khóa học "${confirmDeletePath?.title}" không? Hành động này không thể hoàn tác.`}
+                type="danger"
+                confirmText="Vâng, Xóa Khóa Học"
+            />
         </div>
     );
 }

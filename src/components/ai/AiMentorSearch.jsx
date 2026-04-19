@@ -9,6 +9,7 @@ import {
   SealCheck, CaretDown, CaretUp, X
 } from '@phosphor-icons/react';
 import { aiService } from '../../services/aiService';
+import Avatar from '../common/Avatar';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const PLACEHOLDER_TEXTS = [
@@ -60,25 +61,6 @@ const LoadingPhases = ({ phase }) => (
   </div>
 );
 
-// ─── Avatar helper (reuse pattern from Explore.jsx) ──────────────────────────
-const AiMentorAvatar = ({ src, name, size = 'w-12 h-12' }) => {
-  const [err, setErr] = useState(false);
-  const initials = name ? name.charAt(0).toUpperCase() : '?';
-  const colors = ['bg-violet-500', 'bg-indigo-500', 'bg-sky-500', 'bg-teal-500', 'bg-emerald-500'];
-  const color = colors[name?.charCodeAt(0) % colors.length] ?? 'bg-violet-500';
-
-  if (src && !err) {
-    return (
-      <img src={src} alt={name} onError={() => setErr(true)}
-        className={`${size} rounded-2xl object-cover shrink-0`} />
-    );
-  }
-  return (
-    <div className={`${size} rounded-2xl ${color} text-white flex items-center justify-center font-extrabold text-lg shrink-0`}>
-      {initials}
-    </div>
-  );
-};
 
 // ─── Score Bar ───────────────────────────────────────────────────────────────
 const ScoreBar = ({ score }) => {
@@ -112,7 +94,11 @@ const MentorAiCard = ({ mentor, index, onView }) => {
       <div className="p-5 flex-1">
         {/* Header */}
         <div className="flex items-start gap-3 mb-4">
-          <AiMentorAvatar src={mentor.avatarUrl} name={mentor.fullName} />
+          <Avatar 
+            src={mentor.avatarUrl} 
+            fallback={mentor.fullName ? mentor.fullName.charAt(0).toUpperCase() : '?'} 
+            size="w-12 h-12" 
+          />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-extrabold text-slate-900 text-base group-hover:text-violet-600 transition-colors truncate">
@@ -156,10 +142,7 @@ const MentorAiCard = ({ mentor, index, onView }) => {
               {mentor.reviewCount > 0 && <span>({mentor.reviewCount})</span>}
             </span>
           )}
-          <span className="flex items-center gap-1">
-            <Shield size={11} className="text-teal-500" />
-            <span>{mentor.trustScore}</span>
-          </span>
+
           <span className="ml-auto flex items-center gap-1 font-extrabold text-slate-700">
             <Lightning size={11} weight="fill" className="text-amber-400" />
             {mentor.creditsPerHour} <span className="font-normal text-slate-400">tín/giờ</span>

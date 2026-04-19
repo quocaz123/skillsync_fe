@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react';
 import { BookOpen, Eye, CheckCircle2, XCircle, Zap } from 'lucide-react';
 import PathPreviewModal from '../user/learning-path-management/PathPreviewModal';
+import ConfirmModal from '../../components/common/ConfirmModal';
 
 const INITIAL_PATHS = [
     { id: 'p1', title: 'Trở thành UI/UX Designer', mentor: 'Phạm Thị Dung', created: '2026-03-01', modules: 8, price: 400, status: 'active', category: 'Design', level: 'Beginner' },
@@ -71,6 +72,7 @@ const AdminPaths = () => {
     const [rejectReason, setRejectReason] = useState('');
     const [toast, setToast] = useState(null);
     const toastTimerRef = useRef(null);
+    const [confirmApprovePath, setConfirmApprovePath] = useState(null);
 
     const showToast = (message) => {
         setToast(message);
@@ -93,9 +95,14 @@ const AdminPaths = () => {
         showToast('Đã duyệt lộ trình — trạng thái: Đang mở');
     };
 
-    const handleApprove = (path) => {
-        if (!window.confirm(`Duyệt và mở lộ trình "${path.title}"?`)) return;
-        applyApprove(path);
+    const handleApproveClick = (path) => {
+        setConfirmApprovePath(path);
+    };
+
+    const executeApprove = () => {
+        if (!confirmApprovePath) return;
+        applyApprove(confirmApprovePath);
+        setConfirmApprovePath(null);
     };
 
     const openRejectModal = (path) => {
@@ -257,7 +264,7 @@ const AdminPaths = () => {
                                                 <>
                                                     <button
                                                         type="button"
-                                                        onClick={() => handleApprove(path)}
+                                                        onClick={() => handleApproveClick(path)}
                                                         className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-500 hover:text-white text-emerald-600 font-bold transition-all shadow-sm"
                                                         title="Duyệt lộ trình"
                                                     >
@@ -370,6 +377,16 @@ const AdminPaths = () => {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal 
+                isOpen={!!confirmApprovePath} 
+                onCancel={() => setConfirmApprovePath(null)} 
+                onConfirm={executeApprove} 
+                title="Phê duyệt Lộ trình" 
+                message={`Lộ trình "${confirmApprovePath?.title}" sẽ được mở công khai và học viên có thể bắt đầu đăng ký mua. Bạn chắc chắn chứ?`}
+                type="success"
+                confirmText="Duyệt lộ trình"
+            />
         </div>
     );
 };
