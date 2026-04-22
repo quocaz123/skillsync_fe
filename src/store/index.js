@@ -155,6 +155,17 @@ export const useStore = create(
 
             // LEARNING PROGRESS
             learningProgress: [],
+            completedLessons: {}, // { pathId: ["lessonId1", "lessonId2"] }
+            markLessonCompleted: (pathId, lessonId) => set((state) => {
+                const pathLessons = state.completedLessons[pathId] || [];
+                if (pathLessons.includes(lessonId)) return state;
+                return {
+                    completedLessons: {
+                        ...state.completedLessons,
+                        [pathId]: [...pathLessons, lessonId]
+                    }
+                };
+            }),
             updateProgress: (skillId, increment) => set((state) => ({
                 learningProgress: state.learningProgress.map(lp =>
                     lp.id === skillId
@@ -172,6 +183,7 @@ export const useStore = create(
                 credits: state.credits,
                 creditHistory: state.creditHistory,
                 enrolledPathIds: state.enrolledPathIds,
+                completedLessons: state.completedLessons,
             }),
         }
     )

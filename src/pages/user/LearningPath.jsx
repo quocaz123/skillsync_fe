@@ -5,9 +5,9 @@ import {
     Clock, Search, Users, Book, SlidersHorizontal,
     X, Sparkles, LayoutGrid, Video, Layers, ChevronDown, BadgeCheck,
 } from 'lucide-react';
-import { MY_PATHS_MOCK as myPaths } from '../../utils/mockData';
 import axiosClient from '../../configuration/axiosClient';
 import API_ENDPOINTS from '../../configuration/apiEndpoints';
+import { useStore } from '../../store/index';
 
 // ─────────────────────────────────────────────
 // Constants for UI
@@ -640,33 +640,31 @@ function MyPathCard({ path }) {
 // ─────────────────────────────────────────────
 // My Paths Tab
 // ─────────────────────────────────────────────
-function MyPathsTab({ onExplore, enrolledPaths = [], explorePaths = [] }) {
+function MyPathsTab({ onExplore, enrolledPaths = [] }) {
     const [subTab, setSubTab] = useState('ongoing'); // 'ongoing' | 'completed'
+    const completedLessonsMap = useStore(state => state.completedLessons);
 
-    const dynamicEnrolled = enrolledPaths
-        .map((p) => p.id)
-        .filter((id) => !myPaths.some((p) => p.id === id))
-        .map((id) => {
-            const p = enrolledPaths.find((e) => e.id === id) || explorePaths.find((e) => e.id === id);
-            if (!p) return null;
-            return {
-                id: p.id,
-                title: p.title,
-                emoji: p.emoji || '📚',
-                thumbnailFrom: p.thumbnailFrom || '#6366f1',
-                thumbnailTo: p.thumbnailTo || '#8b5cf6',
-                status: (p.enrollmentStatus === 'COMPLETED' || (p.progressPercent ?? 0) >= 100) ? 'COMPLETED' : 'ONGOING',
-                progress: Math.max(0, Math.min(100, Number(p.progressPercent ?? 0))),
-                modulesDone: 0,
-                modulesTotal: Math.max(1, p.moduleCount || 1),
-                currentModuleTitle: p.moduleCount > 0 ? 'Module 1' : null,
-                currentLesson: 'Bài mở đầu',
-                completedDate: (p.enrollmentStatus === 'COMPLETED' || (p.progressPercent ?? 0) >= 100) ? new Date().toLocaleDateString('vi-VN') : null,
-            };
-        })
-        .filter(Boolean);
+    const myPathsAll = enrolledPaths.map((p) => {
+        const completed = completedLessonsMap[p.id] || [];
+        const totalLessons = p.lessonCount || 1;
+        const calcProgress = Math.floor((completed.length / totalLessons) * 100);
+        const finalProgress = Math.max(0, Math.min(100, isNaN(calcProgress) ? 0 : calcProgress));
 
-    const myPathsAll = [...myPaths, ...dynamicEnrolled];
+        return {
+            id: p.id,
+            title: p.title,
+            emoji: p.emoji || '📚',
+            thumbnailFrom: p.thumbnailFrom || '#6366f1',
+            thumbnailTo: p.thumbnailTo || '#8b5cf6',
+            status: finalProgress >= 100 ? 'COMPLETED' : 'ONGOING',
+            progress: finalProgress,
+            modulesDone: Math.min(Math.floor((finalProgress / 100) * (p.moduleCount || 1)), p.moduleCount || 1),
+            modulesTotal: Math.max(1, p.moduleCount || 1),
+            currentModuleTitle: finalProgress >= 100 ? null : 'Tiếp tục lộ trình',
+            currentLesson: finalProgress >= 100 ? null : 'Bài học kế tiếp',
+            completedDate: finalProgress >= 100 ? new Date().toLocaleDateString('vi-VN') : null,
+        };
+    });
     const activePaths = myPathsAll.filter(p => p.status !== 'COMPLETED');
     const completedPaths = myPathsAll.filter(p => p.status === 'COMPLETED');
 

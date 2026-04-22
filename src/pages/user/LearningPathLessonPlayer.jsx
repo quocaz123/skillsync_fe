@@ -1,35 +1,69 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams, useLocation } from 'react-router-dom';
-import { Play, ChevronLeft, ExternalLink } from 'lucide-react';
-import { fetchLearningPathById } from '../../services/learningPathService';
+import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
+import { Play, ChevronLeft, ExternalLink, CheckCircle2, ChevronRight } from 'lucide-react';
+import { fetchUserLearningPath } from '../../services/userLearningPathService';
+import { useStore } from '../../store/index';
 
 export default function LearningPathLessonPlayer() {
     const { pathId, lessonId } = useParams();
     const location = useLocation();
+    const navigate = useNavigate();
     const title = location.state?.lessonTitle ?? 'Bài học';
     const pathTitle = location.state?.pathTitle ?? '';
     const [videoUrl, setVideoUrl] = useState(location.state?.videoUrl || '');
+    
+    const [pathDetail, setPathDetail] = useState(null);
+    const [completedStatus, setCompletedStatus] = useState(false);
+    const markLessonCompleted = useStore(state => state.markLessonCompleted);
+    const completedLessonsMap = useStore(state => state.completedLessons);
+    const completedLessons = completedLessonsMap[pathId] || [];
+    const isCompleted = completedLessons.includes(lessonId);
 
+    // Fetch and find videoURL if missing
     useEffect(() => {
-        let cancelled = false;
-        if (videoUrl) return undefined;
-        fetchLearningPathById(pathId)
-            .then((detail) => {
-                if (cancelled || !detail?.modules) return;
-                for (const module of detail.modules) {
-                    const lessons = Array.isArray(module.lessons) ? module.lessons : [];
-                    const found = lessons.find((l) => String(l.id) === String(lessonId));
-                    if (found?.videoUrl) {
-                        setVideoUrl(found.videoUrl);
-                        return;
+        let mounted = true;
+        fetchUserLearningPath(pathId)
+            .then((workspace) => {
+                if (!mounted || !workspace?.modules) return;
+                setPathDetail(workspace);
+                if (!videoUrl) {
+                    for (const module of workspace.modules) {
+                        const found = (module.lessons || []).find((l) => String(l.id) === String(lessonId));
+                        if (found?.videoUrl) {
+                            setVideoUrl(found.videoUrl);
+                            return;
+                        }
                     }
                 }
             })
             .catch(() => {});
-        return () => {
-            cancelled = true;
-        };
+        return () => { mounted = false; };
     }, [pathId, lessonId, videoUrl]);
+
+    // Tự động hoàn thành sau 10s
+    useEffect(() => {
+        if (isCompleted) return;
+        const timer = setTimeout(() => {
+            markLessonCompleted(pathId, lessonId);
+            setCompletedStatus(true);
+            setTimeout(() => setCompletedStatus(false), 6000); // Ẩn toast sau 6s
+        }, 10000);
+        return () => clearTimeout(timer);
+    }, [isCompleted, pathId, lessonId, markLessonCompleted]);
+
+    const nextLessonInfo = useMemo(() => {
+        if (!pathDetail) return null;
+        let foundCurrent = false;
+        for (const mod of pathDetail.modules || []) {
+            for (const l of mod.lessons || []) {
+                if (foundCurrent) return { id: l.id, title: l.title, videoUrl: l.videoUrl };
+                if (String(l.id) === String(lessonId)) {
+                    foundCurrent = true;
+                }
+            }
+        }
+        return null;
+    }, [pathDetail, lessonId]);
 
     const embedInfo = useMemo(() => {
         const u = (videoUrl || '').trim();
@@ -89,6 +123,49 @@ export default function LearningPathLessonPlayer() {
             </div>
             <h1 className="text-xl font-extrabold text-slate-900">{title}</h1>
             {pathTitle && <p className="text-sm text-slate-500 mt-1">{pathTitle}</p>}
+
+            {completedStatus && (
+                <div className="mt-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex flex-wrap items-center gap-4 transition-all">
+                    <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                        <CheckCircle2 size={24} />
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                        <h3 className="text-sm font-extrabold text-emerald-800">Tuyệt vời! Bạn đã hoàn thành bài học này.</h3>
+                        {nextLessonInfo ? (
+                            <p className="text-xs text-emerald-600 mt-0.5 font-medium">Hệ thống đã tự ghi nhận tiến độ học tập.</p>
+                        ) : (
+                            <p className="text-xs text-emerald-600 mt-0.5 font-medium">Chúc mừng bạn đã hoàn thành TOÀN BỘ lộ trình!</p>
+                        )}
+                    </div>
+                    {nextLessonInfo ? (
+                        <button
+                            onClick={() => navigate(`/app/learning-path/study/${pathId}/lesson/${nextLessonInfo.id}`, { state: { lessonTitle: nextLessonInfo.title, pathTitle: pathDetail?.pathTitle, videoUrl: nextLessonInfo.videoUrl }})}
+                            className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 flex items-center gap-1.5 shrink-0"
+                        >
+                            Bài tiếp theo <ChevronRight size={16} />
+                        </button>
+                    ) : (
+                        <Link
+                            to={`/app/learning-path`}
+                            className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 shrink-0"
+                        >
+                            Trang chủ Lộ trình
+                        </Link>
+                    )}
+                </div>
+            )}
+
+            {isCompleted && !completedStatus && nextLessonInfo && (
+                <div className="mt-6 flex flex-wrap gap-3 items-center justify-between p-4 rounded-xl border border-slate-200 bg-slate-50">
+                     <span className="text-sm font-semibold text-slate-600 flex items-center gap-2"><CheckCircle2 className="text-emerald-500" size={18}/> Bài học đã hoàn thành</span>
+                     <button
+                        onClick={() => navigate(`/app/learning-path/study/${pathId}/lesson/${nextLessonInfo.id}`, { state: { lessonTitle: nextLessonInfo.title, pathTitle: pathDetail?.pathTitle, videoUrl: nextLessonInfo.videoUrl }})}
+                        className="px-6 py-2 rounded-lg bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 flex items-center gap-2"
+                    >
+                        Học bài tiếp theo <ChevronRight size={18} />
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
