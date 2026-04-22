@@ -166,6 +166,19 @@ export const useStore = create(
                     }
                 };
             }),
+
+            // PATH REVIEWS
+            pathReviews: {}, // { pathId: { rating, comment, tags, createdAt } }
+            addPathReview: (pathId, reviewData) => set((state) => ({
+                pathReviews: {
+                    ...state.pathReviews,
+                    [String(pathId)]: {
+                        ...reviewData,
+                        pathId: String(pathId),
+                        createdAt: new Date().toISOString(),
+                    }
+                }
+            })),
             updateProgress: (skillId, increment) => set((state) => ({
                 learningProgress: state.learningProgress.map(lp =>
                     lp.id === skillId
@@ -184,6 +197,7 @@ export const useStore = create(
                 creditHistory: state.creditHistory,
                 enrolledPathIds: state.enrolledPathIds,
                 completedLessons: state.completedLessons,
+                pathReviews: state.pathReviews,
             }),
         }
     )

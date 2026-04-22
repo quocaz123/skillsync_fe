@@ -60,7 +60,8 @@ const mapBackendPathToLocal = (p) => ({
     moduleCount: p.moduleCount ?? p.modules?.length ?? 0,
     lessonCount: p.lessonCount ?? (p.modules || []).reduce((sum, m) => sum + (m.lessons?.length || 0), 0),
     type: p.teacherRole === 'ADMIN' ? 'system' : 'mentor',
-    rating: 4.8,
+    rating: p.rating != null ? p.rating : 0,
+    totalReviews: p.totalReviews != null ? p.totalReviews : 0,
     featured: p.isFeatured || false,
     newest: true,
     mentor: p.teacherName ? {
@@ -146,9 +147,10 @@ function PathCard({ path }) {
                 </div>
 
                 {/* Rating top-right */}
-                {path.rating && (
+                {path.rating > 0 && (
                     <div className="absolute top-3 right-3 bg-black/30 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
                         <Star size={11} className="text-amber-300 fill-current" /> {path.rating.toFixed(1)}
+                        {path.totalReviews > 0 && <span className="ml-0.5 text-[10px] opacity-80">({path.totalReviews})</span>}
                     </div>
                 )}
 

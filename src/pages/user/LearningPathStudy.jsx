@@ -15,8 +15,15 @@ import {
     Target,
     StickyNote,
     ChevronRight,
+    Star,
+    Trophy,
+    MessageSquarePlus,
 } from 'lucide-react';
 import { fetchUserLearningPath } from '../../services/userLearningPathService';
+import { useStore } from '../../store';
+import PathRatingModal from '../../components/learning/PathRatingModal';
+import axiosClient from '../../configuration/axiosClient';
+import API_ENDPOINTS from '../../configuration/apiEndpoints';
 
 const MODULE_STATUS_LABEL = {
     LOCKED: 'Đã khóa',
@@ -175,6 +182,11 @@ export default function LearningPathStudy() {
     const [quizOpen, setQuizOpen] = useState(false);
     const [quizModuleId, setQuizModuleId] = useState(null);
     const [supportModuleId, setSupportModuleId] = useState(null);
+    const [ratingOpen, setRatingOpen] = useState(false);
+
+    const addPathReview = useStore((s) => s.addPathReview);
+    const pathReviews = useStore((s) => s.pathReviews);
+    const existingReview = pathReviews?.[String(pathId)] ?? null;
 
     useEffect(() => {
         let c = false;
@@ -230,6 +242,16 @@ export default function LearningPathStudy() {
             document.getElementById(`module-${pc.moduleId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     };
+
+    const handleRatingSubmit = useCallback(async (reviewData) => {
+        try {
+            await axiosClient.post(API_ENDPOINTS.LEARNING_PATHS.RATE(pathId), reviewData);
+            addPathReview(pathId, reviewData);
+        } catch (error) {
+            console.error('Lỗi khi đánh giá lộ trình:', error);
+            throw error;
+        }
+    }, [pathId, addPathReview]);
 
     const openSupportForModule = (moduleId) => {
         setSupportModuleId(moduleId);
@@ -601,6 +623,40 @@ export default function LearningPathStudy() {
                                 {data.missionHint}
                             </div>
                         )}
+
+                        {/* Rating CTA in sidebar */}
+                        <div className="pt-1 border-t border-slate-100">
+                            {existingReview ? (
+                                <div className="space-y-2">
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Đánh giá của bạn</p>
+                                    <div className="flex gap-0.5">
+                                        {[1,2,3,4,5].map((s) => (
+                                            <Star key={s} size={16}
+                                                className={s <= existingReview.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-100'}
+                                            />
+                                        ))}
+                                    </div>
+                                    {existingReview.comment && (
+                                        <p className="text-xs text-slate-500 italic line-clamp-2">"{existingReview.comment}"</p>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => setRatingOpen(true)}
+                                        className="w-full py-2 rounded-lg border border-slate-200 text-slate-700 text-xs font-bold hover:border-indigo-300 hover:text-indigo-700 flex items-center justify-center gap-1.5 transition-colors"
+                                    >
+                                        <Star size={13} /> Sửa đánh giá
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => setRatingOpen(true)}
+                                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-indigo-200 transition-all"
+                                >
+                                    <MessageSquarePlus size={16} /> Đánh giá lộ trình
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </aside>
             </div>
@@ -619,6 +675,15 @@ export default function LearningPathStudy() {
                 open={quizOpen}
                 onClose={() => setQuizOpen(false)}
                 moduleTitle={quizModule?.title ?? ''}
+            />
+
+            <PathRatingModal
+                open={ratingOpen}
+                onClose={() => setRatingOpen(false)}
+                onSubmit={handleRatingSubmit}
+                pathTitle={data.pathTitle}
+                pathEmoji={data.emoji}
+                existingRating={existingReview}
             />
         </div>
     );
