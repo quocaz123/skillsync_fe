@@ -19,26 +19,30 @@ export default function LearningPathLessonPlayer() {
     const completedLessons = completedLessonsMap[pathId] || [];
     const isCompleted = completedLessons.includes(lessonId);
 
-    // Fetch and find videoURL if missing
+    // Reset videoUrl khi chuyển bài để tránh hiển thị video cũ
+    useEffect(() => {
+        setVideoUrl(location.state?.videoUrl || '');
+    }, [lessonId, location.state?.videoUrl]);
+
+    // Fetch path detail và tìm videoUrl nếu chưa có
     useEffect(() => {
         let mounted = true;
         fetchUserLearningPath(pathId)
             .then((workspace) => {
                 if (!mounted || !workspace?.modules) return;
                 setPathDetail(workspace);
-                if (!videoUrl) {
-                    for (const module of workspace.modules) {
-                        const found = (module.lessons || []).find((l) => String(l.id) === String(lessonId));
-                        if (found?.videoUrl) {
-                            setVideoUrl(found.videoUrl);
-                            return;
-                        }
+                // Luôn tìm đúng video cho lessonId hiện tại từ API
+                for (const module of workspace.modules) {
+                    const found = (module.lessons || []).find((l) => String(l.id) === String(lessonId));
+                    if (found?.videoUrl) {
+                        setVideoUrl(found.videoUrl);
+                        return;
                     }
                 }
             })
             .catch(() => {});
         return () => { mounted = false; };
-    }, [pathId, lessonId, videoUrl]);
+    }, [pathId, lessonId]);
 
     // Tự động hoàn thành sau 10s
     useEffect(() => {
