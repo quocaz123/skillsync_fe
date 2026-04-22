@@ -189,6 +189,7 @@ export default function LearningPathDetail() {
         () => Number(user?.creditsBalance ?? credits ?? 0),
         [user?.creditsBalance, credits]
     );
+    const currentUserId = user?.id ?? user?.userId ?? null;
 
     useEffect(() => {
         let cancelled = false;
@@ -212,10 +213,24 @@ export default function LearningPathDetail() {
         };
     }, [pathId]);
 
-    const enrolled = detail?.enrolled || (detail?.id && enrolledPathIds?.includes(detail.id));
+    const enrolledIdSet = useMemo(
+        () => new Set((enrolledPathIds || []).map((id) => String(id))),
+        [enrolledPathIds]
+    );
+    const enrolledByStatus = detail?.enrollmentStatus === 'ENROLLED' || detail?.enrollmentStatus === 'COMPLETED';
+    const isOwner = Boolean(detail?.teacherId && currentUserId && String(detail.teacherId) === String(currentUserId));
+    const enrolled = Boolean(
+        detail?.enrolled ||
+        enrolledByStatus ||
+        (detail?.id != null && enrolledIdSet.has(String(detail.id)))
+    );
 
     const handlePrimaryCta = () => {
         if (!detail) return;
+        if (isOwner) {
+            navigate('/mentor/learning-paths');
+            return;
+        }
         if (enrolled) {
             navigate(`/app/learning-path/study/${detail.id}`);
             return;
@@ -225,6 +240,16 @@ export default function LearningPathDetail() {
 
     const handleEnrollConfirm = async () => {
         if (!detail) return;
+        if (isOwner) {
+            setModalOpen(false);
+            navigate('/mentor/learning-paths');
+            return;
+        }
+        if (enrolled) {
+            setModalOpen(false);
+            navigate(`/app/learning-path/study/${detail.id}`);
+            return;
+        }
         const cost = Number(detail.totalCredits || 0);
         if (cost > 0 && balance < cost) return;
 
@@ -367,7 +392,11 @@ export default function LearningPathDetail() {
                                     onClick={handlePrimaryCta}
                                     className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md shadow-indigo-200 flex items-center gap-2"
                                 >
-                                    {enrolled ? (
+                                    {isOwner ? (
+                                        <>
+                                            <Users size={16} /> Quản lí lộ trình
+                                        </>
+                                    ) : enrolled ? (
                                         <>
                                             <Play size={16} className="fill-current" /> Tiếp tục học
                                         </>
@@ -584,7 +613,11 @@ export default function LearningPathDetail() {
                             onClick={handlePrimaryCta}
                             className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2"
                         >
-                            {enrolled ? (
+                            {isOwner ? (
+                                <>
+                                    <Users size={16} /> Quản lí lộ trình
+                                </>
+                            ) : enrolled ? (
                                 <>
                                     <Play size={16} className="fill-current" /> Tiếp tục học
                                 </>
@@ -599,7 +632,7 @@ export default function LearningPathDetail() {
             </div>
 
             <EnrollmentModal
-                open={modalOpen}
+                open={modalOpen && !isOwner}
                 onClose={() => setModalOpen(false)}
                 detail={detail}
                 balance={balance}

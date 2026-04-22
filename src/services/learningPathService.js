@@ -68,6 +68,9 @@ export function normalizePathDetail(raw) {
 
     return {
         id: String(pick(r, 'id', 'pathId', 'learningPathId')),
+        teacherId: pick(r, 'teacherId', 'teacher_id', 'mentorId', 'mentor_id') != null
+            ? String(pick(r, 'teacherId', 'teacher_id', 'mentorId', 'mentor_id'))
+            : null,
         title: pick(r, 'title', 'name') ?? '',
         shortDescription: pick(r, 'shortDescription', 'short_description', 'subtitle') ?? '',
         description: pick(r, 'description', 'fullDescription', 'overview') ?? '',

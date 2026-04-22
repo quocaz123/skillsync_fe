@@ -22,6 +22,8 @@ import CreatePathModal from './learning-path-management/CreatePathModal';
 import { mapFormToApiPayload } from './learning-path-management/pathFormUtils';
 import PathPreviewModal from './learning-path-management/PathPreviewModal';
 import { validatePathForm, countLessons } from './learning-path-management/pathFormUtils';
+import { getMyTeachingSkills } from '../../services/skillService';
+import ConfirmModal from '../../components/common/ConfirmModal';
 
 const STATUS_META = {
     DRAFT: { label: 'Nháp', className: 'bg-slate-100 text-slate-700 border-slate-200', dot: 'bg-slate-400' },
@@ -48,6 +50,8 @@ const FILTERS = [
 
 /** Chuyển API response → shape dùng trong modal/table */
 function apiToPath(p) {
+    const rawStatus = p.status || 'PENDING_APPROVAL';
+    const normalizedStatus = rawStatus === 'PENDING' ? 'PENDING_APPROVAL' : rawStatus;
     return {
         id: p.id,
         title: p.title,
@@ -60,7 +64,7 @@ function apiToPath(p) {
         thumbnailUrl: p.thumbnailUrl || '',
         priceType: (p.totalCredits > 0) ? 'PAID' : 'FREE',
         totalCreditsCost: String(p.totalCredits || 0),
-        status: p.status || 'PENDING_APPROVAL',
+        status: normalizedStatus,
         modules: (p.modules || []).map(m => ({
             id: m.id,
             title: m.title,
@@ -89,6 +93,7 @@ export default function MentorLearningPathManagementPage() {
     const { user } = useStore();
     const [paths, setPaths] = useState([]);
     const [loadingPaths, setLoadingPaths] = useState(true);
+    const [approvedTeachingSkills, setApprovedTeachingSkills] = useState([]);
     const [filter, setFilter] = useState('all');
     const [createOpen, setCreateOpen] = useState(false);
     const [editPath, setEditPath] = useState(null);
@@ -111,7 +116,29 @@ export default function MentorLearningPathManagementPage() {
 
     useEffect(() => { fetchMyPaths(); }, []);
 
+    useEffect(() => {
+        const fetchApprovedTeachingSkills = async () => {
+            try {
+                const res = await getMyTeachingSkills();
+                const skills = Array.isArray(res) ? res : [];
+                setApprovedTeachingSkills(skills.filter((s) => s.verificationStatus === 'APPROVED'));
+            } catch (e) {
+                console.error('Lỗi tải kỹ năng đã duyệt:', e);
+                setApprovedTeachingSkills([]);
+            }
+        };
+        fetchApprovedTeachingSkills();
+    }, []);
 
+    const canCreatePath = approvedTeachingSkills.length > 0;
+    const approvedSkillNames = useMemo(
+        () => Array.from(new Set(
+            approvedTeachingSkills
+                .map((s) => s.skillName || s.name || s.skill)
+                .filter(Boolean)
+        )),
+        [approvedTeachingSkills]
+    );
 
     const sorted = useMemo(
         () => [...paths].sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || '')),
@@ -164,7 +191,12 @@ export default function MentorLearningPathManagementPage() {
     const handleSubmitApproval = async (payload) => {
         try {
             const apiPayload = mapFormToApiPayload(payload);
-            await axiosClient.post(`${API_ENDPOINTS.LEARNING_PATHS.CREATE}?mentorId=${user?.id}`, apiPayload);
+            const endpoint = `${API_ENDPOINTS.LEARNING_PATHS.CREATE}?mentorId=${user?.id}`;
+            try {
+                await axiosClient.post(endpoint, { ...apiPayload, status: 'PENDING_APPROVAL' });
+            } catch {
+                await axiosClient.post(endpoint, { ...apiPayload, status: 'PENDING' });
+            }
             toastSuccess('Gửi yêu cầu phê duyệt thành công!');
             setCreateOpen(false);
             fetchMyPaths();
@@ -215,14 +247,26 @@ export default function MentorLearningPathManagementPage() {
                 <button
                     type="button"
                     onClick={() => {
+                        if (!canCreatePath) return;
                         setEditPath(null);
                         setCreateOpen(true);
                     }}
-                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 text-white font-bold text-sm shadow-lg shadow-violet-500/25 hover:bg-violet-700 transition-colors"
+                    disabled={!canCreatePath}
+                    className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-white font-bold text-sm shadow-lg transition-colors ${
+                        canCreatePath
+                            ? 'bg-violet-600 shadow-violet-500/25 hover:bg-violet-700'
+                            : 'bg-slate-300 shadow-none cursor-not-allowed'
+                    }`}
                 >
                     <Plus size={18} /> Tạo lộ trình
                 </button>
             </header>
+
+            {!canCreatePath && (
+                <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    Bạn cần đăng ký kỹ năng giảng dạy mới và chờ admin duyệt trước khi tạo lộ trình học.
+                </div>
+            )}
 
             {/* Bộ lọc + đếm */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
@@ -424,6 +468,7 @@ export default function MentorLearningPathManagementPage() {
                 pathType="MENTOR"
                 mode={editPath ? 'edit' : 'create'}
                 initialData={editPath}
+                allowedSkills={approvedSkillNames}
                 onSaveDraft={handleSaveDraft}
                 onSubmitApproval={handleSubmitApproval}
             />

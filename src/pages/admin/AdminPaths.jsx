@@ -9,6 +9,7 @@ import { toastSuccess, toastError } from '../../utils/toastUtils';
 import { mapFormToApiPayload } from '../user/learning-path-management/pathFormUtils';
 
 const statusConfig = {
+    draft: { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200', dot: 'bg-slate-400', label: 'Nháp' },
     active: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-100', dot: 'bg-emerald-500', label: 'Đang mở' },
     pending: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-100', dot: 'bg-amber-500', label: 'Chờ duyệt' },
     rejected: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-100', dot: 'bg-rose-500', label: 'Từ chối' },
@@ -57,6 +58,7 @@ function mapBackendPathToPreview(path) {
     if (!path) return null;
     const statusMap = {
         APPROVED: { code: 'APPROVED', label: 'Đang mở' },
+        PENDING_APPROVAL: { code: 'PENDING_APPROVAL', label: 'Chờ duyệt' },
         PENDING: { code: 'PENDING', label: 'Chờ duyệt' },
         REJECTED: { code: 'REJECTED', label: 'Từ chối' },
     };
@@ -101,7 +103,6 @@ const AdminPaths = () => {
     const [previewLoading, setPreviewLoading] = useState(false);
     const user = useStore(s => s.user);
     const toastTimerRef = useRef(null);
-    const [confirmApprovePath, setConfirmApprovePath] = useState(null);
 
     const fetchPaths = async () => {
         setLoading(true);
@@ -115,7 +116,11 @@ const AdminPaths = () => {
                 created: p.createdAt ? new Date(p.createdAt).toLocaleDateString('vi-VN') : '—',
                 modules: p.moduleCount || 0,
                 price: p.totalCredits || 0,
-                status: p.status === 'APPROVED' ? 'active' : (p.status === 'REJECTED' ? 'rejected' : 'pending'),
+                status: p.status === 'APPROVED'
+                    ? 'active'
+                    : p.status === 'REJECTED'
+                      ? 'rejected'
+                      : (p.status === 'DRAFT' ? 'draft' : 'pending'),
                 category: p.category || 'OTHER',
                 level: p.level || '—',
                 rejectionReason: p.rejectionReason || null,
@@ -145,24 +150,33 @@ const AdminPaths = () => {
     const pending = useMemo(() => paths.filter((p) => p.status === 'pending').length, [paths]);
     const active = useMemo(() => paths.filter((p) => p.status === 'active').length, [paths]);
 
+    const requestWithFallback = async (builders) => {
+        let lastError;
+        for (const build of builders) {
+            try {
+                await build();
+                return true;
+            } catch (err) {
+                lastError = err;
+            }
+        }
+        throw lastError;
+    };
+
     const applyApprove = async (path) => {
         try {
-            await axiosClient.patch(API_ENDPOINTS.LEARNING_PATHS.ADMIN_APPROVE(path.id));
+            await requestWithFallback([
+                () => axiosClient.patch(API_ENDPOINTS.LEARNING_PATHS.ADMIN_APPROVE(path.id)),
+                () => axiosClient.patch(API_ENDPOINTS.LEARNING_PATHS.ADMIN_APPROVE(path.id), {}),
+                () => axiosClient.post(API_ENDPOINTS.LEARNING_PATHS.ADMIN_APPROVE(path.id), {}),
+                () => axiosClient.put(API_ENDPOINTS.LEARNING_PATHS.ADMIN_APPROVE(path.id), {}),
+            ]);
             setPaths((prev) => prev.map((p) => (p.id === path.id ? { ...p, status: 'active', rejectionReason: undefined } : p)));
             showToast('✅ Đã duyệt lộ trình thành công');
         } catch (error) {
+            console.error('Approve learning path failed:', error);
             showToast('Lỗi khi duyệt lộ trình');
         }
-    };
-
-    const handleApproveClick = (path) => {
-        setConfirmApprovePath(path);
-    };
-
-    const executeApprove = () => {
-        if (!confirmApprovePath) return;
-        applyApprove(confirmApprovePath);
-        setConfirmApprovePath(null);
     };
 
     const openRejectModal = (path) => { setRejectTarget(path); setRejectReason(''); };
@@ -185,12 +199,18 @@ const AdminPaths = () => {
         if (!rejectTarget) return;
         const reason = rejectReason.trim();
         try {
-            await axiosClient.patch(API_ENDPOINTS.LEARNING_PATHS.ADMIN_REJECT(rejectTarget.id) + `?reason=${encodeURIComponent(reason)}`);
+            await requestWithFallback([
+                () => axiosClient.patch(API_ENDPOINTS.LEARNING_PATHS.ADMIN_REJECT(rejectTarget.id), { reason }),
+                () => axiosClient.patch(API_ENDPOINTS.LEARNING_PATHS.ADMIN_REJECT(rejectTarget.id) + `?reason=${encodeURIComponent(reason)}`),
+                () => axiosClient.post(API_ENDPOINTS.LEARNING_PATHS.ADMIN_REJECT(rejectTarget.id), { reason }),
+                () => axiosClient.put(API_ENDPOINTS.LEARNING_PATHS.ADMIN_REJECT(rejectTarget.id), { reason }),
+            ]);
             setPaths((prev) => prev.map((p) =>
                 p.id === rejectTarget.id ? { ...p, status: 'rejected', rejectionReason: reason || 'Không có lý do.' } : p
             ));
             showToast('Đã từ chối lộ trình');
         } catch (error) {
+            console.error('Reject learning path failed:', error);
             showToast('Lỗi khi từ chối lộ trình');
         }
         setRejectTarget(null);
@@ -250,6 +270,7 @@ const AdminPaths = () => {
             <div className="flex flex-wrap items-center gap-2">
                 {[
                     { id: 'all', label: 'Tất cả' },
+                    { id: 'draft', label: '📝 Nháp' },
                     { id: 'pending', label: '⏳ Chờ duyệt' },
                     { id: 'active', label: '✅ Đang mở' },
                     { id: 'rejected', label: '❌ Từ chối' },
@@ -339,7 +360,7 @@ const AdminPaths = () => {
                                                 <>
                                                     <button
                                                         type="button"
-                                                        onClick={() => handleApproveClick(path)}
+                                                        onClick={() => applyApprove(path)}
                                                         className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-500 hover:text-white text-emerald-600 font-bold transition-all shadow-sm"
                                                         title="Duyệt lộ trình"
                                                     >

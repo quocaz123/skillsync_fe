@@ -736,6 +736,7 @@ function MyPathsTab({ onExplore, enrolledPaths = [] }) {
 // Main Page
 // ─────────────────────────────────────────────
 const LearningPath = () => {
+    const addEnrolledPath = useStore(state => state.addEnrolledPath);
     const [activeTab, setActiveTab] = useState('my_paths'); // 'my_paths' | 'explore'
     const [explorePaths, setExplorePaths] = useState([]);
     const [enrolledPaths, setEnrolledPaths] = useState([]);
@@ -758,13 +759,15 @@ const LearningPath = () => {
             try {
                 const res = await axiosClient.get(API_ENDPOINTS.LEARNING_PATHS.GET_ENROLLED);
                 const data = Array.isArray(res) ? res : (res?.data || res?.result || []);
-                setEnrolledPaths(data.map(mapBackendPathToLocal));
+                const mapped = data.map(mapBackendPathToLocal);
+                setEnrolledPaths(mapped);
+                mapped.forEach((path) => addEnrolledPath(path.id));
             } catch {
                 setEnrolledPaths([]);
             }
         };
         fetchEnrolled();
-    }, []);
+    }, [addEnrolledPath]);
 
     return (
         <div className="max-w-6xl mx-auto font-sans pb-16 space-y-6">

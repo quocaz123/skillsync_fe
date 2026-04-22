@@ -154,10 +154,15 @@ export default function CreatePathModal({
     onSaveDraft,
     onSubmitApproval,
     onPublish,
+    allowedSkills = [],
 }) {
     const user = useStore?.(s => s.user);
     const mentorPreview = useMemo(() => buildMentorPreviewFromUser(user), [user]);
     const isMentor = pathType === 'MENTOR';
+    const normalizedAllowedSkills = useMemo(
+        () => (Array.isArray(allowedSkills) ? allowedSkills.filter(Boolean) : []),
+        [allowedSkills]
+    );
 
     const [step, setStep] = useState(1);
     const [form, setForm] = useState(() => mergeInitialPath(pathType, initialData));
@@ -170,6 +175,15 @@ export default function CreatePathModal({
             setErrorBanner('');
         }
     }, [open, pathType, initialData]);
+
+    useEffect(() => {
+        if (!open || !isMentor || normalizedAllowedSkills.length === 0) return;
+        setForm((prev) => {
+            const selectedSkill = (prev?.skill || '').trim();
+            if (selectedSkill && normalizedAllowedSkills.includes(selectedSkill)) return prev;
+            return { ...prev, skill: normalizedAllowedSkills[0] };
+        });
+    }, [open, isMentor, normalizedAllowedSkills]);
 
     if (!open) return null;
 
@@ -234,7 +248,7 @@ export default function CreatePathModal({
                         )}
 
                         <div className="max-w-3xl mx-auto">
-                            {step === 1 && <StepBasicInfo form={form} update={updateForm} pathType={pathType} />}
+                            {step === 1 && <StepBasicInfo form={form} update={updateForm} pathType={pathType} allowedSkills={normalizedAllowedSkills} />}
                             {step === 2 && <StepCurriculum form={form} update={updateForm} pathType={pathType} />}
                             {step === 3 && <StepReview form={form} mentor={mentorPreview} />}
                         </div>
@@ -271,6 +285,10 @@ export default function CreatePathModal({
                         <button
                             type="button"
                             onClick={() => {
+                                if (isMentor && normalizedAllowedSkills.length === 0) {
+                                    setErrorBanner('Bạn cần có kỹ năng đã được admin duyệt trước khi tạo lộ trình.');
+                                    return;
+                                }
                                 const draftErr = validatePathForm(form, 'draft');
                                 if (draftErr.length) { setErrorBanner(draftErr[0]); return; }
                                 onSaveDraft?.({ ...form, status: 'DRAFT' });
@@ -295,6 +313,10 @@ export default function CreatePathModal({
                         {step < 3 ? (
                             <button
                                 onClick={() => {
+                                    if (isMentor && normalizedAllowedSkills.length === 0) {
+                                        setErrorBanner('Bạn cần có kỹ năng đã được admin duyệt trước khi tạo lộ trình.');
+                                        return;
+                                    }
                                     if (step === 1 && validatePathForm(form, 'draft').length > 0) {
                                         setErrorBanner(validatePathForm(form, 'draft')[0]);
                                         return;
@@ -309,6 +331,14 @@ export default function CreatePathModal({
                         ) : (
                             <button
                                 onClick={() => {
+                                    if (isMentor && normalizedAllowedSkills.length === 0) {
+                                        setErrorBanner('Bạn cần có kỹ năng đã được admin duyệt trước khi tạo lộ trình.');
+                                        return;
+                                    }
+                                    if (isMentor && !normalizedAllowedSkills.includes(form.skill)) {
+                                        setErrorBanner('Bạn chỉ có thể tạo lộ trình cho kỹ năng đã được admin duyệt.');
+                                        return;
+                                    }
                                     if (validationErrors.length) { setErrorBanner(validationErrors[0]); return; }
                                     const payload = { ...form, updatedAt: new Date().toISOString() };
                                     isMentor ? onSubmitApproval?.(payload) : onPublish?.(payload);
@@ -328,7 +358,8 @@ export default function CreatePathModal({
 /**
  * STEP 1: BASIC INFO (REDESIGNED)
  */
-function StepBasicInfo({ form, update, pathType }) {
+function StepBasicInfo({ form, update, pathType, allowedSkills = [] }) {
+    const isMentor = pathType === 'MENTOR';
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
             <div className="grid gap-6">
@@ -345,17 +376,39 @@ function StepBasicInfo({ form, update, pathType }) {
                 <div className="grid sm:grid-cols-2 gap-6">
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2.5">Kỹ năng đào tạo</label>
-                        <div className="relative group">
-                            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
-                            <input
-                                list="skills"
-                                className="w-full rounded-xl border border-slate-200 pl-11 pr-4 py-3 text-sm font-semibold focus:border-indigo-600 outline-none"
+                        {isMentor ? (
+                            <select
+                                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold focus:border-indigo-600 outline-none cursor-pointer bg-white"
                                 value={form.skill}
                                 onChange={(e) => update({ skill: e.target.value })}
-                                placeholder="Search skills..."
-                            />
-                            <datalist id="skills">{SKILL_SUGGESTIONS.map(s => <option key={s} value={s} />)}</datalist>
-                        </div>
+                                disabled={allowedSkills.length === 0}
+                            >
+                                {allowedSkills.length === 0 ? (
+                                    <option value="">Chưa có kỹ năng được duyệt</option>
+                                ) : (
+                                    allowedSkills.map((skill) => (
+                                        <option key={skill} value={skill}>{skill}</option>
+                                    ))
+                                )}
+                            </select>
+                        ) : (
+                            <div className="relative group">
+                                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+                                <input
+                                    list="skills"
+                                    className="w-full rounded-xl border border-slate-200 pl-11 pr-4 py-3 text-sm font-semibold focus:border-indigo-600 outline-none"
+                                    value={form.skill}
+                                    onChange={(e) => update({ skill: e.target.value })}
+                                    placeholder="Search skills..."
+                                />
+                                <datalist id="skills">{SKILL_SUGGESTIONS.map(s => <option key={s} value={s} />)}</datalist>
+                            </div>
+                        )}
+                        {isMentor && (
+                            <p className="mt-2 text-[11px] text-slate-400">
+                                Chỉ hiển thị kỹ năng bạn đã đăng ký và được admin duyệt.
+                            </p>
+                        )}
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2.5">Trình độ</label>
