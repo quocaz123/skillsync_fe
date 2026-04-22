@@ -44,7 +44,7 @@ function LivePreviewCard({ pathType, form, mentor }) {
     const [imgFailed, setImgFailed] = useState(false);
     const [mentorAvatarFailed, setMentorAvatarFailed] = useState(false);
     const thumb = typeof form.thumbnail === 'string' ? form.thumbnail.trim() : '';
-    const looksLikeImageUrl = /^https?:\/\//i.test(thumb);
+    const looksLikeImageUrl = thumb.length > 0;
     const showImage = looksLikeImageUrl && !imgFailed;
     const isMentor = pathType === 'MENTOR';
     const lessonCount = countLessons(form.modules);
@@ -99,7 +99,7 @@ function LivePreviewCard({ pathType, form, mentor }) {
                 </div>
 
                 <p className="text-xs text-slate-500 leading-relaxed line-clamp-2 h-8">
-                    {form.shortDescription || 'Mô tả ngắn về lộ trình sẽ hiển thị ở đây...'}
+                    {form.description || form.shortDescription || 'Mô tả chi tiết về lộ trình sẽ hiển thị ở đây...'}
                 </p>
 
                 {isMentor && (
@@ -120,6 +120,7 @@ function LivePreviewCard({ pathType, form, mentor }) {
                     <div className="flex items-center gap-3">
                         <span className="flex items-center gap-1.5"><Layers size={13} /> {form.modules?.length ?? 0} Modules</span>
                         <span className="flex items-center gap-1.5"><Play size={13} /> {lessonCount} Lessons</span>
+                        {form.estimatedDuration && <span className="flex items-center gap-1.5"><Zap size={13} /> {form.estimatedDuration} tuần</span>}
                     </div>
                 </div>
 
@@ -386,6 +387,18 @@ function StepBasicInfo({ form, update, pathType }) {
                       value={form.thumbnail}
                       onChange={(e) => update({ thumbnail: e.target.value })}
                       placeholder="https://images.unsplash.com/..."
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2.5">Thời gian học dự kiến (Tuần)</label>
+                  <input
+                      type="number"
+                      min="1"
+                      className="w-full rounded-xl border border-slate-200 px-5 py-3 text-sm font-medium focus:border-indigo-600 outline-none transition-all placeholder:text-slate-300"
+                      value={form.estimatedDuration}
+                      onChange={(e) => update({ estimatedDuration: e.target.value })}
+                      placeholder="VD: 4"
                   />
                 </div>
             </div>

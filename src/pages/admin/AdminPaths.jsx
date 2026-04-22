@@ -460,7 +460,7 @@ const AdminPaths = () => {
                 onSubmitApproval={async (payload) => {
                     try {
                         const apiPayload = mapFormToApiPayload(payload);
-                        await axiosClient.post(`${API_ENDPOINTS.LEARNING_PATHS.CREATE}?mentorId=${user?.id || 'admin-id'}`, apiPayload);
+                        await axiosClient.post(`${API_ENDPOINTS.LEARNING_PATHS.CREATE}?mentorId=${user?.userId || user?.id || 'admin-id'}`, apiPayload);
                         toastSuccess('Tạo lộ trình hệ thống thành công!');
                         setIsCreateOpen(false);
                         fetchPaths();
@@ -471,7 +471,7 @@ const AdminPaths = () => {
                 onPublish={async (payload) => {
                     try {
                         const apiPayload = mapFormToApiPayload(payload);
-                        await axiosClient.post(`${API_ENDPOINTS.LEARNING_PATHS.CREATE}?mentorId=${user?.id || 'admin-id'}`, apiPayload);
+                        await axiosClient.post(`${API_ENDPOINTS.LEARNING_PATHS.CREATE}?mentorId=${user?.userId || user?.id || 'admin-id'}`, apiPayload);
                         toastSuccess('Xuất bản lộ trình hệ thống thành công!');
                         setIsCreateOpen(false);
                         fetchPaths();

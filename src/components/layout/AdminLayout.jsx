@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     SquaresFour, CalendarBlank, CurrencyCircleDollar,
     Users, BookOpen, Flag, ChartBar, GearSix, LockKey, Database,
-    List, SignOut, ShieldCheck, X, NotePencil, Brain,
+    List, SignOut, ShieldCheck, X, NotePencil, Brain, MapTrifold,
 } from '@phosphor-icons/react';
 import { useStore } from '../../store';
 import { logout as logoutApi } from '../../services/authService';
@@ -41,8 +41,8 @@ const AdminLayout = () => {
             label: 'Người dùng',
             items: [
                 { path: '/admin/users', label: 'Quản lý Người dùng', icon: Users },
-                { path: '/admin/teaching-skills', label: 'Xét duyệt Mentor', icon: ShieldCheck }
-               
+                { path: '/admin/teaching-skills', label: 'Xét duyệt Mentor', icon: ShieldCheck },
+                { path: '/admin/paths', label: 'Duyệt Lộ trình Học', icon: MapTrifold }
             ],
         },
         {
