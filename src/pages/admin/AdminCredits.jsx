@@ -19,8 +19,19 @@ const typeConfig = {
   PENALTY: { label: "Phạt / Trừ tiền", bg: "bg-rose-50", text: "text-rose-700" },
   MISSION_REWARD: { label: "Thưởng nhiệm vụ", bg: "bg-indigo-50", text: "text-indigo-700" },
   SPEND_SESSION: { label: "Thanh toán", bg: "bg-slate-50", text: "text-slate-600" },
+  SPEND_LEARNING_PATH: { label: "Mua lộ trình", bg: "bg-rose-50", text: "text-rose-700" },
   EARN_SESSION: { label: "Thu nhập Mentor", bg: "bg-emerald-50", text: "text-emerald-700" },
   unknown: { label: "Hệ thống", bg: "bg-slate-50", text: "text-slate-700" },
+};
+
+const getTypeConfig = (tx) => {
+  if (
+    tx?.transactionType === "SPEND_SESSION" &&
+    String(tx?.description || "").toLowerCase().includes("learning path")
+  ) {
+    return typeConfig.SPEND_LEARNING_PATH;
+  }
+  return typeConfig[tx?.transactionType] || typeConfig.unknown;
 };
 
 const FILTER_OPTIONS = [
@@ -290,7 +301,7 @@ const AdminCredits = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {paginatedTransactions.map((t) => {
-                    const tc = typeConfig[t.transactionType] || typeConfig.unknown;
+                    const tc = getTypeConfig(t);
                     return (
                       <tr
                         key={t.id}
@@ -552,7 +563,7 @@ const AdminCredits = () => {
                 <div>
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Loại</label>
                   <div className="mt-1 text-sm font-bold text-indigo-600">
-                    {typeConfig[selectedTx.transactionType]?.label || selectedTx.transactionType}
+                    {getTypeConfig(selectedTx).label || selectedTx.transactionType}
                   </div>
                 </div>
                 <div>

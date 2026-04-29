@@ -6,9 +6,25 @@ import { useStore } from '../../store';
 const TX_CONFIG = {
     SESSION_BOOKED: { icon: BookOpen, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', label: 'Đặt lịch học', sign: '-' },
     SESSION_COMPLETED: { icon: Award, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', label: 'Nhận từ buổi dạy', sign: '+' },
+    SPEND_SESSION: { icon: BookOpen, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', label: 'Đặt lịch học', sign: '-' },
+    SPEND_LEARNING_PATH: { icon: BookOpen, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', label: 'Lộ trình học', sign: '-' },
+    EARN_SESSION: { icon: Award, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', label: 'Nhận từ buổi dạy', sign: '+' },
+    WELCOME_BONUS: { icon: Gift, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', label: 'Thưởng chào mừng', sign: '+' },
+    REFUND: { icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', label: 'Hoàn credit', sign: '+' },
+    PENALTY: { icon: TrendingDown, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', label: 'Phạt', sign: '-' },
     MISSION_REWARD: { icon: Gift, color: 'text-[#5A63F6]', bg: 'bg-indigo-50', border: 'border-indigo-100', label: 'Nhiệm vụ', sign: '+' },
     DEPOSIT: { icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', label: 'Nạp credits', sign: '+' },
     WITHDRAWAL: { icon: TrendingDown, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', label: 'Rút credits', sign: '-' }
+};
+
+const getTxConfig = (tx) => {
+    if (
+        tx?.transactionType === 'SPEND_SESSION' &&
+        String(tx?.description || '').toLowerCase().includes('learning path')
+    ) {
+        return TX_CONFIG.SPEND_LEARNING_PATH;
+    }
+    return TX_CONFIG[tx?.transactionType] || TX_CONFIG['MISSION_REWARD'];
 };
 
 const CreditHistory = () => {
@@ -113,9 +129,9 @@ const CreditHistory = () => {
                         <p className="text-slate-500 font-medium">Chưa có giao dịch nào</p>
                     </div>
                 ) : (
-                    <div className="divide-y divide-slate-50">
+                    <div className="divide-y divide-slate-50 max-h-[420px] overflow-y-auto">
                         {creditHistory.map((tx, idx) => {
-                            const config = TX_CONFIG[tx.transactionType] || TX_CONFIG['MISSION_REWARD'];
+                            const config = getTxConfig(tx);
                             const Icon = config.icon;
                             const isPositive = tx.amount > 0;
                             return (
