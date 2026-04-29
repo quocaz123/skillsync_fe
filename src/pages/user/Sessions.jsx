@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
+import toast from 'react-hot-toast';
 import SessionStatusBadge from "../../components/common/SessionStatusBadge";
 import { SkillDynamicIcon } from '../../components/common/SkillDynamicIcon';
 import { getMySessions, confirmSession } from '../../services/sessionService';
 import { createSessionReport, submitCounterEvidence } from '../../services/reportService';
 import { createSessionReview } from '../../services/reviewService';
+import { getMyProfile } from '../../services/userService';
 import {
     Clock, CheckCircle2, ArrowRight, Play, Star,
     CalendarDays, Zap, BookOpen, XCircle, ThumbsUp, Medal, Loader2, AlertTriangle, ShieldAlert
@@ -39,7 +41,7 @@ const getJoinStatus = (session) => {
 
 const Sessions = () => {
     const navigate = useNavigate();
-    const { user } = useStore();
+    const { user, syncCredits } = useStore();
     const [activeTab, setActiveTab] = useState('upcoming');
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -54,21 +56,27 @@ const Sessions = () => {
     const [counterModal, setCounterModal] = useState(null);
     const [counterDesc, setCounterDesc] = useState('');
 
-    useEffect(() => {
-        const load = async () => {
-            setLoading(true);
-            setError('');
-            try {
-                const data = await getMySessions('all');
-                setSessions(Array.isArray(data) ? data : []);
-            } catch (err) {
-                setError('Không thể tải lịch học. Vui lòng thử lại.');
-            } finally {
-                setLoading(false);
-            }
-        };
-        load();
+    const fetchSessions = useCallback(async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const data = await getMySessions('all');
+            setSessions(Array.isArray(data) ? data : []);
+        } catch (err) {
+            setError('Không thể tải lịch học. Vui lòng thử lại.');
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    useEffect(() => {
+        fetchSessions();
+        // Auto-refresh mỗi 30 giây để cập nhật trạng thái session
+        const interval = setInterval(fetchSessions, 30_000);
+        return () => clearInterval(interval);
+    }, [fetchSessions]);
+
+
 
     const upcomingSessions = sessions.filter(s => s.status === 'SCHEDULED' || s.status === 'IN_PROGRESS');
     const pastSessions = sessions.filter(s => s.status === 'COMPLETED' || s.status === 'DISPUTED' || s.status === 'CANCELLED');
@@ -89,18 +97,28 @@ const Sessions = () => {
             ));
             setReviewModal(null);
             setActiveTab('past');
+            toast.success('Đã gửi đánh giá thành công! Cảm ơn bạn 🎉');
         } catch (error) {
-            alert('Lỗi gửi đánh giá: ' + (error.response?.data?.message || 'Không thành công'));
+            toast.error('Lỗi gửi đánh giá: ' + (error.response?.data?.message || 'Không thành công'));
         }
     };
 
     const handleConfirmSession = async (sessionId) => {
         try {
             await confirmSession(sessionId);
-            setSessions(prev => prev.map(s => s.id === sessionId ? {...s, status: 'COMPLETED'} : s));
-            alert('Đã xác nhận hoàn thành buổi học!');
+            setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, status: 'COMPLETED', isPaid: true } : s));
+            toast.success('Đã xác nhận! Credits đã được chuyển cho Mentor ✅');
+            // Sync lại credit balance từ server sau khi giải phóng escrow
+            try {
+                const profile = await getMyProfile();
+                if (profile?.creditsBalance != null) {
+                    syncCredits(profile.creditsBalance, 0, 0);
+                }
+            } catch (_) {
+                // Không block UX nếu sync thất bại
+            }
         } catch (error) {
-            alert('Lỗi xác nhận: ' + (error.response?.data?.message || 'Không thành công'));
+            toast.error('Lỗi xác nhận: ' + (error.response?.data?.message || 'Không thành công'));
         }
     };
 
@@ -114,11 +132,11 @@ const Sessions = () => {
         if (!reportDesc) return;
         try {
             await createSessionReport(reportModal.id, reportReason, reportDesc, '');
-            setSessions(prev => prev.map(s => s.id === reportModal.id ? {...s, status: 'DISPUTED'} : s));
-            alert('Đã gửi báo cáo sự cố thành công!');
+            setSessions(prev => prev.map(s => s.id === reportModal.id ? { ...s, status: 'DISPUTED', isReported: true } : s));
+            toast.success('Đã gửi báo cáo sự cố thành công! Admin sẽ xem xét sớm.');
             setReportModal(null);
         } catch (error) {
-            alert('Lỗi gửi báo cáo: ' + (error.response?.data?.message || 'Không thành công'));
+            toast.error('Lỗi gửi báo cáo: ' + (error.response?.data?.message || 'Không thành công'));
         }
     };
 
@@ -131,10 +149,10 @@ const Sessions = () => {
         if (!counterDesc) return;
         try {
             await submitCounterEvidence(counterModal.id, counterDesc, '');
-            alert('Đã gửi thông tin kháng cáo thành công!');
+            toast.success('Đã gửi phản hồi kháng cáo thành công! Admin sẽ xem xét.');
             setCounterModal(null);
         } catch (error) {
-            alert('Lỗi gửi kháng cáo: ' + (error.response?.data?.message || 'Không thành công'));
+            toast.error('Lỗi gửi kháng cáo: ' + (error.response?.data?.message || 'Không thành công'));
         }
     };
 
@@ -420,15 +438,21 @@ const Sessions = () => {
                                                 <div className="flex justify-end gap-3 flex-wrap flex-1">
                                                     {!isTeacher(session) && session.status === 'COMPLETED' && (
                                                         <>
-                                                            <button onClick={() => handleConfirmSession(session.id)} className="text-xs font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-4 py-2 rounded-lg transition-colors flex items-center gap-1">
-                                                                <CheckCircle2 size={14} /> Chuyển tiền Mentor
-                                                            </button>
-                                                            <button onClick={() => handleOpenReport(session)} className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg transition-colors flex items-center gap-1">
-                                                                <ShieldAlert size={14} /> Báo cáo sự cố
-                                                            </button>
-                                                            <button onClick={() => handleOpenReview(session)} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-lg transition-colors">
-                                                                Viết đánh giá
-                                                            </button>
+                                                            {!session.isPaid && !session.isReported && (
+                                                                <>
+                                                                    <button onClick={() => handleConfirmSession(session.id)} className="text-xs font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-4 py-2 rounded-lg transition-colors flex items-center gap-1">
+                                                                        <CheckCircle2 size={14} /> Chuyển tiền Mentor
+                                                                    </button>
+                                                                    <button onClick={() => handleOpenReport(session)} className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg transition-colors flex items-center gap-1">
+                                                                        <ShieldAlert size={14} /> Báo cáo sự cố
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                            {!session.isReported && (
+                                                                <button onClick={() => handleOpenReview(session)} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-lg transition-colors">
+                                                                    Viết đánh giá
+                                                                </button>
+                                                            )}
                                                         </>
                                                     )}
                                                 </div>

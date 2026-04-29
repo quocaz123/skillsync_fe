@@ -28,6 +28,7 @@ import { uploadFile } from '../../services/uploadService.js';
 import { getMyProfile, updateAvatar, updateBio } from '../../services/userService.js';
 import { getMyTeachingSkills, deleteTeachingSkill, updateSkillPrice, toggleTeachingSkillVisibility } from '../../services/skillService.js';
 import { getReviewsByUserId } from '../../services/reviewService.js';
+import toast from 'react-hot-toast';
 
 const LEVEL_LABEL = {
     BEGINNER: 'Beginner',
@@ -59,6 +60,10 @@ const Profile = () => {
     // Reviews state
     const [reviews, setReviews] = useState([]);
     const [loadingReviews, setLoadingReviews] = useState(false);
+
+    // Price editing state
+    const [editingPriceId, setEditingPriceId] = useState(null);
+    const [newPriceInput, setNewPriceInput] = useState('');
 
     // Lazy-load reviews when tab is first switched
     useEffect(() => {
@@ -103,7 +108,7 @@ const Profile = () => {
         const file = e.target.files?.[0];
         if (!file) return;
         if (!file.type.startsWith('image/')) {
-            alert('Vui lòng chọn file ảnh (JPG, PNG, WEBP)');
+            toast.error('Vui lòng chọn file ảnh (JPG, PNG, WEBP)');
             return;
         }
 
@@ -114,17 +119,17 @@ const Profile = () => {
         try {
             const { fileKey, fileUrl } = await uploadFile(file, 'AVATAR');
             const updatedUser = await updateAvatar(fileKey);
-            // avatarUrl từ BE (buildPublicUrl) — fallback fileUrl nếu response thiếu field
             const newUrl = updatedUser?.avatarUrl ?? fileUrl;
             if (newUrl) {
                 setAvatarUrl(newUrl);
                 setProfile(prev => ({ ...prev, avatarUrl: newUrl }));
                 if (setUser) setUser(prev => ({ ...prev, avatarUrl: newUrl }));
             }
+            toast.success('Cập nhật ảnh đại diện thành công!');
         } catch (err) {
             console.error('Avatar upload failed:', err);
             setAvatarUrl(user?.avatarUrl || null);
-            alert('Upload avatar thất bại. Vui lòng thử lại.');
+            toast.error('Upload avatar thất bại. Vui lòng thử lại.');
         } finally {
             setAvatarUploading(false);
             URL.revokeObjectURL(previewUrl);
@@ -140,22 +145,25 @@ const Profile = () => {
                 if (setUser) setUser(prev => ({ ...prev, bio: updated.bio }));
             }
             setBioEditing(false);
+            toast.success('Đã lưu giới thiệu thành công!');
         } catch (err) {
             console.error('Bio save failed:', err);
-            alert('Lưu bio thất bại. Vui lòng thử lại.');
+            toast.error('Lưu bio thất bại. Vui lòng thử lại.');
         } finally {
             setBioSaving(false);
         }
     };
 
     const handleDeleteSkill = async (skillId) => {
-        if (!confirm('Bạn có chắc muốn xóa kỹ năng dạy này?')) return;
+        // Dùng toast.promise thay cho confirm() native
+        const toastId = toast.loading('Đang xóa kỹ năng...');
         try {
             await deleteTeachingSkill(skillId);
             setTeachingSkills(prev => prev.filter(s => s.id !== skillId));
+            toast.success('Đã xóa kỹ năng dạy thành công!', { id: toastId });
         } catch (err) {
             console.error('Delete skill failed:', err);
-            alert('Xóa thất bại. Vui lòng thử lại.');
+            toast.error('Xóa thất bại. Vui lòng thử lại.', { id: toastId });
         }
     };
 
@@ -163,29 +171,32 @@ const Profile = () => {
         try {
             const updated = await toggleTeachingSkillVisibility(ts.id);
             setTeachingSkills(prev => prev.map(s => (s.id === ts.id ? { ...s, hidden: updated.hidden } : s)));
+            toast.success(updated.hidden ? 'Đã ẩn khỏi Explore.' : 'Đã hiện trên Explore!');
         } catch (err) {
             console.error('Toggle visibility failed:', err);
-            alert('Không thể cập nhật trạng thái hiển thị.');
+            toast.error('Không thể cập nhật trạng thái hiển thị.');
         }
     };
 
-    const handleEditPrice = async (ts) => {
-        const newPrice = prompt(`Nhập mức giá mới cho kỹ năng ${ts.skillName} (Credits/Giờ):\nLưu ý: Hệ thống hỗ trợ tối đa 500 cr/h`, ts.creditsPerHour || 5);
-        if (!newPrice) return;
-        
-        const priceVal = parseInt(newPrice, 10);
+    const handleEditPrice = (ts) => {
+        setEditingPriceId(ts.id);
+        setNewPriceInput(String(ts.creditsPerHour || 5));
+    };
+
+    const handleSavePrice = async (ts) => {
+        const priceVal = parseInt(newPriceInput, 10);
         if (isNaN(priceVal) || priceVal < 1 || priceVal > 500) {
-            alert('Vui lòng nhập giá từ 1 đến 500 credits hợp lệ.');
+            toast.error('Giá hợp lệ từ 1 đến 500 credits/giờ.');
             return;
         }
-
         try {
             await updateSkillPrice(ts.id, priceVal);
             setTeachingSkills(prev => prev.map(s => s.id === ts.id ? { ...s, creditsPerHour: priceVal } : s));
-            alert('Cập nhật giá thành công!');
+            setEditingPriceId(null);
+            toast.success('Cập nhật giá thành công!');
         } catch (err) {
             console.error('Update price failed:', err);
-            alert('Cập nhật giá thất bại. Giá có thể đã vượt quá giới hạn hệ thống.');
+            toast.error('Cập nhật giá thất bại. Vui lòng thử lại.');
         }
     };
 
@@ -383,9 +394,25 @@ const Profile = () => {
                                                         <button type="button" onClick={() => handleToggleSkillVisibility(ts)} className="text-[11px] text-slate-600 hover:bg-slate-100 px-2 py-1 rounded-lg transition-colors flex items-center gap-1 opacity-80 group-hover:opacity-100">
                                                             {ts.hidden ? 'Hiện Explore' : 'Tạm ẩn'}
                                                         </button>
-                                                        <button onClick={() => handleEditPrice(ts)} className="text-[11px] text-purple-600 hover:bg-purple-100 px-2 py-1 rounded-lg transition-colors flex items-center gap-1 opacity-80 group-hover:opacity-100">
-                                                            <PencilSimple size={12} weight="bold" /> Đổi giá
-                                                        </button>
+                                                        {editingPriceId === ts.id ? (
+                                                            <span className="flex items-center gap-1">
+                                                                <input
+                                                                    type="number"
+                                                                    min={1} max={500}
+                                                                    value={newPriceInput}
+                                                                    onChange={e => setNewPriceInput(e.target.value)}
+                                                                    className="w-16 text-xs border border-purple-300 rounded-md px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                                                    autoFocus
+                                                                    onKeyDown={e => { if (e.key === 'Enter') handleSavePrice(ts); if (e.key === 'Escape') setEditingPriceId(null); }}
+                                                                />
+                                                                <button onClick={() => handleSavePrice(ts)} className="text-[11px] text-emerald-600 hover:bg-emerald-100 px-2 py-1 rounded-lg transition-colors font-bold">Lưu</button>
+                                                                <button onClick={() => setEditingPriceId(null)} className="text-[11px] text-slate-500 hover:bg-slate-100 px-1.5 py-1 rounded-lg transition-colors">✕</button>
+                                                            </span>
+                                                        ) : (
+                                                            <button onClick={() => handleEditPrice(ts)} className="text-[11px] text-purple-600 hover:bg-purple-100 px-2 py-1 rounded-lg transition-colors flex items-center gap-1 opacity-80 group-hover:opacity-100">
+                                                                <PencilSimple size={12} weight="bold" /> Đổi giá
+                                                            </button>
+                                                        )}
                                                     </>
                                                 ) : null
                                             }

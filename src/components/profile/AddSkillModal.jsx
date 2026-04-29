@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import {
     Check, X, UploadSimple, Medal, VideoCamera, LinkedinLogo,
-    Briefcase, Certificate, GraduationCap, WarningCircle, CaretDown, CheckCircle, Spinner, LinkSimple, FileText
+    Briefcase, Certificate, GraduationCap, WarningCircle, CaretDown, CheckCircle, Spinner, LinkSimple, FileText,
+    MagnifyingGlass
 } from '@phosphor-icons/react';
 import { useStore } from '../../store';
 import { SkillDynamicIcon } from '../common/SkillDynamicIcon.jsx';
@@ -9,17 +10,16 @@ import { getAllSkills, createTeachingSkill, createEvidence } from '../../service
 import { uploadFile } from '../../services/uploadService.js';
 
 const LEVELS = [
-    { id: 'BEGINNER', label: 'Beginner', years: '1–2 năm', icon: '🌱', color: 'text-emerald-500 bg-emerald-50 border-emerald-200' },
-    { id: 'INTERMEDIATE', label: 'Intermediate', years: '2–4 năm', icon: '🚀', color: 'text-orange-500 bg-orange-50 border-orange-200' },
-    { id: 'ADVANCED', label: 'Advanced', years: '4+ năm', icon: '💎', color: 'text-violet-500 bg-violet-50 border-violet-200' },
+    { id: 'BEGINNER', label: 'Beginner', years: '1–2 năm', color: 'text-emerald-500 bg-emerald-50 border-emerald-200' },
+    { id: 'INTERMEDIATE', label: 'Intermediate', years: '2–4 năm', color: 'text-orange-500 bg-orange-50 border-orange-200' },
+    { id: 'ADVANCED', label: 'Advanced', years: '4+ năm', color: 'text-violet-500 bg-violet-50 border-violet-200' },
 ];
 
 const EVIDENCE_DEFS = [
-    { id: 'cert', label: 'Chứng chỉ chuyên môn', type: 'mandatory', pts: 40, uploadType: 'TEACHING_EVIDENCE', acceptUrl: false, icon: Certificate, tips: 'IELTS, TOEIC, JLPT, AWS, Google... tải lên ảnh/PDF chứng chỉ' },
-    { id: 'video', label: 'Video bằng chứng giảng dạy / tự giới thiệu', type: 'mandatory', pts: 30, uploadType: 'TEACHING_EVIDENCE', acceptUrl: true, icon: VideoCamera, tips: 'Độ dài tối thiểu 2 phút để học viên đáng giá kỹ năng nói/trình bày' },
-    { id: 'linkedin', label: 'Hồ sơ LinkedIn', type: 'optional', pts: 10, uploadType: null, acceptUrl: true, icon: LinkedinLogo, tips: 'Link hồ sơ (Nên có Endorsements)' },
-    { id: 'work', label: 'Dự án / Nơi làm việc', type: 'optional', pts: 15, uploadType: 'TEACHING_EVIDENCE', acceptUrl: true, icon: Briefcase, tips: 'Link GitHub, Behance, Portfolio hoặc file chứng minh' },
-    { id: 'teaching', label: 'Chứng chỉ sư phạm', type: 'optional', pts: 5, uploadType: 'TEACHING_EVIDENCE', acceptUrl: false, icon: GraduationCap, tips: 'TESOL, CELTA, bằng Sư phạm...' }
+    { id: 'cert',     label: 'Chứng chỉ chuyên môn',                    type: 'mandatory', uploadType: 'TEACHING_EVIDENCE', acceptUrl: false, icon: Certificate,  tips: 'IELTS, TOEIC, JLPT, AWS, Google... tải lên ảnh/PDF chứng chỉ' },
+    { id: 'video',    label: 'Video bằng chứng giảng dạy / tự giới thiệu', type: 'mandatory', uploadType: 'TEACHING_EVIDENCE', acceptUrl: true,  icon: VideoCamera,  tips: 'Độ dài tối thiểu 2 phút để học viên đánh giá kỹ năng nói/trình bày' },
+    { id: 'linkedin', label: 'Hồ sơ LinkedIn',                           type: 'optional',  uploadType: null,                acceptUrl: true,  icon: LinkedinLogo, tips: 'Link hồ sơ (Nên có Endorsements)' },
+    { id: 'teaching', label: 'Chứng chỉ sư phạm',                       type: 'optional',  uploadType: 'TEACHING_EVIDENCE', acceptUrl: false, icon: GraduationCap,tips: 'TESOL, CELTA, bằng Sư phạm...' }
 ];
 
 // Map evidence id -> EvidenceType enum on BE
@@ -27,7 +27,6 @@ const EVIDENCE_TYPE_MAP = {
     cert: 'CERTIFICATE',
     video: 'VIDEO_INTRO',
     linkedin: 'LINKEDIN',
-    work: 'WORK_PROOF',
     teaching: 'TEACHING_CERTIFICATE',
 };
 
@@ -40,6 +39,7 @@ export const AddSkillModal = ({ onClose, onSave }) => {
     const [loadingSkills, setLoadingSkills] = useState(false);
     const [selectedSkill, setSelectedSkill] = useState(null);
     const [selectedLevel, setSelectedLevel] = useState(null);
+    const [skillSearch, setSkillSearch] = useState('');
 
     // Step 2 — Chi tiết mô tả
     const [experienceDesc, setExperienceDesc] = useState('');
@@ -66,8 +66,8 @@ export const AddSkillModal = ({ onClose, onSave }) => {
 
     // Computed
     const mandatoryCount = EVIDENCE_DEFS.filter(e => e.type === 'mandatory' && evidenceData[e.id]?.done).length;
-    const score = EVIDENCE_DEFS.reduce((acc, ev) => evidenceData[ev.id]?.done ? acc + ev.pts : acc, 0);
-    const progressColor = score >= 70 ? 'bg-emerald-500' : score >= 40 ? 'bg-amber-400' : 'bg-red-400';
+    const optionalCount  = EVIDENCE_DEFS.filter(e => e.type === 'optional'  && evidenceData[e.id]?.done).length;
+    const totalDone = mandatoryCount + optionalCount;
 
     // Step 2 validation
     const step2Valid = experienceDesc.trim().length >= 20 && outcomeDesc.trim().length >= 10;
@@ -198,36 +198,63 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                             <div>
                                 <h3 className="text-base font-extrabold text-slate-900 mb-4">Bạn dạy kỹ năng gì?</h3>
 
+                                {/* Search box */}
+                                <div className="relative mb-4">
+                                    <MagnifyingGlass size={16} weight="bold" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                    <input
+                                        type="text"
+                                        placeholder="Tìm kỹ năng... (React, Python, Piano...)"
+                                        value={skillSearch}
+                                        onChange={e => setSkillSearch(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-2.5 rounded-xl border-2 border-slate-200 bg-slate-50 text-sm font-medium text-slate-800 placeholder:text-slate-400 outline-none focus:border-indigo-400 focus:bg-white transition-all"
+                                    />
+                                    {skillSearch && (
+                                        <button onClick={() => setSkillSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                            <X size={14} weight="bold" />
+                                        </button>
+                                    )}
+                                </div>
+
                                 {loadingSkills ? (
                                     <div className="flex items-center justify-center py-12 gap-3 text-slate-400">
                                         <Spinner size={24} className="animate-spin" />
                                         <span>Đang tải danh sách kỹ năng...</span>
                                     </div>
-                                ) : (
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                        {skills.map(skill => {
-                                            const isSelected = selectedSkill?.id === skill.id;
-                                            const colorClass = skillColorByCat[skill.category] || skillColorByCat.OTHER;
-                                            return (
-                                                <button
-                                                    key={skill.id}
-                                                    onClick={() => setSelectedSkill(skill)}
-                                                    className={`text-left p-4 rounded-[1.25rem] border-2 transition-all relative ${isSelected ? 'border-indigo-500 bg-indigo-50/30' : 'border-transparent bg-slate-50 hover:bg-slate-100/80 shadow-sm hover:shadow'}`}
-                                                >
-                                                    {isSelected && <div className="absolute top-3 right-3 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center"><Check size={12} weight="bold" className="text-white" /></div>}
-                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-2.5 shadow-sm border ${colorClass}`}>
-                                                        <SkillDynamicIcon skillName={skill.name} defaultIcon={skill.icon} size={24} weight="duotone" />
-                                                    </div>
-                                                    <p className={`font-bold text-sm mb-0.5 ${isSelected ? 'text-indigo-900' : 'text-slate-800'}`}>{skill.name}</p>
-                                                    <p className="text-[11px] text-slate-400 mb-2.5">{categoryLabel[skill.category] || skill.category}</p>
-                                                    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-md bg-cyan-50/80 text-cyan-700 border border-cyan-100/50">
-                                                        💻 2 bằng chứng bắt buộc
-                                                    </span>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                )}
+                                ) : (() => {
+                                    const filteredSkills = skillSearch.trim()
+                                        ? skills.filter(s => s.name.toLowerCase().includes(skillSearch.trim().toLowerCase()))
+                                        : skills;
+                                    return filteredSkills.length === 0 ? (
+                                        <div className="py-10 text-center">
+                                            <p className="text-slate-400 text-sm font-medium mb-1">Không tìm thấy kỹ năng <span className="font-bold text-slate-600">"{skillSearch}"</span></p>
+                                            <p className="text-xs text-slate-400">Thử tìm tên khác hoặc chọn một kỹ năng gần nhất rồi mô tả chi tiết ở bước 2.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                            {filteredSkills.map(skill => {
+                                                const isSelected = selectedSkill?.id === skill.id;
+                                                const colorClass = skillColorByCat[skill.category] || skillColorByCat.OTHER;
+                                                return (
+                                                    <button
+                                                        key={skill.id}
+                                                        onClick={() => setSelectedSkill(skill)}
+                                                        className={`text-left p-4 rounded-[1.25rem] border-2 transition-all relative ${isSelected ? 'border-indigo-500 bg-indigo-50/30' : 'border-transparent bg-slate-50 hover:bg-slate-100/80 shadow-sm hover:shadow'}`}
+                                                    >
+                                                        {isSelected && <div className="absolute top-3 right-3 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center"><Check size={12} weight="bold" className="text-white" /></div>}
+                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-2.5 shadow-sm border ${colorClass}`}>
+                                                            <SkillDynamicIcon skillName={skill.name} defaultIcon={skill.icon} size={24} weight="duotone" />
+                                                        </div>
+                                                        <p className={`font-bold text-sm mb-0.5 ${isSelected ? 'text-indigo-900' : 'text-slate-800'}`}>{skill.name}</p>
+                                                        <p className="text-[11px] text-slate-400 mb-2.5">{categoryLabel[skill.category] || skill.category}</p>
+                                                        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-md bg-cyan-50/80 text-cyan-700 border border-cyan-100/50">
+                                                            💻 2 bằng chứng bắt buộc
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                })()}
                             </div>
 
                             {selectedSkill && (
@@ -280,7 +307,7 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                             {/* Field 1: About me / Experience */}
                             <div>
                                 <label className="block text-sm font-extrabold text-slate-900 mb-1.5">
-                                    👤 Giới thiệu bản thân <span className="text-red-500">*</span>
+                                    Giới thiệu bản thân <span className="text-red-500">*</span>
                                 </label>
                                 <p className="text-xs text-slate-400 mb-2">Kinh nghiệm thực tế của bạn với kỹ năng này (tối thiểu 20 ký tự)</p>
                                 <textarea
@@ -288,18 +315,16 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                                     onChange={e => setExperienceDesc(e.target.value)}
                                     placeholder={`Ví dụ: Tôi có 3 năm kinh nghiệm làm việc với ${selectedSkill?.name} tại các công ty startup và agency. Đã triển khai hơn 10 dự án thực tế từ nhỏ đến lớn...`}
                                     rows={4}
-                                    className={`w-full px-4 py-3 rounded-xl border-2 text-sm outline-none transition focus:bg-white resize-none ${
-                                        experienceDesc.trim().length > 0 && experienceDesc.trim().length < 20
-                                            ? 'border-red-300 bg-red-50/50 focus:border-red-400'
-                                            : experienceDesc.trim().length >= 20
+                                    className={`w-full px-4 py-3 rounded-xl border-2 text-sm outline-none transition focus:bg-white resize-none ${experienceDesc.trim().length > 0 && experienceDesc.trim().length < 20
+                                        ? 'border-red-300 bg-red-50/50 focus:border-red-400'
+                                        : experienceDesc.trim().length >= 20
                                             ? 'border-emerald-300 bg-emerald-50/30 focus:border-emerald-400'
                                             : 'border-slate-200 bg-slate-50 focus:border-indigo-400'
-                                    }`}
+                                        }`}
                                 />
                                 <div className="flex justify-between mt-1">
-                                    <span className={`text-xs font-medium ${
-                                        experienceDesc.trim().length < 20 ? 'text-red-400' : 'text-emerald-500'
-                                    }`}>
+                                    <span className={`text-xs font-medium ${experienceDesc.trim().length < 20 ? 'text-red-400' : 'text-emerald-500'
+                                        }`}>
                                         {experienceDesc.trim().length >= 20 ? '✓ Đạt yêu cầu' : `Còn thiếu ${20 - experienceDesc.trim().length} ký tự`}
                                     </span>
                                     <span className="text-xs text-slate-400">{experienceDesc.length} ký tự</span>
@@ -309,7 +334,7 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                             {/* Field 2: Learning Outcomes */}
                             <div>
                                 <label className="block text-sm font-extrabold text-slate-900 mb-1.5">
-                                    🎯 Học viên sẽ đạt được gì? <span className="text-red-500">*</span>
+                                    Học viên sẽ đạt được gì? <span className="text-red-500">*</span>
                                 </label>
                                 <p className="text-xs text-slate-400 mb-2">Mỗi dòng = 1 mục tiêu, hiển thị dưới dạng danh sách tick ✓ (tối thiểu 10 ký tự)</p>
                                 <textarea
@@ -317,13 +342,12 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                                     onChange={e => setOutcomeDesc(e.target.value)}
                                     placeholder={`Ví dụ:\nHiểu vững các khái niệm cốt lõi\nXây dựng được project thực tế\nTự tin làm việc trong môi trường chuyên nghiệp`}
                                     rows={5}
-                                    className={`w-full px-4 py-3 rounded-xl border-2 text-sm outline-none transition focus:bg-white resize-none font-mono ${
-                                        outcomeDesc.trim().length > 0 && outcomeDesc.trim().length < 10
-                                            ? 'border-red-300 bg-red-50/50 focus:border-red-400'
-                                            : outcomeDesc.trim().length >= 10
+                                    className={`w-full px-4 py-3 rounded-xl border-2 text-sm outline-none transition focus:bg-white resize-none font-mono ${outcomeDesc.trim().length > 0 && outcomeDesc.trim().length < 10
+                                        ? 'border-red-300 bg-red-50/50 focus:border-red-400'
+                                        : outcomeDesc.trim().length >= 10
                                             ? 'border-emerald-300 bg-emerald-50/30 focus:border-emerald-400'
                                             : 'border-slate-200 bg-slate-50 focus:border-indigo-400'
-                                    }`}
+                                        }`}
                                 />
                                 {outcomeDesc.trim().length >= 10 && (
                                     <div className="mt-2 p-3 bg-violet-50 border border-violet-100 rounded-xl">
@@ -342,7 +366,7 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                             {/* Field 3: Teaching Style — Optional */}
                             <div>
                                 <label className="block text-sm font-extrabold text-slate-900 mb-1.5">
-                                    🌀 Phong cách giảng dạy <span className="text-slate-400 font-normal text-xs">(tuỳ chọn)</span>
+                                    Phong cách giảng dạy <span className="text-slate-400 font-normal text-xs">(tuỳ chọn)</span>
                                 </label>
                                 <p className="text-xs text-slate-400 mb-2">Bạn thường dạy theo cách nào? Thực hành, lý thuyết, hay hands-on project?</p>
                                 <textarea
@@ -359,45 +383,28 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                     {/* STEP 3: Upload evidence */}
                     {step === 3 && (
                         <div className="space-y-6">
-                            {/* Score Card */}
-                            <div className={`rounded-2xl border p-6 flex flex-col md:flex-row md:items-center gap-6 ${mandatoryCount < 2 ? 'bg-red-50/30 border-red-100' : 'bg-emerald-50/30 border-emerald-100'}`}>
-                                <div className="flex items-center gap-5 md:w-1/2">
-                                    <div className={`relative w-16 h-16 rounded-full border-4 flex items-center justify-center font-extrabold text-xl shrink-0 ${mandatoryCount < 2 ? 'border-red-100 text-red-500' : 'border-emerald-100 text-emerald-500'}`}>
-                                        {score}
-                                        <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 100 100">
-                                            <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="8" strokeDasharray={`${score * 2.89} 289`} className={`${mandatoryCount < 2 ? 'text-red-400' : 'text-emerald-400'}`} strokeLinecap="round" />
-                                        </svg>
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className={`font-extrabold text-lg flex items-center gap-2 ${mandatoryCount < 2 ? 'text-red-600' : 'text-emerald-600'}`}>
-                                            {mandatoryCount < 2 ? <span className="w-3 h-3 rounded-full bg-red-500 inline-block" /> : <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" />}
-                                            {mandatoryCount < 2 ? 'Chưa đủ' : 'Đạt yêu cầu cơ bản'}
-                                        </h3>
-                                        <p className="text-sm text-slate-500 mb-2">Điểm chứng minh năng lực ({score}/100 điểm)</p>
-                                        <div className="h-2.5 bg-slate-200/60 rounded-full overflow-hidden">
-                                            <div className={`h-full ${progressColor} transition-all duration-500`} style={{ width: `${score}%` }}></div>
-                                        </div>
-                                    </div>
+                            {/* Progress bar đơn giản */}
+                            <div className={`rounded-2xl border p-5 flex items-center gap-4 ${mandatoryCount < 2 ? 'bg-amber-50/40 border-amber-100' : 'bg-emerald-50/40 border-emerald-100'}`}>
+                                {mandatoryCount < 2 ? (
+                                    <WarningCircle size={28} className="shrink-0 text-amber-500" weight="fill" />
+                                ) : (
+                                    <CheckCircle size={28} className="shrink-0 text-emerald-500" weight="fill" />
+                                )}
+                                <div className="flex-1">
+                                    <p className={`font-extrabold text-base ${mandatoryCount < 2 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                                        {mandatoryCount < 2
+                                            ? `Cần thêm ${2 - mandatoryCount} bằng chứng bắt buộc`
+                                            : 'Đã đủ bằng chứng bắt buộc — sẵn sàng giảng dạy!'}
+                                    </p>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        {mandatoryCount}/2 bắt buộc hoàn thành
+                                        {optionalCount > 0 && ` · ${optionalCount} bổ sung`}
+                                    </p>
                                 </div>
-                                <div className="md:w-1/2 md:border-l md:border-slate-200 md:pl-6 space-y-3">
-                                    {mandatoryCount < 2 ? (
-                                        <div className="bg-amber-50 rounded-xl p-3 border border-amber-200/50 flex items-start gap-2 text-sm text-amber-800 font-medium">
-                                            <WarningCircle size={18} className="shrink-0 mt-0.5" weight="fill" />
-                                            <p>{mandatoryCount}/2 bằng chứng bắt buộc — cần thêm {2 - mandatoryCount} nữa</p>
-                                        </div>
-                                    ) : (
-                                        <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-200/50 flex items-start gap-2 text-sm text-emerald-700 font-medium">
-                                            <CheckCircle size={18} className="shrink-0 mt-0.5" weight="fill" />
-                                            <p>2/2 bằng chứng bắt buộc — Đã đủ để giảng dạy.</p>
-                                        </div>
-                                    )}
-                                    <p className="text-xs text-slate-500 flex items-center gap-1.5"><span className="text-amber-500">💡</span> Điền đủ bắt buộc → booking tăng 3×. Thêm không bắt buộc → tăng thêm 2× nữa.</p>
-                                </div>
+                                <span className={`shrink-0 text-sm font-extrabold px-3 py-1.5 rounded-xl ${mandatoryCount < 2 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                    {totalDone}/{EVIDENCE_DEFS.length}
+                                </span>
                             </div>
-
-                            <p className="text-sm font-semibold text-emerald-600 bg-emerald-50 px-4 py-2.5 rounded-xl border border-emerald-100 flex items-center gap-2">
-                                🌍 Điểm thi cụ thể ≥ câu 'tôi giỏi {selectedSkill?.name}'
-                            </p>
 
                             {/* Evidence items */}
                             <div className="space-y-6">
@@ -490,16 +497,15 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                                         </div>
                                     )}
                                 </div>
-                                <div className={`relative border rounded-2xl p-4 overflow-hidden ${mandatoryCount < 2 ? 'bg-red-50/50 border-red-200' : 'bg-emerald-50/50 border-emerald-200'}`}>
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center font-extrabold text-sm border shadow-sm">{score}</div>
-                                        <div>
-                                            <p className={`font-extrabold flex items-center gap-2 ${mandatoryCount < 2 ? 'text-red-600' : 'text-emerald-700'}`}>
-                                                {mandatoryCount < 2 ? <span className="w-2.5 h-2.5 rounded-full bg-red-500" /> : <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />}
-                                                {mandatoryCount < 2 ? 'Chưa đủ' : 'Đạt Uy Tín'}
-                                            </p>
-                                            <p className="text-xs text-slate-500">{mandatoryCount}/2 bắt buộc · {Object.values(evidenceData).filter(e => e?.done).length} bằng chứng đã upload</p>
-                                        </div>
+                                <div className={`border rounded-2xl p-4 flex items-center gap-3 ${mandatoryCount < 2 ? 'bg-amber-50/50 border-amber-200' : 'bg-emerald-50/50 border-emerald-200'}`}>
+                                    {mandatoryCount < 2
+                                        ? <WarningCircle size={22} className="shrink-0 text-amber-500" weight="fill" />
+                                        : <CheckCircle   size={22} className="shrink-0 text-emerald-500" weight="fill" />}
+                                    <div>
+                                        <p className={`font-extrabold text-sm ${mandatoryCount < 2 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                                            {mandatoryCount < 2 ? 'Chưa đủ bằng chứng bắt buộc' : 'Đã xác minh đủ bằng chứng'}
+                                        </p>
+                                        <p className="text-xs text-slate-500">{mandatoryCount}/2 bắt buộc · {totalDone} mục đã hoàn thành</p>
                                     </div>
                                 </div>
                             </div>
@@ -551,17 +557,16 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                             }
                             onClick={handleNext}
                             className={`px-8 py-2.5 rounded-xl font-bold transition-all text-sm shadow-sm flex items-center gap-2
-                                ${
-                                    (step === 1 && (!selectedSkill || !selectedLevel)) ||
+                                ${(step === 1 && (!selectedSkill || !selectedLevel)) ||
                                     (step === 2 && !step2Valid) ||
                                     saving
-                                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                        : step === 4 ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                    : step === 4 ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
                                         : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200'
                                 }`}
                         >
                             {saving ? <><Spinner size={16} className="animate-spin" /> Đang lưu...</> :
-                             step === 4 ? <><Check size={16} weight="bold" /> Lưu kỹ năng dạy</> : <>Tiếp tục →</>
+                                step === 4 ? <><Check size={16} weight="bold" /> Lưu kỹ năng dạy</> : <>Tiếp tục →</>
                             }
                         </button>
                     </div>
@@ -629,14 +634,25 @@ const EvidenceItem = ({ ev, state, expanded, onToggle, onFileChange, onUrlChange
                                         {state?.file ? 'Click để thay đổi file khác' : 'Kéo thả hoặc Nhấn để tải file'}
                                     </span>
                                     <span className="text-xs text-slate-400">
-                                        {state?.file ? state.file.name : 'PNG, JPG, PDF, MP4 (Max 100MB)'}
+                                        {state?.file ? state.file.name : 'JPG, PNG, WEBP, PDF, MP4 (Max 100MB)'}
                                     </span>
                                 </div>
                                 <input
                                     ref={fileRef}
                                     type="file"
                                     className="hidden"
-                                    onChange={e => e.target.files?.[0] && onFileChange(e.target.files[0])}
+                                    accept="image/jpeg, image/png, image/webp, application/pdf, video/mp4"
+                                    onChange={e => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            if (file.size > 100 * 1024 * 1024) {
+                                                alert("Dung lượng file vượt quá 100MB. Vui lòng chọn file nhỏ hơn.");
+                                                e.target.value = '';
+                                                return;
+                                            }
+                                            onFileChange(file);
+                                        }
+                                    }}
                                 />
                             </label>
                         </div>

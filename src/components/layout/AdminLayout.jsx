@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     SquaresFour, CalendarBlank, CurrencyCircleDollar,
     Users, BookOpen, Flag, ChartBar, GearSix, LockKey, Database,
-    List, SignOut, ShieldCheck, X, NotePencil, Brain,
+    List, SignOut, ShieldCheck, X, NotePencil, Brain, MapTrifold,
 } from '@phosphor-icons/react';
 import { useStore } from '../../store';
 import { logout as logoutApi } from '../../services/authService';
@@ -30,10 +30,9 @@ const AdminLayout = () => {
             label: 'Tổng quan',
             items: [
                 { path: '/admin', label: 'Dashboard', icon: SquaresFour, exact: true },
-                { path: '/admin/reports', label: 'Báo cáo', icon: Flag },
+                { path: '/admin/financial-moderation', label: 'Escrow & Báo cáo', icon: LockKey },
                 { path: '/admin/forum-posts', label: 'Bài viết cộng đồng', icon: BookOpen },
                 { path: '/admin/sessions', label: 'Sessions', icon: CalendarBlank },
-                { path: '/admin/escrow', label: 'Quản lý Escrow', icon: LockKey },
                 { path: '/admin/credits', label: 'Credits & GD', icon: CurrencyCircleDollar },
             ],
         },
@@ -41,14 +40,14 @@ const AdminLayout = () => {
             label: 'Người dùng',
             items: [
                 { path: '/admin/users', label: 'Quản lý Người dùng', icon: Users },
-                { path: '/admin/teaching-skills', label: 'Xét duyệt Mentor', icon: ShieldCheck }
-               
+                { path: '/admin/teaching-skills', label: 'Xét duyệt Mentor', icon: ShieldCheck },
+                { path: '/admin/paths', label: 'Duyệt Lộ trình Học', icon: MapTrifold }
             ],
         },
         {
             label: 'Hệ thống',
             items: [
-                { path: '/admin/system-learning-paths', label: 'Khóa học hệ thống', icon: NotePencil },
+                { path: '/admin/missions', label: 'Nhiệm vụ (Missions)', icon: Flag },
                 { path: '/admin/system', label: 'Nhật ký Hoạt động', icon: Database },
                 { path: '/admin/ai-config', label: 'Cấu hình AI', icon: Brain },
             ],
@@ -57,14 +56,14 @@ const AdminLayout = () => {
 
     const headerTitles = {
         '/admin': 'Tổng quan Hệ thống',
-        '/admin/reports': 'Xử lý Báo cáo',
+        '/admin/financial-moderation': 'Quản lý Tài chính & Tranh chấp',
         "/admin/forum-posts": "Duyệt bài cộng đồng",
         '/admin/sessions': 'Quản lý Sessions',
-        '/admin/escrow': 'Quản lý Tạm giữ tiền (Escrow)',
         '/admin/credits': 'Credits & Giao dịch',
         '/admin/users': 'Quản lý Người dùng',
         '/admin/teaching-skills': 'Xét duyệt Kỹ năng Mentor',
         '/admin/paths': 'Quản lý Lộ trình Học',
+        '/admin/missions': 'Quản lý Nhiệm vụ (Missions)',
         '/admin/system': 'Nhật ký Hoạt động Hệ thống',
         '/admin/ai-config': 'Cấu hình AI',
     };
