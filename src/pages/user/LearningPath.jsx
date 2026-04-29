@@ -249,6 +249,7 @@ const SORT_OPTIONS = [
     { value: 'popular', label: 'Phổ biến' },
     { value: 'rating', label: 'Rating cao' },
 ];
+const TYPE_LABEL = { mentor: 'Có mentor hướng dẫn', system: 'Tự học' };
 const TYPE_LABEL_FILTER = { 'Tất cả': 'Tất cả', mentor: 'Có mentor hướng dẫn', system: 'Tự học' };
 
 function ExploreTab() {
