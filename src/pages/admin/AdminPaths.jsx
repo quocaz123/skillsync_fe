@@ -7,6 +7,7 @@ import PathPreviewModal from '../user/learning-path-management/PathPreviewModal'
 import CreatePathModal from '../user/learning-path-management/CreatePathModal';
 import { toastSuccess, toastError } from '../../utils/toastUtils';
 import { mapFormToApiPayload } from '../user/learning-path-management/pathFormUtils';
+import { getAllSkills } from '../../services/skillService';
 
 const statusConfig = {
     draft: { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200', dot: 'bg-slate-400', label: 'Nháp' },
@@ -101,6 +102,7 @@ const AdminPaths = () => {
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [previewLoading, setPreviewLoading] = useState(false);
+    const [skillsOptions, setSkillsOptions] = useState([]);
     const user = useStore(s => s.user);
     const toastTimerRef = useRef(null);
 
@@ -135,6 +137,21 @@ const AdminPaths = () => {
     };
 
     useEffect(() => { fetchPaths(); }, []);
+
+    useEffect(() => {
+        const fetchSkills = async () => {
+            try {
+                const res = await getAllSkills();
+                const data = Array.isArray(res) ? res : (res?.data || []);
+                const names = data.map((s) => s?.name).filter(Boolean);
+                setSkillsOptions(Array.from(new Set(names)));
+            } catch (e) {
+                console.error('Lỗi tải skills:', e);
+                setSkillsOptions([]);
+            }
+        };
+        fetchSkills();
+    }, []);
 
     const showToast = (message) => {
         setToast(message);
@@ -478,6 +495,7 @@ const AdminPaths = () => {
                 open={isCreateOpen}
                 onClose={() => setIsCreateOpen(false)}
                 pathType="SYSTEM"
+                allowedSkills={skillsOptions}
                 onSubmitApproval={async (payload) => {
                     try {
                         const apiPayload = mapFormToApiPayload(payload);

@@ -21,7 +21,6 @@ import {
 import { useStore } from '../../../store';
 import { buildMentorPreviewFromUser } from '../learning-path/learningPathMocks';
 import {
-    SKILL_SUGGESTIONS,
     LEVEL_OPTIONS,
     mergeInitialPath,
     validatePathForm,
@@ -177,11 +176,19 @@ export default function CreatePathModal({
     }, [open, pathType, initialData]);
 
     useEffect(() => {
-        if (!open || !isMentor || normalizedAllowedSkills.length === 0) return;
+        if (!open || normalizedAllowedSkills.length === 0) return;
         setForm((prev) => {
             const selectedSkill = (prev?.skill || '').trim();
-            if (selectedSkill && normalizedAllowedSkills.includes(selectedSkill)) return prev;
-            return { ...prev, skill: normalizedAllowedSkills[0] };
+
+            // MENTOR: bắt buộc thuộc danh sách đã được admin duyệt
+            if (isMentor) {
+                if (selectedSkill && normalizedAllowedSkills.includes(selectedSkill)) return prev;
+                return { ...prev, skill: normalizedAllowedSkills[0] };
+            }
+
+            // SYSTEM: tự chọn skill đầu tiên nếu form đang trống
+            if (!selectedSkill) return { ...prev, skill: normalizedAllowedSkills[0] };
+            return prev;
         });
     }, [open, isMentor, normalizedAllowedSkills]);
 
@@ -396,12 +403,17 @@ function StepBasicInfo({ form, update, pathType, allowedSkills = [] }) {
                                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
                                 <input
                                     list="skills"
-                                    className="w-full rounded-xl border border-slate-200 pl-11 pr-4 py-3 text-sm font-semibold focus:border-indigo-600 outline-none"
+                                    disabled={allowedSkills.length === 0}
+                                    className="w-full rounded-xl border border-slate-200 pl-11 pr-4 py-3 text-sm font-semibold focus:border-indigo-600 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                                     value={form.skill}
                                     onChange={(e) => update({ skill: e.target.value })}
-                                    placeholder="Search skills..."
+                                    placeholder={allowedSkills.length === 0 ? 'Đang tải danh sách skills...' : 'Search skills...'}
                                 />
-                                <datalist id="skills">{SKILL_SUGGESTIONS.map(s => <option key={s} value={s} />)}</datalist>
+                                <datalist id="skills">
+                                    {allowedSkills.map((skill) => (
+                                        <option key={skill} value={skill} />
+                                    ))}
+                                </datalist>
                             </div>
                         )}
                         {isMentor && (

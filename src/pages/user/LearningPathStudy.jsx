@@ -379,7 +379,7 @@ export default function LearningPathStudy() {
                     </h2>
 
                     <div className="space-y-3">
-                        {data.modules.map((mod) => {
+                        {data.modules.map((mod, idx) => {
                             const active = selectedModuleId === mod.id;
                             const locked = mod.status === 'LOCKED';
                             return (
@@ -407,7 +407,7 @@ export default function LearningPathStudy() {
                                                       : 'bg-slate-200 text-slate-500'
                                             }`}
                                         >
-                                            {mod.order}
+                                            {idx + 1}
                                         </span>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex flex-wrap items-center gap-2 mb-1">

@@ -469,7 +469,7 @@ export default function LearningPathDetail() {
                                 const open = openIdx === idx;
                                 return (
                                     <div
-                                        key={mod.order}
+                                        key={mod.id || mod.order || idx}
                                         className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm"
                                     >
                                         <button
@@ -478,7 +478,7 @@ export default function LearningPathDetail() {
                                             className="w-full flex items-start gap-3 p-4 text-left hover:bg-slate-50/80 transition-colors"
                                         >
                                             <span className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 font-black text-sm flex items-center justify-center shrink-0">
-                                                {mod.order}
+                                                {idx + 1}
                                             </span>
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-bold text-slate-900">{mod.title}</p>
