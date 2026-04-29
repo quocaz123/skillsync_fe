@@ -40,6 +40,16 @@ const LEVEL_STYLE = {
 };
 const LEVEL_LABEL = { BEGINNER: 'Cơ bản', INTERMEDIATE: 'Trung cấp', ADVANCED: 'Nâng cao' };
 
+function normalizeSearchText(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd')
+        .replace(/Đ/g, 'D')
+        .toLowerCase()
+        .trim();
+}
+
 // ─────────────────────────────────────────────
 // Helper: Map Backend DTO to Frontend UI Object
 // ─────────────────────────────────────────────
@@ -294,12 +304,12 @@ function ExploreTab() {
         let list = [...paths];
 
         if (keyword.trim()) {
-            const kw = keyword.toLowerCase();
+            const kw = normalizeSearchText(keyword);
             list = list.filter(p =>
-                p.title.toLowerCase().includes(kw) ||
-                p.skill.toLowerCase().includes(kw) ||
-                p.description.toLowerCase().includes(kw) ||
-                (p.mentor?.name || '').toLowerCase().includes(kw)
+                normalizeSearchText(p.title).includes(kw) ||
+                normalizeSearchText(p.skill).includes(kw) ||
+                normalizeSearchText(p.description).includes(kw) ||
+                normalizeSearchText(p.mentor?.name).includes(kw)
             );
         }
         if (skillFilter !== 'Tất cả') list = list.filter(p => p.skill === skillFilter);

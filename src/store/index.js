@@ -67,12 +67,36 @@ export const useStore = create(
              */
             syncCredits: (balance, pendingLearner, pendingTeacher) => set((state) => ({
                 credits: balance,
+                user: state.user
+                    ? { ...state.user, creditsBalance: balance }
+                    : state.user,
                 pendingLearnerCredits: pendingLearner ?? state.pendingLearnerCredits,
                 pendingTeacherCredits: pendingTeacher ?? state.pendingTeacherCredits,
             })),
 
             /** Local credit increment — dùng khi nhận mission reward (optimistic update) */
-            addCredits: (amount) => set((state) => ({ credits: state.credits + amount })),
+            addCredits: (amount) => set((state) => {
+                const currentCredits = Number(state.user?.creditsBalance ?? state.credits ?? 0);
+                const nextCredits = currentCredits + amount;
+                return {
+                    credits: nextCredits,
+                    user: state.user
+                        ? { ...state.user, creditsBalance: nextCredits }
+                        : state.user,
+                };
+            }),
+
+            /** Local credit decrement — dùng cho optimistic update khi cần */
+            deductCredits: (amount) => set((state) => {
+                const currentCredits = Number(state.user?.creditsBalance ?? state.credits ?? 0);
+                const nextCredits = Math.max(0, currentCredits - amount);
+                return {
+                    credits: nextCredits,
+                    user: state.user
+                        ? { ...state.user, creditsBalance: nextCredits }
+                        : state.user,
+                };
+            }),
 
             /** Ghi local transaction log — không thay thế /api/users/me/transactions */
             addCreditTransaction: (tx) => set((state) => ({
