@@ -84,11 +84,12 @@ const TabIntro = ({ mentor }) => (
 const TabCredentials = ({ mentor }) => (
     <div className="space-y-5">
         {/* Trust Score */}
+        {mentor.evidences.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-100 p-6">
             <h3 className="font-extrabold text-slate-900 text-sm mb-1 flex items-center gap-2">
-                Bằng chứng — Kỹ năng mềm
+                Tổng quan xác minh
             </h3>
-            <p className="text-xs text-slate-400 mb-4">Kỹ năng chuyên ngành: xác minh bởi cộng đồng SkillSync</p>
+            <p className="text-xs text-slate-400 mb-4">Danh sách các bằng chứng đã được thêm vào hồ sơ</p>
 
             {/* Badge grid */}
             <div className="grid grid-cols-2 gap-2 mt-3">
@@ -101,6 +102,7 @@ const TabCredentials = ({ mentor }) => (
                 ))}
             </div>
         </div>
+        )}
 
         {/* Certs */}
         {mentor.certs.length > 0 && (
@@ -159,6 +161,7 @@ const TabCredentials = ({ mentor }) => (
         )}
 
         {/* Reviews preview */}
+        {mentor.reviews.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-100 p-6">
             <h3 className="font-extrabold text-slate-900 text-sm mb-4 flex items-center gap-2">
                 Kết quả học viên thực tế
@@ -176,6 +179,7 @@ const TabCredentials = ({ mentor }) => (
                 ))}
             </div>
         </div>
+        )}
         {mentor.reviews.length === 0 && mentor.portfolio.length === 0 && mentor.certs.length === 0 && (
             <p className="text-center text-sm text-slate-400 py-10">Người dùng chưa thêm bằng chứng năng lực nào.</p>
         )}
@@ -312,7 +316,7 @@ const DETAIL_TABS = [
 // ─── Main Explore Component ──────────────────────────────────────────────
 
 const Explore = () => {
-    const { credits, mySkills, user, syncCredits } = useStore();
+    const { credits, user, syncCredits } = useStore();
     const location = useLocation();
     const currentUserId = user?.id ?? null;
     const [searchTerm, setSearchTerm] = useState('');
@@ -453,7 +457,6 @@ const Explore = () => {
         loadSlots();
     }, [selectedMentor?.id]);
 
-    const learningInterests = mySkills.filter(s => s.type === 'learn').map(s => s.name.toLowerCase());
 
     /** Sắp xếp được phụ trách 100% bởi backend */
     const displayMentors = mentors;

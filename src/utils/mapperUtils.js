@@ -34,8 +34,18 @@ export const mapSkillToMentor = (ts) => {
             ? ts.outcomeDesc.split('\n').map(s => s.trim()).filter(Boolean)
             : [],
         certs: (ts.evidences || []).filter(e => e.evidenceType === 'CERTIFICATE' || e.evidenceType === 'TEACHING_CERTIFICATE'),
-        evidences: ts.evidences || [],
-        portfolio: (ts.evidences || []).filter(e => e.evidenceType === 'PORTFOLIO' || e.evidenceType === 'LINKEDIN' || e.evidenceType === 'GITHUB' || e.evidenceType === 'BEHANCE' || e.evidenceType === 'WORK_PROOF'),
+        evidences: (ts.evidences || []).map(e => ({
+            ...e, // keep original fields for certs and portfolio filtering
+            id: e.id,
+            type: e.evidenceType === 'VIDEO_INTRO' ? 'video' :
+                  e.evidenceType === 'LINKEDIN' ? 'linkedin' :
+                  e.evidenceType === 'CERTIFICATE' ? 'cert' :
+                  e.evidenceType === 'TEACHING_CERTIFICATE' ? 'event' :
+                  e.evidenceType === 'WORK_PROOF' ? 'link' : 'badge',
+            label: e.title,
+            verified: e.isVerified
+        })),
+        portfolio: (ts.evidences || []).filter(e => e.evidenceType === 'PORTFOLIO' || e.evidenceType === 'LINKEDIN' || e.evidenceType === 'GITHUB' || e.evidenceType === 'BEHANCE' || e.evidenceType === 'WORK_PROOF' || e.evidenceType === 'VIDEO_INTRO'),
         reviews: (ts.reviews || []).map(r => ({
             id: r.id,
             name: r.reviewerName,

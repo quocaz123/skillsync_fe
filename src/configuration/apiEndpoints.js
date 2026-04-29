@@ -18,6 +18,7 @@ export const API_ENDPOINTS = {
   USERS: {
     GET_ALL: "/api/users",
     ME: "/api/users/me",
+    PUBLIC_PROFILE: (id) => `/api/users/${id}/profile`,
     TRANSACTIONS: "/api/users/me/transactions",
     UPDATE_AVATAR: "/api/users/me/avatar",
     UPDATE_BIO: "/api/users/me/bio",
@@ -52,6 +53,7 @@ export const API_ENDPOINTS = {
     MINE: "/api/sessions/mine",
     APPROVE: (id) => `/api/sessions/${id}/approve`,
     REJECT: (id) => `/api/sessions/${id}/reject`,
+    CANCEL: (id) => `/api/sessions/${id}/cancel`,
     ZEGO_TOKEN: (id) => `/api/sessions/${id}/zego-token`,
     JOIN: (id) => `/api/sessions/${id}/join`,
     LEAVE: (id) => `/api/sessions/${id}/leave`,
@@ -113,6 +115,8 @@ export const API_ENDPOINTS = {
     ESCROW: "/api/admin/escrow",
     TEACHING_SKILLS: "/api/admin/teaching-skills",
     FORUM_POSTS: "/api/admin/forum-posts",
+    MISSIONS: "/api/admin/missions",
+    MISSIONS_TOGGLE: (id) => `/api/admin/missions/${id}/toggle`,
 
     CREDITS: "/api/admin/credits",
     CREDIT_TRANSACTIONS: "/api/admin/credits/transactions",
