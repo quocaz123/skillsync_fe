@@ -61,9 +61,9 @@ const SessionRow = ({ session, isTeacher }) => {
 
 /** AI Teacher recommendation card */
 const TeacherCard = ({ teacher }) => {
-    const stars = 5; // Fake for now until we have rating system
-    const rating = (Math.random() * (5.0 - 4.5) + 4.5).toFixed(1);
-    
+    const rating = teacher.averageRating ?? null;
+    const ratingDisplay = rating != null ? Number(rating).toFixed(1) : null;
+
     return (
         <Link to={`/app/explore`} className="relative bg-white/80 backdrop-blur-sm rounded-2xl border border-violet-100/50 p-5 shadow-[0_4px_20px_-4px_rgba(90,99,246,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(90,99,246,0.2)] hover:border-violet-300 hover:-translate-y-1 transition-all duration-300 group">
             <span className="absolute top-0 right-0 bg-gradient-to-br from-orange-400 to-pink-500 text-white text-[9px] font-black px-2 py-1 rounded-bl-xl rounded-tr-2xl shadow-sm tracking-wider uppercase">
@@ -77,12 +77,16 @@ const TeacherCard = ({ teacher }) => {
                 </div>
             </div>
             <div className="flex items-center justify-between border-t border-slate-50 pt-3">
-                <div className="flex items-center gap-0.5">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} size={13} weight={i < Math.floor(rating) ? 'fill' : 'regular'} className={i < Math.floor(rating) ? 'text-amber-400' : 'text-slate-200'} />
-                    ))}
-                    <span className="text-[11px] font-bold text-slate-600 ml-1">{rating}</span>
-                </div>
+                {ratingDisplay != null ? (
+                    <div className="flex items-center gap-0.5">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                            <Star key={i} size={13} weight={i < Math.floor(Number(ratingDisplay)) ? 'fill' : 'regular'} className={i < Math.floor(Number(ratingDisplay)) ? 'text-amber-400' : 'text-slate-200'} />
+                        ))}
+                        <span className="text-[11px] font-bold text-slate-600 ml-1">{ratingDisplay}</span>
+                    </div>
+                ) : (
+                    <span className="text-[11px] text-slate-400 font-medium italic">Chưa có đánh giá</span>
+                )}
                 <div className="flex items-center gap-1 bg-amber-50 text-amber-600 px-2 py-1 rounded-lg font-extrabold text-xs">
                     <Lightning size={12} weight="fill" />
                     {teacher.creditsPerHour}/h
@@ -300,29 +304,6 @@ const UserDashboard = () => {
                         )}
                     </div>
                 </div>
-            </div>
-
-            {/* ─── AI RECOMMENDATIONS ─── */}
-            <div className="relative pt-2">
-                <div className="flex items-center justify-between mb-5 px-1">
-                    <h2 className="font-black text-slate-800 text-xl flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center shadow-md">
-                            <Robot size={18} weight="fill" className="text-white" />
-                        </div>
-                        Gợi ý xịn dành riêng cho bạn
-                    </h2>
-                    <Link to="/app/explore" className="flex items-center gap-1 text-xs font-extrabold text-violet-600 hover:text-violet-800 transition-colors">
-                        Khám phá thêm <ArrowRight size={13} weight="bold" />
-                    </Link>
-                </div>
-                
-                {loadingData ? (
-                    <div className="flex justify-center py-10"><CircleNotch size={32} className="animate-spin text-violet-500" /></div>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {recommendedMentors.map((t, i) => <TeacherCard key={t.id || i} teacher={t} />)}
-                    </div>
-                )}
             </div>
 
         </div>

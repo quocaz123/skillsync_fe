@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useStore } from '../../store';
 import * as sessionService from '../../services/sessionService';
-import { getAllSkills } from '../../services/skillService';
+import { getAllSkills, getExploreTeachingSkills } from '../../services/skillService';
 import { getMyProfile } from '../../services/userService';
 import {
     MagnifyingGlass, Star, Sparkle, ArrowLeft, ChatCircle,
@@ -10,54 +11,14 @@ import {
     GraduationCap, FolderOpen, SealCheck,
     CalendarBlank, Clock, ChartBar, CheckCircle, Warning
 } from '@phosphor-icons/react';
-import { trackAction } from '../../services/missionService';
-
+// trackAction import removed
 import { mapSkillToMentor } from '../../utils/mapperUtils';
 import { toastError, toastSuccess } from "../../utils/toastUtils";
 
 const DATES = ['T2 10/3', 'T3 11/3', 'T4 12/3', 'T5 13/3', 'T6 14/3'];
 const TIMES = ['8:00 SA', '9:00 SA', '10:00 SA', '14:00 CH', '15:00 CH', '16:00 CH', '19:00 CH', '20:00 CH'];
 
-// ─── Avatar helper ───────────────────────────────────────────────────────
-const AvatarImg = ({ src, fallback, fallbackBg, size = 'w-14 h-14', textSize = 'text-xl', rounded = 'rounded-2xl', extra = '' }) => {
-    const [imgError, setImgError] = useState(false);
-    if (src && !imgError) {
-        return (
-            <img
-                src={src}
-                alt="avatar"
-                onError={() => setImgError(true)}
-                className={`${size} ${rounded} object-cover shadow-md shrink-0 ${extra}`}
-            />
-        );
-    }
-    return (
-        <div className={`${size} ${rounded} ${fallbackBg} text-white flex items-center justify-center font-extrabold ${textSize} shadow-md shrink-0 ${extra}`}>
-            {fallback}
-        </div>
-    );
-};
-
-// ─── Trust Score Bar ─────────────────────────────────────────────────────
-const TrustBar = ({ score }) => {
-    const color = score >= 90 ? 'bg-emerald-500' : score >= 70 ? 'bg-amber-400' : 'bg-red-400';
-    const label = score >= 90 ? 'Đáng tin cậy cao' : score >= 70 ? 'Tin cậy tốt' : 'Đang xây dựng';
-    return (
-        <div className="bg-white border-2 border-emerald-200 rounded-2xl p-4 mb-4">
-            <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 rounded-xl bg-emerald-50 border-2 border-emerald-300 flex items-center justify-center font-extrabold text-emerald-700 text-lg">{score}</div>
-                <div>
-                    <p className="font-extrabold text-slate-800 text-sm">Trust Score</p>
-                    <p className="text-xs text-emerald-600 font-semibold">⏳ {label}</p>
-                </div>
-            </div>
-            <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden mb-1.5">
-                <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${score}%` }} />
-            </div>
-            <p className="text-[11px] text-slate-400">Dựa trên bằng chứng xác nhận: 5/5 tổng · 2/2 chứng chỉ xác minh</p>
-        </div>
-    );
-};
+import Avatar from '../../components/common/Avatar';
 
 // ─── Evidence chips ──────────────────────────────────────────────────────
 const EvidenceIcon = ({ type }) => {
@@ -123,12 +84,13 @@ const TabIntro = ({ mentor }) => (
 const TabCredentials = ({ mentor }) => (
     <div className="space-y-5">
         {/* Trust Score */}
+        {mentor.evidences.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-100 p-6">
             <h3 className="font-extrabold text-slate-900 text-sm mb-1 flex items-center gap-2">
-                Bằng chứng — Kỹ năng mềm
+                Tổng quan xác minh
             </h3>
-            <p className="text-xs text-slate-400 mb-4">Kỹ năng chuyên ngành: xác minh bởi cộng đồng SkillSync</p>
-            <TrustBar score={mentor.trustScore} />
+            <p className="text-xs text-slate-400 mb-4">Danh sách các bằng chứng đã được thêm vào hồ sơ</p>
+
             {/* Badge grid */}
             <div className="grid grid-cols-2 gap-2 mt-3">
                 {mentor.evidences.map((e, i) => (
@@ -140,29 +102,37 @@ const TabCredentials = ({ mentor }) => (
                 ))}
             </div>
         </div>
+        )}
 
         {/* Certs */}
+        {mentor.certs.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-100 p-6">
             <h3 className="font-extrabold text-slate-900 text-sm mb-4 flex items-center gap-2">
-                Bằng clip & Chứng chỉ
+                Bằng cấp & Chứng chỉ
             </h3>
             <div className="space-y-3">
                 {mentor.certs.map((c, i) => (
                     <div key={i} className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                        <span className="text-2xl shrink-0">{c.icon}</span>
                         <div className="flex-1 min-w-0">
-                            <p className="font-bold text-slate-800 text-sm">{c.name}</p>
-                            <p className="text-xs text-slate-400">{c.org}</p>
+                            <p className="font-bold text-slate-800 text-sm">{c.title}</p>
+                            <p className="text-xs text-slate-400">{c.description}</p>
                         </div>
-                        {c.verified && (
+                        {c.isVerified && (
                             <span className="text-[11px] font-bold px-2 py-1 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg shrink-0 flex items-center gap-1">
                                 <Check size={10} weight="bold" /> đã xác minh
                             </span>
                         )}
+                        {/* Lazy load strategy */}
+                        {c.externalUrl ? (
+                            <a href={c.externalUrl} target="_blank" rel="noreferrer" className="text-xs font-bold text-violet-600 hover:underline px-3 py-1.5 bg-violet-50 rounded-lg whitespace-nowrap">Xem chi tiết</a>
+                        ) : c.fileUrl ? (
+                            <a href={c.fileUrl} target="_blank" rel="noreferrer" className="text-xs font-bold text-violet-600 hover:underline px-3 py-1.5 bg-violet-50 rounded-lg whitespace-nowrap">Xem đính kèm</a>
+                        ) : null}
                     </div>
                 ))}
             </div>
         </div>
+        )}
 
         {/* Portfolio */}
         {mentor.portfolio.length > 0 && (
@@ -172,12 +142,18 @@ const TabCredentials = ({ mentor }) => (
                 </h3>
                 <div className="space-y-2.5">
                     {mentor.portfolio.map((p, i) => (
-                        <div key={i} className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 hover:border-violet-200 transition-colors cursor-pointer group">
+                        <div key={i} className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 hover:border-violet-200 transition-colors">
                             <FolderOpen size={16} weight="duotone" className="text-violet-400 shrink-0" />
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-violet-600 truncate group-hover:underline">{p.title}</p>
-                                <p className="text-[11px] text-slate-400">{p.sub}</p>
+                                <p className="text-sm font-bold text-slate-700">{p.title}</p>
+                                <p className="text-[11px] text-slate-400">{p.description}</p>
                             </div>
+                            {/* Lazy load strategy */}
+                            {p.externalUrl ? (
+                                <a href={p.externalUrl} target="_blank" rel="noreferrer" className="text-xs font-bold text-violet-600 hover:underline px-3 py-1.5 bg-violet-50 rounded-lg break-keep whitespace-nowrap">Kiểm chứng</a>
+                            ) : p.fileUrl ? (
+                                <a href={p.fileUrl} target="_blank" rel="noreferrer" className="text-xs font-bold text-violet-600 hover:underline px-3 py-1.5 bg-violet-50 rounded-lg break-keep whitespace-nowrap">Xem tài liệu</a>
+                            ) : null}
                         </div>
                     ))}
                 </div>
@@ -185,6 +161,7 @@ const TabCredentials = ({ mentor }) => (
         )}
 
         {/* Reviews preview */}
+        {mentor.reviews.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-100 p-6">
             <h3 className="font-extrabold text-slate-900 text-sm mb-4 flex items-center gap-2">
                 Kết quả học viên thực tế
@@ -202,11 +179,15 @@ const TabCredentials = ({ mentor }) => (
                 ))}
             </div>
         </div>
+        )}
+        {mentor.reviews.length === 0 && mentor.portfolio.length === 0 && mentor.certs.length === 0 && (
+            <p className="text-center text-sm text-slate-400 py-10">Người dùng chưa thêm bằng chứng năng lực nào.</p>
+        )}
     </div>
 );
 
 // ─── TAB: Lịch trống ─────────────────────────────────────────────────────
-const TabSchedule = ({ mentor, onBook }) => (
+const TabSchedule = ({ mentor, onBook, isOwner }) => (
     <div className="bg-white rounded-2xl border border-slate-100 p-6">
         <h3 className="font-extrabold text-slate-900 text-base mb-1 flex items-center gap-2">
             📅 Lịch rảnh hiện có
@@ -229,12 +210,14 @@ const TabSchedule = ({ mentor, onBook }) => (
                         </div>
                     ))}
                 </div>
-                <button
-                    onClick={onBook}
-                    className="w-full py-3.5 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl shadow-md shadow-violet-200 active:scale-95 transition-all flex items-center justify-center gap-2"
-                >
-                    <CalendarCheck size={18} weight="duotone" /> Đặt lịch ngay ({mentor.availableSlots.length} slot trống)
-                </button>
+                {!isOwner && (
+                    <button
+                        onClick={onBook}
+                        className="w-full py-3.5 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl shadow-md shadow-violet-200 active:scale-95 transition-all flex items-center justify-center gap-2"
+                    >
+                        <CalendarCheck size={18} weight="duotone" /> Đặt lịch ngay ({mentor.availableSlots.length} slot trống)
+                    </button>
+                )}
             </>
         ) : (
             <div className="text-center py-10 text-slate-400">
@@ -248,13 +231,18 @@ const TabSchedule = ({ mentor, onBook }) => (
 
 // ─── TAB: Đánh giá ───────────────────────────────────────────────────────
 const TabReviews = ({ mentor }) => {
-    const ratingDist = [
-        { star: 5, pct: 75 },
-        { star: 4, pct: 20 },
-        { star: 3, pct: 4 },
-        { star: 2, pct: 1 },
-        { star: 1, pct: 0 },
-    ];
+    const ratingDist = useMemo(() => {
+        const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+        mentor.reviews.forEach(r => {
+            const star = Math.round(r.rating);
+            if (counts[star] !== undefined) counts[star]++;
+        });
+        const total = mentor.reviews.length || 1;
+        return [5, 4, 3, 2, 1].map(star => ({
+            star,
+            pct: Math.round((counts[star] / total) * 100)
+        }));
+    }, [mentor.reviews]);
     return (
         <div className="space-y-5">
             {/* Rating overview */}
@@ -291,13 +279,15 @@ const TabReviews = ({ mentor }) => {
                 {mentor.reviews.map((r, i) => (
                     <div key={i} className="bg-white rounded-2xl border border-slate-100 p-5">
                         <div className="flex items-center gap-3 mb-3">
-                            <div className={`w-9 h-9 ${r.color} text-white rounded-xl flex items-center justify-center font-extrabold text-sm shrink-0`}>{r.initials}</div>
+                            <div className={`w-9 h-9 ${r.color} text-white rounded-xl flex items-center justify-center font-extrabold text-sm shrink-0 rounded-full`}>
+                                {r.avatar ? <img src={r.avatar} alt="avatar" className="w-full h-full object-cover rounded-full"/> : r.initials}
+                            </div>
                             <div>
                                 <p className="font-bold text-slate-800 text-sm">{r.name}</p>
-                                <p className="text-[11px] text-slate-400">{r.label} ✓</p>
+                                <p className="text-[11px] text-slate-400">{new Date(r.date).toLocaleDateString('vi-VN')} ✓</p>
                             </div>
                             <div className="ml-auto flex gap-0.5">
-                                {[...Array(r.stars)].map((_, j) => (
+                                {[...Array(r.rating || 5)].map((_, j) => (
                                     <Star key={j} size={13} weight="fill" className="text-amber-400" />
                                 ))}
                             </div>
@@ -305,6 +295,11 @@ const TabReviews = ({ mentor }) => {
                         <p className="text-sm text-slate-600 leading-relaxed">"{r.comment}"</p>
                     </div>
                 ))}
+                {mentor.reviews.length === 0 && (
+                    <div className="text-center py-10">
+                        <p className="text-sm text-slate-500 font-medium">Chưa có đánh giá nào.</p>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -321,15 +316,19 @@ const DETAIL_TABS = [
 // ─── Main Explore Component ──────────────────────────────────────────────
 
 const Explore = () => {
-    const { credits, mySkills, user, syncCredits } = useStore();
+    const { credits, user, syncCredits } = useStore();
+    const location = useLocation();
     const currentUserId = user?.id ?? null;
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedQ, setDebouncedQ] = useState('');
     const [mentors, setMentors] = useState([]);
     const [loadingMentors, setLoadingMentors] = useState(true);
+    const [explorePage, setExplorePage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
 
     const [availableSkills, setAvailableSkills] = useState([]);
     const [activeSkillId, setActiveSkillId] = useState('all');
-    const [sortBy, setSortBy] = useState('experience');
+    const [sortBy, setSortBy] = useState('newest');
     const [showSortDropdown, setShowSortDropdown] = useState(false);
 
     const [selectedMentor, setSelectedMentor] = useState(null);
@@ -341,28 +340,82 @@ const Explore = () => {
     const [selectedSlotCost, setSelectedSlotCost] = useState(0);
     const [note, setNote] = useState('');
     const [bookingLoading, setBookingLoading] = useState(false);
+    const [isProposing, setIsProposing] = useState(false);
+    const [proposeDate, setProposeDate] = useState('');
+    const [proposeTime, setProposeTime] = useState('');
+    const [proposeEndTime, setProposeEndTime] = useState('');
 
-    // Fetch Danh sách mentors 
     useEffect(() => {
-        const load = async () => {
-            try {
-                // Sử dụng custom getter (phải add vào sessionService hoặc axios config)
-                // Vì /api/teaching-skills/approved thuộc skill, nên tạm dùng instance axios.
-                const { default: axiosClient } = await import('../../configuration/axiosClient');
-                const { default: API_ENDPOINTS } = await import('../../configuration/apiEndpoints');
+        const t = setTimeout(() => setDebouncedQ(searchTerm.trim()), 400);
+        return () => clearTimeout(t);
+    }, [searchTerm]);
 
-                const res = await axiosClient.get(API_ENDPOINTS.TEACHING_SKILLS.GET_APPROVED);
-                const data = res?.result ?? (Array.isArray(res) ? res : []);
-                setMentors(data.map(mapSkillToMentor));
-            } catch (err) {
-                console.error('Lỗi lấy danh sách khám phá:', err);
-                setMentors([]);
-            } finally {
-                setLoadingMentors(false);
+    const mapSortToApi = (sb) => {
+        switch (sb) {
+            case 'experience': return 'experience';
+            case 'credits_asc': return 'credits_asc';
+            case 'credits_desc': return 'credits_desc';
+            case 'newest':
+            default:
+                return 'newest';
+        }
+    };
+
+    const apiSort = mapSortToApi(sortBy);
+
+    const loadExplore = useCallback(async (page = 0, append = false) => {
+        setLoadingMentors(true);
+        try {
+            const params = {
+                page,
+                size: 24,
+                sort: apiSort,
+                ...(debouncedQ ? { q: debouncedQ } : {}),
+                ...(activeSkillId !== 'all' ? { skillId: activeSkillId } : {}),
+            };
+            const pr = await getExploreTeachingSkills(params);
+            const rows = Array.isArray(pr?.data) ? pr.data : [];
+            const mapped = rows.map(mapSkillToMentor);
+            if (append) {
+                setMentors(prev => [...prev, ...mapped]);
+            } else {
+                setMentors(mapped);
             }
-        };
-        load();
-    }, []);
+            setExplorePage(pr?.currentPage ?? page);
+            setTotalPages(pr?.totalPages ?? 0);
+        } catch (err) {
+            console.error('Lỗi lấy danh sách khám phá:', err);
+            if (!append) {
+                setMentors([]);
+                setTotalPages(0);
+            }
+        } finally {
+            setLoadingMentors(false);
+        }
+    }, [debouncedQ, activeSkillId, apiSort]);
+
+    useEffect(() => {
+        loadExplore(0, false);
+    }, [loadExplore]);
+
+    // ── Auto-open từ AI Chat Bubble ──────────────────────────────────────────
+    // Khi navigate từ AiChatBubble với state { openMentorId }, tìm mentor
+    // trong danh sách đã fetch và mở trang chi tiết ngay lập tức.
+    useEffect(() => {
+        const targetId = location.state?.openMentorId;
+        if (!targetId || loadingMentors || mentors.length === 0) return;
+
+        // AI trả về mentorId = User UUID của teacher → map sang m.teacherId trong Explore
+        // m.id là TeachingSkill ID (khác), m.teacherId mới là teacher's user UUID
+        const found = mentors.find(m => String(m.teacherId) === String(targetId));
+        if (found) {
+            setSelectedMentor(found);
+            setBookingStep(0);
+            setActiveTab('intro');
+            // Xoá state khỏi history để không bị re-trigger khi navigate lại
+            window.history.replaceState({}, '');
+        }
+    }, [location.state, mentors, loadingMentors]);
 
     useEffect(() => {
         const loadSkills = async () => {
@@ -404,26 +457,9 @@ const Explore = () => {
         loadSlots();
     }, [selectedMentor?.id]);
 
-    const learningInterests = mySkills.filter(s => s.type === 'learn').map(s => s.name.toLowerCase());
 
-    const activeSkillName = activeSkillId === 'all' ? null : availableSkills.find(s => s.id === activeSkillId)?.name;
-
-    const filteredMentors = mentors.filter(m => {
-        const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase()) || m.skill.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesSkill = activeSkillId === 'all' || m.skill === activeSkillName;
-        return matchesSearch && matchesSkill;
-    }).sort((a, b) => {
-        if (sortBy === 'match') {
-            const aBoost = learningInterests.includes(a.skill.toLowerCase()) ? 20 : 0;
-            const bBoost = learningInterests.includes(b.skill.toLowerCase()) ? 20 : 0;
-            return (b.match + bBoost) - (a.match + aBoost);
-        }
-        if (sortBy === 'experience') return b.totalSessions - a.totalSessions;
-        if (sortBy === 'rating') return b.rating - a.rating;
-        if (sortBy === 'price_asc') return a.price - b.price;
-        if (sortBy === 'price_desc') return b.price - a.price;
-        return 0;
-    });
+    /** Sắp xếp được phụ trách 100% bởi backend */
+    const displayMentors = mentors;
 
     const resetAll = () => {
         setSelectedMentor(null);
@@ -434,6 +470,10 @@ const Explore = () => {
         setSelectedSlotId('');
         setSelectedSlotCost(0);
         setNote('');
+        setIsProposing(false);
+        setProposeDate('');
+        setProposeTime('');
+        setProposeEndTime('');
     };
 
     const handleConfirmBooking = async () => {
@@ -441,7 +481,16 @@ const Explore = () => {
         if (credits < slotPrice) return;
         setBookingLoading(true);
         try {
-            await sessionService.bookSession(selectedSlotId, note);
+            if (isProposing || selectedSlotId === 'PROPOSE') {
+                if (!proposeDate || !proposeTime || !proposeEndTime) {
+                    toastError("Vui lòng chọn đầy đủ ngày, giờ bắt đầu và giờ kết thúc!");
+                    setBookingLoading(false);
+                    return;
+                }
+                await sessionService.proposeSession(selectedMentor.id, proposeDate, proposeTime, proposeEndTime, note);
+            } else {
+                await sessionService.bookSession(selectedSlotId, note);
+            }
             toastSuccess("Đã gửi yêu cầu đặt lịch. Vui lòng chờ mentor xác nhận.");
             setBookingStep(3);
             // Sync updated credits from server
@@ -463,6 +512,7 @@ const Explore = () => {
     if (selectedMentor && bookingStep === 0) {
         const m = selectedMentor;
         const tabCount = m.reviews?.length ?? 0;
+        const isOwner = currentUserId && currentUserId === m.teacherId;
 
         return (
             <div className="max-w-5xl mx-auto font-sans pb-14">
@@ -475,7 +525,7 @@ const Explore = () => {
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-5">
                     <div className="flex flex-col sm:flex-row items-start gap-5">
                         {/* Avatar */}
-                        <AvatarImg
+                        <Avatar
                             src={m.avatarUrl}
                             fallback={m.avatar}
                             fallbackBg={m.avatarBg}
@@ -510,7 +560,7 @@ const Explore = () => {
                             { icon: ChartBar, label: 'Buổi đã dạy', value: m.totalSessions, iconCls: 'text-violet-500' },
                             { icon: Clock, label: 'Phản hồi', value: m.responseTime, iconCls: 'text-sky-500' },
                             { icon: CalendarCheck, label: 'Còn trống', value: `${m.slots} slot`, iconCls: 'text-emerald-500' },
-                            { icon: Shield, label: 'Trust Score', value: m.trustScore, iconCls: 'text-teal-500' },
+
                         ].map((s, i) => (
                             <div key={i} className="text-center">
                                 <div className="flex items-center justify-center gap-1 font-extrabold text-slate-900">
@@ -543,7 +593,7 @@ const Explore = () => {
                         {/* Tab content */}
                         {activeTab === 'intro' && <TabIntro mentor={m} />}
                         {activeTab === 'creds' && <TabCredentials mentor={m} />}
-                        {activeTab === 'schedule' && <TabSchedule mentor={m} onBook={() => setBookingStep(1)} />}
+                        {activeTab === 'schedule' && <TabSchedule mentor={m} onBook={() => setBookingStep(1)} isOwner={isOwner} />}
                         {activeTab === 'reviews' && <TabReviews mentor={m} />}
                     </div>
 
@@ -580,9 +630,9 @@ const Explore = () => {
                                     <CalendarCheck size={16} weight="duotone" /> Chọn slot & Đặt lịch
                                 </button>
                             )}
-                            <button className="w-full py-3 border-2 border-slate-200 hover:bg-slate-50 text-slate-600 font-bold rounded-xl transition-all text-sm flex items-center justify-center gap-2">
+                            {/* <button className="w-full py-3 border-2 border-slate-200 hover:bg-slate-50 text-slate-600 font-bold rounded-xl transition-all text-sm flex items-center justify-center gap-2">
                                 <ChatCircle size={16} weight="duotone" /> Nhắn tin trước
-                            </button>
+                            </button> */}
                         </div>
 
                         {/* Credentials sidebar */}
@@ -661,24 +711,49 @@ const Explore = () => {
                         <div className="flex-1 bg-white rounded-2xl border border-slate-100 shadow-sm p-7">
                             <h2 className="text-xl font-extrabold text-slate-900 mb-5">Chọn lịch học trống</h2>
                             {m.availableSlots.length > 0 ? (
-                                <div className="flex flex-wrap gap-3 mb-8">
-                                    {m.availableSlots.map(sl => (
-                                        <button key={sl.id} onClick={() => { setSelectedDate(sl.day); setSelectedTime(sl.time); setSelectedSlotId(sl.id); setSelectedSlotCost(sl.creditCost ?? m.price ?? 0); }}
-                                            className={`px-5 py-3.5 rounded-xl text-sm font-bold border-2 transition-all active:scale-95 text-left ${selectedSlotId === sl.id ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-slate-100 text-slate-600 hover:border-slate-200'}`}>
-                                            <p className="font-extrabold text-base mb-1">{sl.day}</p>
-                                            <p className="flex items-center gap-1 text-xs opacity-90 font-semibold mt-1">
-                                                <Clock size={13} weight="bold" /> {sl.time}
-                                            </p>
-                                            <p className="flex items-center gap-1 text-[11px] font-extrabold text-amber-600 mt-1.5">
-                                                <Lightning size={11} weight="fill" className="text-amber-400" /> {sl.creditCost ?? m.price} credits
-                                            </p>
+                                <div>
+                                    <div className="flex flex-wrap gap-3 mb-8">
+                                        {m.availableSlots.map(sl => (
+                                            <button key={sl.id} onClick={() => { setSelectedDate(sl.day); setSelectedTime(sl.time); setSelectedSlotId(sl.id); setSelectedSlotCost(sl.creditCost ?? m.price ?? 0); setIsProposing(false); }}
+                                                className={`px-5 py-3.5 rounded-xl text-sm font-bold border-2 transition-all active:scale-95 text-left ${selectedSlotId === sl.id ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-slate-100 text-slate-600 hover:border-slate-200'}`}>
+                                                <p className="font-extrabold text-base mb-1">{sl.day}</p>
+                                                <p className="flex items-center gap-1 text-xs opacity-90 font-semibold mt-1">
+                                                    <Clock size={13} weight="bold" /> {sl.time}
+                                                </p>
+                                                <p className="flex items-center gap-1 text-[11px] font-extrabold text-amber-600 mt-1.5">
+                                                    <Lightning size={11} weight="fill" className="text-amber-400" /> {sl.creditCost ?? m.price} credits
+                                                </p>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between mb-8">
+                                        <span className="text-sm text-slate-500">Giờ không phù hợp?</span>
+                                        <button onClick={() => { setIsProposing(true); setSelectedSlotId('PROPOSE'); setSelectedDate(proposeDate); setSelectedTime(proposeTime); setSelectedSlotCost(m.price); }} className="text-violet-600 font-bold text-sm hover:underline">
+                                           Đề xuất lịch riêng
                                         </button>
-                                    ))}
+                                    </div>
                                 </div>
                             ) : (
-                                <div className="bg-slate-50 border border-slate-100 rounded-xl p-6 text-center text-slate-500 mb-8 text-sm">
-                                    <p className="font-semibold mb-1">Mentor này hiện chưa có slot trống mới 😔</p>
-                                    <p className="text-xs">Hãy sử dụng tính năng "Nhắn tin trước" để hỏi xin lịch nhé.</p>
+                                <div className="bg-violet-50 border border-violet-100 rounded-xl p-6 mb-8">
+                                    <p className="font-bold text-violet-800 mb-2">Đề xuất khung giờ của bạn 🕒</p>
+                                    <p className="text-xs text-violet-600 mb-4">Mentor này chưa thiết lập sẵn slot rảnh. Bạn có thể chủ động đề xuất ngày giờ phù hợp, hệ thống sẽ gửi yêu cầu duyệt đến Mentor.</p>
+                                    <div className="flex flex-col sm:flex-row gap-4">
+                                         <input type="date" value={proposeDate} min={new Date().toISOString().split("T")[0]} onChange={e => {setProposeDate(e.target.value); setSelectedDate(e.target.value); setSelectedSlotCost(m.price); setIsProposing(true); setSelectedSlotId('PROPOSE');}} className="flex-1 px-4 py-3 rounded-xl border border-violet-200 outline-none focus:border-violet-500 text-sm font-semibold text-slate-700 bg-white" placeholder="Ngày học" />
+                                         <input type="time" title="Giờ bắt đầu" value={proposeTime} onChange={e => {setProposeTime(e.target.value); setSelectedTime(e.target.value); setSelectedSlotCost(m.price); setIsProposing(true); setSelectedSlotId('PROPOSE');}} className="flex-1 px-4 py-3 rounded-xl border border-violet-200 outline-none focus:border-violet-500 text-sm font-semibold text-slate-700 bg-white" />
+                                         <input type="time" title="Giờ kết thúc" value={proposeEndTime} onChange={e => {setProposeEndTime(e.target.value); setIsProposing(true); setSelectedSlotId('PROPOSE');}} className="flex-1 px-4 py-3 rounded-xl border border-violet-200 outline-none focus:border-violet-500 text-sm font-semibold text-slate-700 bg-white" />
+                                    </div>
+                                </div>
+                            )}
+
+                            {isProposing && m.availableSlots.length > 0 && (
+                                <div className="bg-violet-50 border border-violet-100 rounded-xl p-6 mb-8 mt-4">
+                                    <p className="font-bold text-violet-800 mb-2">Đề xuất khung giờ của bạn 🕒</p>
+                                    <p className="text-xs text-violet-600 mb-4">Chủ động đề xuất ngày giờ phù hợp ngoài các slot có sẵn.</p>
+                                    <div className="flex flex-col sm:flex-row gap-4">
+                                         <input type="date" value={proposeDate} min={new Date().toISOString().split("T")[0]} onChange={e => {setProposeDate(e.target.value); setSelectedDate(e.target.value); setSelectedSlotCost(m.price); setIsProposing(true); setSelectedSlotId('PROPOSE');}} className="flex-1 px-4 py-3 rounded-xl border border-violet-200 outline-none focus:border-violet-500 text-sm font-semibold text-slate-700 bg-white" />
+                                         <input type="time" title="Giờ bắt đầu" value={proposeTime} onChange={e => {setProposeTime(e.target.value); setSelectedTime(e.target.value); setSelectedSlotCost(m.price); setIsProposing(true); setSelectedSlotId('PROPOSE');}} className="flex-1 px-4 py-3 rounded-xl border border-violet-200 outline-none focus:border-violet-500 text-sm font-semibold text-slate-700 bg-white" />
+                                         <input type="time" title="Giờ kết thúc" value={proposeEndTime} onChange={e => {setProposeEndTime(e.target.value); setIsProposing(true); setSelectedSlotId('PROPOSE');}} className="flex-1 px-4 py-3 rounded-xl border border-violet-200 outline-none focus:border-violet-500 text-sm font-semibold text-slate-700 bg-white" />
+                                    </div>
                                 </div>
                             )}
                             <h2 className="text-base font-extrabold text-slate-900 mb-3">Ghi chú (tùy chọn)</h2>
@@ -689,7 +764,7 @@ const Explore = () => {
                         <div className="lg:w-72 shrink-0" style={{ position: 'sticky', top: '1rem' }}>
                             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
                                 <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-                                    <AvatarImg
+                                <Avatar
                                         src={m.avatarUrl}
                                         fallback={m.avatar}
                                         fallbackBg={m.avatarBg}
@@ -726,7 +801,7 @@ const Explore = () => {
                     <div className="max-w-lg mx-auto bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
                         <h2 className="text-2xl font-extrabold text-slate-900 mb-6 pb-4 border-b border-slate-100">Xác nhận đặt lịch</h2>
                         <div className="bg-slate-50 rounded-xl p-4 flex items-center gap-4 mb-6 border border-slate-100">
-                            <AvatarImg
+                            <Avatar
                                 src={m.avatarUrl}
                                 fallback={m.avatar}
                                 fallbackBg={m.avatarBg}
@@ -764,13 +839,21 @@ const Explore = () => {
                     </div>
                 )}
 
-                {/* Step 3: Success */}
+                {/* Step 3: Success / Pending */}
                 {bookingStep === 3 && (
                     <div className="max-w-lg mx-auto text-center mt-8">
-                        <div className="text-6xl mb-4">🎉</div>
-                        <h1 className="text-3xl font-extrabold text-slate-900 mb-3">Đặt lịch thành công!</h1>
-                        <p className="text-slate-500 mb-8">
-                            Buổi học với <b>{m.name}</b> vào <span className="font-bold text-violet-600">{selectedDate}</span> lúc <span className="font-bold text-violet-600">{selectedTime}</span> đã xác nhận.
+                        <div className="text-6xl mb-4">⏳</div>
+                        <h1 className="text-3xl font-extrabold text-slate-900 mb-3">Đã gửi Yêu cầu Đặt lịch!</h1>
+                        <p className="text-slate-500 mb-8 max-w-sm mx-auto leading-relaxed">
+                            {isProposing || selectedSlotId === 'PROPOSE' ? (
+                                <>
+                                    Đề xuất lịch học với <b>{m.name}</b> vào <span className="font-bold text-violet-600">{selectedDate}</span> từ <span className="font-bold text-violet-600">{selectedTime}</span> đến <span className="font-bold text-violet-600">{proposeEndTime}</span> đã được ghi nhận. Vui lòng chờ Mentor Duyệt lịch.
+                                </>
+                            ) : (
+                                <>
+                                    Yêu cầu đăng ký slot học với <b>{m.name}</b> vào <span className="font-bold text-violet-600">{selectedDate}</span> lúc <span className="font-bold text-violet-600">{selectedTime}</span> đã được chuyển đi. Vui lòng chờ Mentor Duyệt lịch.
+                                </>
+                            )}
                         </p>
                         <div className="flex flex-col sm:flex-row gap-3 justify-center">
                             <button onClick={() => window.location.href = '/app/sessions'} className="px-7 py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 shadow-md shadow-violet-200 transition-all">
@@ -789,6 +872,7 @@ const Explore = () => {
     // ─── EXPLORE LIST VIEW ──────────────────────────────────────────────
     return (
         <div className="max-w-6xl mx-auto font-sans pb-12 space-y-8">
+            {/* ── Tìm kiếm thủ công ───────────────────────────────────── */}
             <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
                 <div className="flex flex-col sm:flex-row gap-4">
                     <div className="flex-1 relative">
@@ -813,11 +897,10 @@ const Explore = () => {
                                     <span className="absolute bottom-0 right-0 w-2 h-2 bg-sky-400 rounded-sm"></span>
                                     <span className="absolute bottom-0 left-0 w-2 h-2 bg-violet-400 rounded-sm"></span>
                                 </span>
-                                {sortBy === 'match' && 'Phù hợp nhất'}
+                                {sortBy === 'newest' && 'Mới nhất'}
                                 {sortBy === 'experience' && 'Nhiều kinh nghiệm'}
-                                {sortBy === 'rating' && 'Đánh giá cao'}
-                                {sortBy === 'price_asc' && 'Giá thấp nhất'}
-                                {sortBy === 'price_desc' && 'Giá cao nhất'}
+                                {sortBy === 'credits_asc' && 'Credits tăng dần'}
+                                {sortBy === 'credits_desc' && 'Credits giảm dần'}
                             </span>
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" className={`transition-transform duration-200 ${showSortDropdown ? 'rotate-180' : ''}`}>
                                 <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -829,11 +912,10 @@ const Explore = () => {
                                 <div className="fixed inset-0 z-10" onClick={() => setShowSortDropdown(false)}></div>
                                 <div className="absolute right-0 top-full mt-2 w-full bg-white rounded-xl border border-slate-100 shadow-lg py-2 z-20 animate-in fade-in slide-in-from-top-2">
                                     {[
-                                        { id: 'match', label: 'Phù hợp nhất' },
+                                        { id: 'newest', label: 'Mới nhất' },
                                         { id: 'experience', label: 'Nhiều kinh nghiệm' },
-                                        { id: 'rating', label: 'Đánh giá cao' },
-                                        { id: 'price_asc', label: 'Giá thấp nhất' },
-                                        { id: 'price_desc', label: 'Giá cao nhất' },
+                                        { id: 'credits_asc', label: 'Credits tăng dần' },
+                                        { id: 'credits_desc', label: 'Credits giảm dần' },
                                     ].map(option => (
                                         <button
                                             key={option.id}
@@ -874,16 +956,21 @@ const Explore = () => {
                 </div>
             </div>
 
+            {loadingMentors && mentors.length === 0 && (
+                <div className="text-center py-16 text-slate-400 font-semibold">Đang tải danh sách mentor…</div>
+            )}
+            {!loadingMentors && displayMentors.length === 0 && (
+                <div className="text-center py-16 text-slate-500 font-medium">Không tìm thấy mentor phù hợp. Thử đổi từ khóa hoặc bộ lọc kỹ năng.</div>
+            )}
+
             {/* Cards grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredMentors.map(mentor => {
-                    const isHigh = mentor.match >= 90;
+                {displayMentors.map(mentor => {
                     return (
                         <div key={mentor.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col group relative">
-                            {isHigh && <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-400 to-orange-400" />}
                             <div className="p-6 flex-1">
                                 <div className="flex items-start justify-between mb-5">
-                                    <AvatarImg
+                                    <Avatar
                                         src={mentor.avatarUrl}
                                         fallback={mentor.avatar}
                                         fallbackBg={mentor.avatarBg}
@@ -891,9 +978,6 @@ const Explore = () => {
                                         textSize="text-xl"
                                         rounded="rounded-2xl"
                                     />
-                                    <span className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-full ${isHigh ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-violet-50 text-violet-700 border border-violet-100'}`}>
-                                        <Sparkle size={11} weight="fill" /> {mentor.match}% Match
-                                    </span>
                                 </div>
                                 <h3 className="font-extrabold text-xl text-slate-900 group-hover:text-violet-600 transition-colors mb-1">{mentor.name}</h3>
                                 <p className="text-sm text-slate-500 mb-3">{mentor.subSkills.slice(0, 2).join(' · ')}</p>
@@ -917,6 +1001,19 @@ const Explore = () => {
                     );
                 })}
             </div>
+
+            {totalPages > 1 && explorePage < totalPages - 1 && (
+                <div className="flex justify-center pt-2">
+                    <button
+                        type="button"
+                        disabled={loadingMentors}
+                        onClick={() => loadExplore(explorePage + 1, true)}
+                        className="px-8 py-3 rounded-xl border-2 border-slate-200 bg-white text-slate-700 font-bold text-sm hover:border-violet-300 hover:bg-violet-50/50 transition-all disabled:opacity-50"
+                    >
+                        {loadingMentors ? 'Đang tải…' : 'Xem thêm mentor'}
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

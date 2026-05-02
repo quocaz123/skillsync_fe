@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useStore } from '../../store';
 import { login as apiLogin } from '../../services/authService';
 import { getMyProfile } from '../../services/userService';
@@ -8,12 +8,24 @@ import { Mail, Lock } from 'lucide-react';
 
 const Login = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const setSession = useStore((state) => state.login);
     const syncCredits = useStore((state) => state.syncCredits);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [info, setInfo] = useState('');
+
+    useEffect(() => {
+        if (location.state?.message) {
+            setInfo(location.state.message);
+            window.history.replaceState({}, document.title);
+        }
+        if (location.state?.email) {
+            setEmail(location.state.email);
+        }
+    }, [location.state]);
 
     const handleEmailLogin = async (e) => {
         e.preventDefault();
@@ -68,6 +80,11 @@ const Login = () => {
                     <p className="text-slate-500 mt-2 font-medium">Log in to your SkillSync account</p>
                 </div>
 
+                {info && (
+                    <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">
+                        {info}
+                    </div>
+                )}
                 {error && (
                     <div
                         className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
@@ -97,7 +114,12 @@ const Login = () => {
                     <div>
                         <div className="flex items-center justify-between mb-1">
                             <label className="block text-sm font-medium text-slate-700">Password</label>
-                            <a href="#" className="text-sm font-medium text-primary-600 hover:text-primary-700">Forgot password?</a>
+                            <Link
+                                to="/forgot-password"
+                                className="text-sm font-medium text-primary-600 hover:text-primary-700"
+                            >
+                                Forgot password?
+                            </Link>
                         </div>
                         <div className="relative">
                             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
@@ -142,9 +164,7 @@ const Login = () => {
                     </Link>
                 </div>
 
-                <p className="text-xs text-center text-slate-400 mt-4">
-                    Tài khoản admin do backend gán role ADMIN — không còn mock theo email.
-                </p>
+               
             </div>
         </div>
     );

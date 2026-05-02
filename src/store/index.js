@@ -1,184 +1,119 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-// Mock Tasks System for Welcome Credit
-const MOCK_TASKS = [
-    { id: 1, title: 'Complete your profile details', reward: 50, completed: false },
-    { id: 2, title: 'Add your first teaching skill', reward: 100, completed: false },
-    { id: 3, title: 'Verify your email address', reward: 20, completed: true },
-];
-
-// Mock initial credit history
-const INITIAL_CREDIT_HISTORY = [
-    { id: 'h1', type: 'welcome', amount: +20, description: 'Welcome credit - Xác thực email', date: '2026-03-01T08:00:00' },
-    { id: 'h2', type: 'session_booked', amount: -40, description: 'Đặt lịch học UI/UX Basics với Maria Garcia', date: '2026-03-09T10:00:00' },
-];
-
-// Mock learning progress
-const INITIAL_LEARNING_PROGRESS = [
-    { id: 'lp1', skill: 'UI/UX Design', mentor: 'Maria Garcia', level: 'Beginner', goal: 'Intermediate', totalSessions: 8, completedSessions: 3, lastSession: '2026-03-08T10:00:00' },
-    { id: 'lp2', skill: 'Public Speaking', mentor: null, level: 'Beginner', goal: 'Advanced', totalSessions: 5, completedSessions: 0, lastSession: null },
-];
-
+/**
+ * SkillSync Global Store (Zustand)
+ *
+ * Chỉ giữ:
+ *   - Auth state (user, isAuthenticated, role)
+ *   - Credit balance (đồng bộ từ BE sau mỗi transaction)
+ *   - enrolledPathIds (local cache để tránh gọi API nhiều lần)
+ *   - completedLessons / pathReviews (learning progress)
+ *   - creditHistory (local log — KHÔNG dùng cho display chính, dùng /api/users/me/transactions)
+ *
+ * ĐÃ XÓA (technical debt):
+ *   - tasks / completeTask / addTask / removeTask — duplicate với missionService
+ *   - sessions / bookSession / completeSession — duplicate với sessionService
+ *   - reviews / addReview — duplicate với reviewService
+ */
 export const useStore = create(
     persist(
         (set) => ({
-            // AUTH STATE
-    user: null,
-    isAuthenticated: false,
-    role: 'user',
-    showMissionPopup: false,
-    dismissMissionPopup: () => set({ showMissionPopup: false }),
-    login: (userData) => set((state) => ({ 
-        user: userData, 
-        isAuthenticated: true, 
-        role: userData.role || 'user',
-        // Chỉ update credits nếu backend trả về giá trị hợp lệ (không null/undefined)
-        // Tránh overwrite credits về 0 khi creditsBalance bị thiếu trong response
-        credits: (userData.creditsBalance !== undefined && userData.creditsBalance !== null)
-            ? userData.creditsBalance
-            : state.credits,
-        pendingLearnerCredits: userData.pendingLearnerCredits || 0,
-        pendingTeacherCredits: userData.pendingTeacherCredits || 0,
-        showMissionPopup: true,
-    })),
-    // Sync credits từ server (gọi sau khi login hoặc khi cần đồng bộ)
-    syncCredits: (balance, pendingLearner = 0, pendingTeacher = 0) => set({ 
-        credits: balance, 
-        pendingLearnerCredits: pendingLearner, 
-        pendingTeacherCredits: pendingTeacher 
-    }),
-    logout: () => set({ user: null, isAuthenticated: false, role: 'user', creditHistory: [] }),
+            // ── Auth ────────────────────────────────────────────────
+            user: null,
+            isAuthenticated: false,
+            role: 'user',
+            showMissionPopup: false,
 
-    // CREDIT & PROFILE STATE
-    credits: 180, // 200 welcome - 20 spent = 180 after initial tx
-    pendingLearnerCredits: 0,
-    pendingTeacherCredits: 0,
-    addCredits: (amount) => set((state) => ({ credits: state.credits + amount })),
-    deductCredits: (amount) => set((state) => ({ credits: state.credits - amount })),
+            dismissMissionPopup: () => set({ showMissionPopup: false }),
 
-    // CREDIT HISTORY
-    creditHistory: INITIAL_CREDIT_HISTORY,
-    addCreditTransaction: (tx) => set((state) => ({
-        creditHistory: [{ ...tx, id: `h_${Date.now()}`, date: new Date().toISOString() }, ...state.creditHistory]
-    })),
+            login: (userData) => set((state) => ({
+                user: userData,
+                isAuthenticated: true,
+                role: userData.role || 'user',
+                credits: (userData.creditsBalance !== undefined && userData.creditsBalance !== null)
+                    ? userData.creditsBalance
+                    : state.credits,
+                pendingLearnerCredits: userData.pendingLearnerCredits || 0,
+                pendingTeacherCredits: userData.pendingTeacherCredits || 0,
+                showMissionPopup: true,
+            })),
 
-    // TASKS STATE (For Welcome Credit System)
-    tasks: MOCK_TASKS,
-    completeTask: (taskId) => set((state) => {
-        const taskIndex = state.tasks.findIndex(t => t.id === taskId);
-        if (taskIndex === -1 || state.tasks[taskIndex].completed) return state;
+            logout: () => set({
+                user: null,
+                isAuthenticated: false,
+                role: 'user',
+                credits: 0,
+                creditHistory: [],
+                enrolledPathIds: [],
+                pendingLearnerCredits: 0,
+                pendingTeacherCredits: 0,
+            }),
 
-        const newTasks = [...state.tasks];
-        const reward = newTasks[taskIndex].reward;
-        newTasks[taskIndex] = { ...newTasks[taskIndex], completed: true };
+            /** Dùng bởi Profile.jsx và các nơi cần update user partial */
+            setUser: (updater) => set((state) => ({
+                user: typeof updater === 'function' ? updater(state.user) : { ...state.user, ...updater }
+            })),
 
-        const newTx = {
-            id: `h_${Date.now()}`,
-            type: 'welcome',
-            amount: +reward,
-            description: `Hoàn thành nhiệm vụ: ${newTasks[taskIndex].title}`,
-            date: new Date().toISOString()
-        };
+            // ── Credits ─────────────────────────────────────────────
+            credits: 0,
+            pendingLearnerCredits: 0,
+            pendingTeacherCredits: 0,
+            creditHistory: [],
 
-        return {
-            tasks: newTasks,
-            credits: state.credits + reward,
-            creditHistory: [newTx, ...state.creditHistory]
-        };
-    }),
+            /**
+             * Đồng bộ credit balance từ BE (gọi sau mỗi transaction quan trọng).
+             * pendingLearner/pendingTeacher optional — nếu không biết thì giữ nguyên.
+             */
+            syncCredits: (balance, pendingLearner, pendingTeacher) => set((state) => ({
+                credits: balance,
+                pendingLearnerCredits: pendingLearner ?? state.pendingLearnerCredits,
+                pendingTeacherCredits: pendingTeacher ?? state.pendingTeacherCredits,
+            })),
 
-    // ADMIN TASK MANAGEMENT
-    addTask: (task) => set((state) => ({
-        tasks: [...state.tasks, { ...task, id: Date.now(), completed: false }]
-    })),
-    removeTask: (taskId) => set((state) => ({
-        tasks: state.tasks.filter(t => t.id !== taskId)
-    })),
+            /** Local credit increment — dùng khi nhận mission reward (optimistic update) */
+            addCredits: (amount) => set((state) => ({ credits: state.credits + amount })),
 
-    // SKILLS LOGIC
-    mySkills: [
-        { id: 1, name: 'ReactJS', type: 'teach', level: 'Advanced' },
-        { id: 2, name: 'UI/UX Design', type: 'learn', level: 'Beginner' },
-    ],
-    addSkill: (skill) => set((state) => ({
-        mySkills: [...state.mySkills, { ...skill, id: Date.now() }]
-    })),
-    removeSkill: (skillId) => set((state) => ({
-        mySkills: state.mySkills.filter(s => s.id !== skillId)
-    })),
+            /** Ghi local transaction log — không thay thế /api/users/me/transactions */
+            addCreditTransaction: (tx) => set((state) => ({
+                creditHistory: [
+                    { ...tx, id: `h_${Date.now()}`, date: new Date().toISOString() },
+                    ...state.creditHistory,
+                ].slice(0, 50) // Giới hạn 50 entries để tránh localStorage bloat
+            })),
 
-    // SESSIONS & MATCHING
-    sessions: [
-        { id: 101, topic: 'UI/UX Basics', mentor: 'Maria Garcia', date: '2026-03-10T10:00:00', status: 'upcoming', cost: 40 },
-        { id: 102, topic: 'ReactJS Hooks', mentor: 'Alex Johnson', date: '2026-02-20T14:00:00', status: 'completed', cost: 50, rating: 5, review: 'Rất tuyệt vời! Mentor giải thích rõ ràng.' },
-    ],
-    bookSession: (sessionDetails) => set((state) => {
-        if (state.credits < sessionDetails.cost) return state;
-        const newTx = {
-            id: `h_${Date.now()}`,
-            type: 'session_booked',
-            amount: -sessionDetails.cost,
-            description: `Đặt lịch học ${sessionDetails.topic} với ${sessionDetails.mentor}`,
-            date: new Date().toISOString()
-        };
-        return {
-            sessions: [...state.sessions, { ...sessionDetails, id: Date.now(), status: 'upcoming' }],
-            credits: state.credits - sessionDetails.cost,
-            creditHistory: [newTx, ...state.creditHistory]
-        };
-    }),
-
-    completeSession: (sessionId, reviewData) => set((state) => {
-        const session = state.sessions.find(s => s.id === sessionId);
-        if (!session) return state;
-
-        const mentorEarned = Math.round(session.cost * 0.8); // mentor gets 80% back as credits
-        const newTxEarned = {
-            id: `h_${Date.now() + 1}`,
-            type: 'session_completed',
-            amount: +mentorEarned,
-            description: `Hoàn thành buổi học ${session.topic} - Nhận credit từ người học`,
-            date: new Date().toISOString()
-        };
-
-        return {
-            sessions: state.sessions.map(s =>
-                s.id === sessionId
-                    ? { ...s, status: 'completed', rating: reviewData.rating, review: reviewData.review, completedAt: new Date().toISOString() }
-                    : s
+            // ── Learning ────────────────────────────────────────────
+            enrolledPathIds: [],
+            addEnrolledPath: (pathId) => set((state) =>
+                state.enrolledPathIds.includes(pathId)
+                    ? state
+                    : { enrolledPathIds: [...state.enrolledPathIds, pathId] }
             ),
-            credits: state.credits + mentorEarned,
-            creditHistory: [newTxEarned, ...state.creditHistory],
-            reviews: [...state.reviews, {
-                id: `r_${Date.now()}`,
-                sessionId,
-                mentorName: session.mentor,
-                topic: session.topic,
-                rating: reviewData.rating,
-                review: reviewData.review,
-                date: new Date().toISOString()
-            }]
-        };
-    }),
 
-    // REVIEWS
-    reviews: [
-        { id: 'r1', sessionId: 102, mentorName: 'Alex Johnson', topic: 'ReactJS Hooks', rating: 5, review: 'Rất tuyệt vời! Mentor giải thích rõ ràng.', date: '2026-02-20T16:00:00' }
-    ],
-    addReview: (review) => set((state) => ({
-        reviews: [...state.reviews, { ...review, id: `r_${Date.now()}`, date: new Date().toISOString() }]
-    })),
 
-    // LEARNING PROGRESS
-    learningProgress: INITIAL_LEARNING_PROGRESS,
-    updateProgress: (skillId, increment) => set((state) => ({
-        learningProgress: state.learningProgress.map(lp =>
-            lp.id === skillId
-                ? { ...lp, completedSessions: Math.min(lp.completedSessions + increment, lp.totalSessions) }
-                : lp
-        )
-    })),
+            completedLessons: {}, // { pathId: ["lessonId1", "lessonId2"] }
+            markLessonCompleted: (pathId, lessonId) => set((state) => {
+                const pathLessons = state.completedLessons[pathId] || [];
+                if (pathLessons.includes(lessonId)) return state;
+                return {
+                    completedLessons: {
+                        ...state.completedLessons,
+                        [pathId]: [...pathLessons, lessonId],
+                    },
+                };
+            }),
+
+            pathReviews: {}, // { pathId: { rating, comment, tags, createdAt } }
+            addPathReview: (pathId, reviewData) => set((state) => ({
+                pathReviews: {
+                    ...state.pathReviews,
+                    [String(pathId)]: {
+                        ...reviewData,
+                        pathId: String(pathId),
+                        createdAt: new Date().toISOString(),
+                    },
+                },
+            })),
         }),
         {
             name: 'skillsync-auth-storage',
@@ -187,7 +122,12 @@ export const useStore = create(
                 isAuthenticated: state.isAuthenticated,
                 role: state.role,
                 credits: state.credits,
-                creditHistory: state.creditHistory
+                pendingLearnerCredits: state.pendingLearnerCredits,
+                pendingTeacherCredits: state.pendingTeacherCredits,
+                creditHistory: state.creditHistory,
+                enrolledPathIds: state.enrolledPathIds,
+                completedLessons: state.completedLessons,
+                pathReviews: state.pathReviews,
             }),
         }
     )

@@ -3,28 +3,35 @@ import MainLayout from './components/layout/MainLayout';
 import AdminLayout from './components/layout/AdminLayout';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import VerifyEmail from './pages/auth/VerifyEmail';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
 import GoogleAuthCallback from './pages/auth/GoogleAuthCallback';
 import LandingPage from './pages/auth/LandingPage';
 import UserDashboard from './pages/user/UserDashboard';
 import AdminDash from './pages/admin/AdminDash';
-import AdminReports from './pages/admin/AdminReports';
+import AdminFinancialModeration from './pages/admin/AdminFinancialModeration';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminSessions from './pages/admin/AdminSessions';
 import AdminCredits from './pages/admin/AdminCredits';
 import AdminPaths from './pages/admin/AdminPaths';
 import AdminSystem from './pages/admin/AdminSystem';
 import AdminTeachingSkills from './pages/admin/AdminTeachingSkills';
-import AdminEscrow from './pages/admin/AdminEscrow';
 import AdminForumPosts from './pages/admin/AdminForumPosts';
+import AdminMissions from './pages/admin/AdminMissions';
 import Explore from './pages/user/Explore';
 import Sessions from './pages/user/Sessions';
 import JoinSessionGuidePage from './pages/user/JoinSessionGuide';
 import Profile from './pages/user/Profile';
 import CreditHistory from './pages/user/CreditHistory';
 import LearningPath from './pages/user/LearningPath';
+import LearningPathDetail from './pages/user/LearningPathDetail';
+import LearningPathStudy from './pages/user/LearningPathStudy';
+import LearningPathLessonPlayer from './pages/user/LearningPathLessonPlayer';
 import TeachingManagement from './pages/user/TeachingManagement';
 import CreateTeachingSession from './pages/user/CreateTeachingSession';
-import CreateLearningPath from './pages/user/CreateLearningPath';
+import MentorLearningPathManagementPage from './pages/user/MentorLearningPathManagementPage';
+import AdminAiConfig from './pages/admin/AdminAiConfig';
 import Community from './pages/user/Community';
 import VideoCallPage from './pages/user/VideoCallPage';
 import Missions from './pages/user/Missions';
@@ -69,7 +76,15 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/auth/google/callback" element={<GoogleAuthCallback />} />
+
+        <Route path="/mentor" element={<ProtectedUserRoute><MainLayout /></ProtectedUserRoute>}>
+          <Route index element={<Navigate to="/mentor/learning-paths" replace />} />
+          <Route path="learning-paths" element={<MentorLearningPathManagementPage />} />
+        </Route>
 
         {/* User Routes (Protected) */}
         <Route
@@ -86,10 +101,12 @@ function App() {
           <Route path="guide" element={<JoinSessionGuidePage />} />
           <Route path="profile" element={<Profile />} />
           <Route path="credits" element={<CreditHistory />} />
+          <Route path="learning-path/study/:pathId/lesson/:lessonId" element={<LearningPathLessonPlayer />} />
+          <Route path="learning-path/study/:pathId" element={<LearningPathStudy />} />
+          <Route path="learning-path/:pathId" element={<LearningPathDetail />} />
           <Route path="learning-path" element={<LearningPath />} />
           <Route path="teaching" element={<TeachingManagement />} />
           <Route path="teaching/create" element={<CreateTeachingSession />} />
-          <Route path="teaching/create-path" element={<CreateLearningPath />} />
           <Route path="call/:sessionId" element={<VideoCallPage />} />
           <Route path="community" element={<Community />} />
           <Route path="missions" element={<Missions />} />
@@ -105,15 +122,16 @@ function App() {
           }
         >
           <Route index element={<AdminDash />} />
-          <Route path="reports" element={<AdminReports />} />
+          <Route path="financial-moderation" element={<AdminFinancialModeration />} />
           <Route path="forum-posts" element={<AdminForumPosts />} />
           <Route path="sessions" element={<AdminSessions />} />
-          <Route path="escrow" element={<AdminEscrow />} />
           <Route path="credits" element={<AdminCredits />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="teaching-skills" element={<AdminTeachingSkills />} />
           <Route path="paths" element={<AdminPaths />} />
+          <Route path="missions" element={<AdminMissions />} />
           <Route path="system" element={<AdminSystem />} />
+          <Route path="ai-config" element={<AdminAiConfig />} />
         </Route>
 
         {/* 404 */}

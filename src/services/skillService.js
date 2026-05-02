@@ -23,6 +23,16 @@ export const getApprovedTeachingSkills = async (params = {}) => {
 };
 
 /**
+ * Explore — lọc/tìm/phân trang phía server.
+ * @param {{ q?: string, skillId?: string, category?: string, sort?: string, page?: number, size?: number }} params
+ * @returns {Promise<{ data: [], currentPage: number, totalPages: number, pageSize: number, totalElements: number }>}
+ */
+export const getExploreTeachingSkills = async (params = {}) => {
+  const res = await httpClient.get(TEACHING_SKILLS.EXPLORE, { params });
+  return res;
+};
+
+/**
  * Đăng ký teaching skill mới
  * @param {{ skillId, level, experienceDesc, outcomeDesc, creditsPerHour }} payload
  */
@@ -43,4 +53,16 @@ export const createEvidence = async (teachingSkillId, payload) => {
 /** Xóa teaching skill */
 export const deleteTeachingSkill = async (id) => {
   await httpClient.delete(TEACHING_SKILLS.DELETE(id));
+};
+
+/** Cập nhật giá cho teaching skill */
+export const updateSkillPrice = async (id, newPrice) => {
+  const res = await httpClient.put(TEACHING_SKILLS.UPDATE_PRICE(id), { newPrice });
+  return res.data ?? res;
+};
+
+/** Bật/tắt hiển thị công khai (Explore, AI) — không xóa dữ liệu */
+export const toggleTeachingSkillVisibility = async (id) => {
+  const res = await httpClient.post(TEACHING_SKILLS.TOGGLE_VISIBILITY(id));
+  return res.data ?? res;
 };

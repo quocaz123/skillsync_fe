@@ -215,7 +215,7 @@ const CommentItem = ({ comment, depth = 0, onLike, onReply, timeOverride }) => {
   );
 };
 
-const buildSuggestedPosts = (user, mySkills, posts, trendingPosts) => {
+const buildSuggestedPosts = (user, posts, trendingPosts) => {
   const interests = Array.isArray(user?.learningInterests)
     ? user.learningInterests
         .map((interest) => ({
@@ -227,17 +227,7 @@ const buildSuggestedPosts = (user, mySkills, posts, trendingPosts) => {
         .filter((interest) => Boolean(interest.name))
     : [];
 
-  const fallbackTopics =
-    interests.length > 0
-      ? interests
-      : (Array.isArray(mySkills) ? mySkills : [])
-          .filter((skill) => skill?.type === "learn" && skill?.name)
-          .map((skill) => ({
-            name: skill.name,
-            iconEmoji: null,
-            desiredLevel: skill.level || "",
-            learningGoal: "Học tốt hơn",
-          }));
+  const fallbackTopics = interests.length > 0 ? interests : [];
 
   const uniqueTopics = fallbackTopics.filter((topic, index, list) => {
     const topicKey = normalizeKeyword(topic.name);
@@ -1094,7 +1084,7 @@ const PostDetailModal = ({
 
 // ─── MAIN ─────────────────────────────────────────────────
 const Community = () => {
-  const { user, mySkills } = useStore();
+  const { user } = useStore();
   const [activeTab, setActiveTab] = useState("community");
   const [activeCategory, setActiveCategory] = useState("all");
   const [sortBy, setSortBy] = useState("hot");
@@ -1766,7 +1756,6 @@ const Community = () => {
 
   const suggestedPosts = buildSuggestedPosts(
     user,
-    mySkills,
     posts,
     trendingPosts,
   );
@@ -1927,9 +1916,9 @@ const Community = () => {
                 </div>
                 <div className="flex gap-1.5 bg-white border border-slate-200 rounded-xl p-1.5">
                   {[
-                    { id: "hot", label: "🔥 Nổi bật" },
-                    { id: "new", label: "🕐 Mới nhất" },
-                    { id: "saved", label: "🔖 Đã lưu" },
+                    { id: "hot", label: "Nổi bật" },
+                    { id: "new", label: "Mới nhất" },
+                    { id: "saved", label: "Đã lưu" },
                   ].map((s) => (
                     <button
                       key={s.id}
@@ -1962,7 +1951,6 @@ const Community = () => {
                 </div>
               ) : sorted.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
-                  <p className="text-3xl mb-3">🔍</p>
                   <p className="font-bold text-slate-700">
                     Không tìm thấy bài viết nào
                   </p>
@@ -2103,7 +2091,7 @@ const Community = () => {
               {/* Rules */}
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
                 <h3 className="font-extrabold text-slate-900 text-sm mb-3">
-                  📋 Nội quy cộng đồng
+                  Nội quy cộng đồng
                 </h3>
                 <ul className="space-y-2 text-xs text-slate-500">
                   {[
@@ -2188,7 +2176,6 @@ const Community = () => {
 
             {myPosts.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-3xl mb-3">✍️</p>
                 <p className="font-bold text-slate-700">
                   Bạn chưa đăng bài viết nào
                 </p>

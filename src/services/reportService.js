@@ -42,3 +42,17 @@ export const resolveReport = async (reportId, resolution, adminNotes) => {
     });
     return unwrap(res);
 };
+
+/**
+ * Submit counter-evidence for a reported user
+ * @param {string} sessionId 
+ * @param {string} description 
+ * @param {string} evidenceUrl 
+ */
+export const submitCounterEvidence = async (sessionId, description, evidenceUrl) => {
+    const res = await httpClient.post(`/api/reports/session/${sessionId}/counter-evidence`, {
+        description,
+        evidenceUrl
+    });
+    return unwrap(res);
+};

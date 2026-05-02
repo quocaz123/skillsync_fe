@@ -10,6 +10,12 @@ export const getMyProfile = async () => {
   return mapUserResponse(res.data ?? res);
 };
 
+/** Lấy public profile của bất kỳ mentor nào — dùng cho trang mentor profile */
+export const getMentorProfile = async (userId) => {
+  const res = await httpClient.get(USERS.PUBLIC_PROFILE(userId));
+  return mapUserResponse(res.data ?? res);
+};
+
 /** Cập nhật avatar — chỉ cần fileKey, BE tự build URL */
 export const updateAvatar = async (fileKey) => {
   const res = await httpClient.patch(USERS.UPDATE_AVATAR, { fileKey });
@@ -20,5 +26,9 @@ export const updateAvatar = async (fileKey) => {
 export const updateBio = async (bio) => {
   const res = await httpClient.patch(USERS.UPDATE_BIO, { bio });
   return mapUserResponse(res.data ?? res);
+};
+export const getMyTransactions = async () => {
+  const res = await httpClient.get(USERS.TRANSACTIONS);
+  return res.data ?? res;
 };
 

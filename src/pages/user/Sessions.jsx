@@ -1,12 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
+import toast from 'react-hot-toast';
+import SessionStatusBadge from "../../components/common/SessionStatusBadge";
+import { SkillDynamicIcon } from '../../components/common/SkillDynamicIcon';
 import { getMySessions, confirmSession } from '../../services/sessionService';
-import { createSessionReport } from '../../services/reportService';
+import { createSessionReport, submitCounterEvidence } from '../../services/reportService';
 import { createSessionReview } from '../../services/reviewService';
+import { getMyProfile } from '../../services/userService';
 import {
     Clock, CheckCircle2, ArrowRight, Play, Star,
-    CalendarDays, Zap, BookOpen, XCircle, ThumbsUp, Medal, Award, Loader2, AlertTriangle, ShieldAlert
+    CalendarDays, Zap, BookOpen, XCircle, ThumbsUp, Medal, Loader2, AlertTriangle, ShieldAlert
 } from 'lucide-react';
 
 const StarRating = ({ rating, setRating }) => (
@@ -37,7 +41,7 @@ const getJoinStatus = (session) => {
 
 const Sessions = () => {
     const navigate = useNavigate();
-    const { user } = useStore();
+    const { user, syncCredits } = useStore();
     const [activeTab, setActiveTab] = useState('upcoming');
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -49,29 +53,30 @@ const Sessions = () => {
     const [reportModal, setReportModal] = useState(null);
     const [reportReason, setReportReason] = useState('POOR_QUALITY');
     const [reportDesc, setReportDesc] = useState('');
-    const [now, setNow] = useState(new Date());
+    const [counterModal, setCounterModal] = useState(null);
+    const [counterDesc, setCounterDesc] = useState('');
 
-    // Tick every 30s to refresh countdown labels without full re-fetch
-    useEffect(() => {
-        const tick = setInterval(() => setNow(new Date()), 30000);
-        return () => clearInterval(tick);
+    const fetchSessions = useCallback(async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const data = await getMySessions('all');
+            setSessions(Array.isArray(data) ? data : []);
+        } catch (err) {
+            setError('Không thể tải lịch học. Vui lòng thử lại.');
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
     useEffect(() => {
-        const load = async () => {
-            setLoading(true);
-            setError('');
-            try {
-                const data = await getMySessions('all');
-                setSessions(Array.isArray(data) ? data : []);
-            } catch (e) {
-                setError('Không thể tải lịch học. Vui lòng thử lại.');
-            } finally {
-                setLoading(false);
-            }
-        };
-        load();
-    }, []);
+        fetchSessions();
+        // Auto-refresh mỗi 30 giây để cập nhật trạng thái session
+        const interval = setInterval(fetchSessions, 30_000);
+        return () => clearInterval(interval);
+    }, [fetchSessions]);
+
+
 
     const upcomingSessions = sessions.filter(s => s.status === 'SCHEDULED' || s.status === 'IN_PROGRESS');
     const pastSessions = sessions.filter(s => s.status === 'COMPLETED' || s.status === 'DISPUTED' || s.status === 'CANCELLED');
@@ -90,21 +95,30 @@ const Sessions = () => {
                 ? { ...s, status: 'COMPLETED', rating, review: reviewText }
                 : s
             ));
-            setSuccessModal(reviewModal);
             setReviewModal(null);
             setActiveTab('past');
+            toast.success('Đã gửi đánh giá thành công! Cảm ơn bạn 🎉');
         } catch (error) {
-            alert('Lỗi gửi đánh giá: ' + (error.response?.data?.message || 'Không thành công'));
+            toast.error('Lỗi gửi đánh giá: ' + (error.response?.data?.message || 'Không thành công'));
         }
     };
 
     const handleConfirmSession = async (sessionId) => {
         try {
             await confirmSession(sessionId);
-            setSessions(prev => prev.map(s => s.id === sessionId ? {...s, status: 'COMPLETED'} : s));
-            alert('Đã xác nhận hoàn thành buổi học!');
+            setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, status: 'COMPLETED', isPaid: true } : s));
+            toast.success('Đã xác nhận! Credits đã được chuyển cho Mentor ✅');
+            // Sync lại credit balance từ server sau khi giải phóng escrow
+            try {
+                const profile = await getMyProfile();
+                if (profile?.creditsBalance != null) {
+                    syncCredits(profile.creditsBalance, 0, 0);
+                }
+            } catch (_) {
+                // Không block UX nếu sync thất bại
+            }
         } catch (error) {
-            alert('Lỗi xác nhận: ' + (error.response?.data?.message || 'Không thành công'));
+            toast.error('Lỗi xác nhận: ' + (error.response?.data?.message || 'Không thành công'));
         }
     };
 
@@ -118,11 +132,27 @@ const Sessions = () => {
         if (!reportDesc) return;
         try {
             await createSessionReport(reportModal.id, reportReason, reportDesc, '');
-            setSessions(prev => prev.map(s => s.id === reportModal.id ? {...s, status: 'DISPUTED'} : s));
-            alert('Đã gửi báo cáo sự cố thành công!');
+            setSessions(prev => prev.map(s => s.id === reportModal.id ? { ...s, status: 'DISPUTED', isReported: true } : s));
+            toast.success('Đã gửi báo cáo sự cố thành công! Admin sẽ xem xét sớm.');
             setReportModal(null);
         } catch (error) {
-            alert('Lỗi gửi báo cáo: ' + (error.response?.data?.message || 'Không thành công'));
+            toast.error('Lỗi gửi báo cáo: ' + (error.response?.data?.message || 'Không thành công'));
+        }
+    };
+
+    const handleOpenCounter = (session) => {
+        setCounterModal(session);
+        setCounterDesc('');
+    };
+
+    const handleSubmitCounter = async () => {
+        if (!counterDesc) return;
+        try {
+            await submitCounterEvidence(counterModal.id, counterDesc, '');
+            toast.success('Đã gửi phản hồi kháng cáo thành công! Admin sẽ xem xét.');
+            setCounterModal(null);
+        } catch (error) {
+            toast.error('Lỗi gửi kháng cáo: ' + (error.response?.data?.message || 'Không thành công'));
         }
     };
 
@@ -131,12 +161,23 @@ const Sessions = () => {
     const isTeacher = (session) => session.teacherId === user?.id;
 
     const formatSlotTime = (session) => {
-        if (!session.slotDate || !session.slotTime) return '';
+        if (!session.slotDate && !session.createdAt) return 'Chưa có thông tin thời gian';
+        if (!session.slotDate || !session.slotTime) {
+            const dt = new Date(session.createdAt);
+            return dt.toLocaleString('vi-VN', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
         const dt = new Date(`${session.slotDate}T${session.slotTime}`);
-        return dt.toLocaleString('vi-VN', {
+        let result = dt.toLocaleString('vi-VN', {
             day: 'numeric', month: 'numeric',
             hour: '2-digit', minute: '2-digit'
         });
+        if (session.slotEndTime) {
+            const endDt = new Date(`${session.slotDate}T${session.slotEndTime}`);
+            result += ' - ' + endDt.toLocaleString('vi-VN', {
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+        return result;
     };
 
     return (
@@ -204,8 +245,13 @@ const Sessions = () => {
                                     )}
                                     <div className="p-6 md:p-8 flex flex-col md:flex-row gap-6 items-start md:items-center">
                                         <div className="relative shrink-0">
-                                            <div className="w-20 h-20 rounded-[1.5rem] bg-indigo-100 flex items-center justify-center text-3xl font-black text-indigo-600 overflow-hidden border-4 border-white shadow-sm">
-                                                {session.skillIcon || session.skillName?.charAt(0) || '📘'}
+                                            <div className="w-20 h-20 rounded-[1.5rem] bg-gradient-to-br from-indigo-50 to-indigo-100 flex items-center justify-center border-4 border-white shadow-sm overflow-hidden group-hover:scale-105 transition-transform duration-300">
+                                                <SkillDynamicIcon 
+                                                    skillName={session.skillName} 
+                                                    defaultIcon={session.skillIcon} 
+                                                    size={40} 
+                                                    className="text-indigo-600"
+                                                />
                                             </div>
                                             <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center z-20 shadow-sm border border-slate-100">
                                                 <div className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center">
@@ -215,14 +261,21 @@ const Sessions = () => {
                                         </div>
 
                                         <div className="flex-1 min-w-0 md:pl-2">
-                                            <h3 className="text-2xl font-black text-slate-900 mb-1 truncate">{session.skillName}</h3>
+                                            <div className="flex items-center gap-3 mb-1 flex-wrap">
+                                                <h3 className="text-2xl font-black text-slate-900 truncate">{session.skillName || 'Buổi học (1-kèm-1)'}</h3>
+                                                {session.skillLevel && (
+                                                    <span className="text-[10px] bg-white border border-slate-200 text-slate-500 uppercase tracking-wider px-2 py-0.5 rounded-md font-black shadow-sm">
+                                                        {session.skillLevel}
+                                                    </span>
+                                                )}
+                                            </div>
                                             <p className="text-slate-500 font-medium mb-4 flex items-center gap-2">
                                                 <span>{isTeacher(session) ? 'Học viên:' : 'Giảng viên:'}</span>
                                                 <span className="text-slate-800 font-bold bg-slate-100 px-2.5 py-0.5 rounded-lg">
                                                     {isTeacher(session) ? session.learnerName : session.teacherName}
                                                 </span>
                                             </p>
-                                            <div className="flex flex-wrap gap-2.5">
+                                            <div className="flex flex-wrap gap-2.5 mb-4">
                                                 <div className="flex items-center bg-indigo-50 rounded-xl overflow-hidden border border-indigo-100/50">
                                                     <div className="flex items-center gap-1.5 px-3 py-2 text-indigo-800 text-sm font-bold">
                                                         <CalendarDays size={16} /> {formatSlotTime(session)}
@@ -235,10 +288,19 @@ const Sessions = () => {
                                                     🎥 ZEGO
                                                 </div>
                                                 {session.status === 'IN_PROGRESS' && (
-                                                    <div className="flex items-center gap-1.5 px-3 py-2 text-emerald-700 text-sm font-bold bg-emerald-50 rounded-xl border border-emerald-100">
-                                                        <CheckCircle2 size={16} /> Đang diễn ra
-                                                    </div>
+                                                    <SessionStatusBadge status="IN_PROGRESS" />
                                                 )}
+                                            </div>
+                                            <div className="mt-3 bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-start gap-2.5">
+                                                <div className="mt-0.5 w-6 h-6 shrink-0 bg-white rounded-full flex items-center justify-center shadow-sm text-slate-400">
+                                                    <BookOpen size={12} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Mục tiêu / Ghi chú</p>
+                                                    <p className="text-sm font-medium text-slate-700 leading-relaxed max-h-16 overflow-y-auto custom-scrollbar">
+                                                        {session.learnerNotes || 'Không có ghi chú mục tiêu cho buổi học này.'}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -301,11 +363,23 @@ const Sessions = () => {
                                 <div key={session.id} className="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 flex flex-col">
                                     <div className="bg-slate-50/50 p-6 border-b border-slate-100 flex items-start justify-between gap-4">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-2xl font-black text-slate-700 shadow-sm shrink-0">
-                                                {session.skillIcon || session.skillName?.charAt(0) || '📘'}
+                                            <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm shrink-0 overflow-hidden">
+                                                <SkillDynamicIcon 
+                                                    skillName={session.skillName} 
+                                                    defaultIcon={session.skillIcon} 
+                                                    size={28} 
+                                                    className="text-slate-700"
+                                                />
                                             </div>
                                             <div>
-                                                <h3 className="font-black text-slate-900 text-lg leading-tight mb-1">{session.skillName}</h3>
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    <h3 className="font-black text-slate-900 text-lg leading-tight truncate max-w-[200px]">{session.skillName || 'Buổi học (1-kèm-1)'}</h3>
+                                                    {session.skillLevel && (
+                                                        <span className="text-[9px] bg-white border border-slate-200 text-slate-400 uppercase tracking-wider px-1.5 py-0.5 rounded font-black">
+                                                            {session.skillLevel}
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <p className="text-slate-500 font-semibold text-sm">
                                                     {isTeacher(session) ? `Học viên: ${session.learnerName}` : `Với ${session.teacherName}`}
                                                 </p>
@@ -324,6 +398,14 @@ const Sessions = () => {
                                                 <Zap size={16} className="fill-red-500" /> -{session.creditCost}
                                             </div>
                                         </div>
+                                        <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1">
+                                                <BookOpen size={10} /> Nội dung đăng ký
+                                            </p>
+                                            <p className="text-xs font-semibold text-slate-600 line-clamp-2" title={session.learnerNotes}>
+                                                {session.learnerNotes || 'Không có hướng dẫn / ghi chú chi tiết.'}
+                                            </p>
+                                        </div>
                                         {session.review ? (
                                             <div className="bg-amber-50/50 rounded-2xl p-5 border border-amber-100/50 relative mt-auto">
                                                 <div className="absolute -top-3 left-4 bg-white border border-amber-100 px-2 py-0.5 rounded-full flex gap-0.5">
@@ -334,28 +416,46 @@ const Sessions = () => {
                                                 <p className="mt-2 text-sm text-slate-700 italic font-medium">"{session.review}"</p>
                                             </div>
                                         ) : session.status === 'CANCELLED' ? (
-                                            <div className="mt-auto pt-4 text-red-500 font-bold flex items-center gap-2">
-                                                <XCircle size={18} /> Đã hủy / Hoàn tiền
+                                            <div className="mt-auto pt-4">
+                                                <SessionStatusBadge status="CANCELLED" extra="justify-center" />
                                             </div>
                                         ) : session.status === 'DISPUTED' ? (
-                                            <div className="mt-auto pt-4 text-amber-600 font-bold flex items-center gap-2">
-                                                <AlertTriangle size={18} /> Đang xử lý khiếu nại
+                                            <div className="mt-auto pt-4 flex flex-col items-end gap-2">
+                                                <SessionStatusBadge status="DISPUTED" extra="w-full justify-center" />
+                                                {isTeacher(session) && (
+                                                    <button onClick={() => handleOpenCounter(session)} className="text-xs text-amber-700 bg-amber-100 hover:bg-amber-200 px-4 py-2 rounded-lg transition-colors border border-amber-200">
+                                                        Phản biện / Kháng cáo
+                                                    </button>
+                                                )}
                                             </div>
                                         ) : (
-                                            <div className="mt-auto pt-4 flex justify-end gap-3 flex-wrap">
-                                                {!isTeacher(session) && session.status === 'COMPLETED' && (
-                                                    <>
-                                                        <button onClick={() => handleConfirmSession(session.id)} className="text-xs font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-4 py-2 rounded-lg transition-colors flex items-center gap-1">
-                                                            <CheckCircle2 size={14} /> Chuyển tiền Mentor
-                                                        </button>
-                                                        <button onClick={() => handleOpenReport(session)} className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg transition-colors flex items-center gap-1">
-                                                            <ShieldAlert size={14} /> Báo cáo sự cố
-                                                        </button>
-                                                    </>
+                                            <div className="mt-auto pt-4 flex justify-between items-center gap-3 flex-wrap">
+                                                {isTeacher(session) && session.status === 'COMPLETED' && (
+                                                    <div className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                                                        <CheckCircle2 size={14} /> Chờ Học viên xác nhận Credits
+                                                    </div>
                                                 )}
-                                                <button onClick={() => handleOpenReview(session)} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-lg transition-colors">
-                                                    Viết đánh giá
-                                                </button>
+                                                <div className="flex justify-end gap-3 flex-wrap flex-1">
+                                                    {!isTeacher(session) && session.status === 'COMPLETED' && (
+                                                        <>
+                                                            {!session.isPaid && !session.isReported && (
+                                                                <>
+                                                                    <button onClick={() => handleConfirmSession(session.id)} className="text-xs font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-4 py-2 rounded-lg transition-colors flex items-center gap-1">
+                                                                        <CheckCircle2 size={14} /> Chuyển tiền Mentor
+                                                                    </button>
+                                                                    <button onClick={() => handleOpenReport(session)} className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg transition-colors flex items-center gap-1">
+                                                                        <ShieldAlert size={14} /> Báo cáo sự cố
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                            {!session.isReported && (
+                                                                <button onClick={() => handleOpenReview(session)} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-lg transition-colors">
+                                                                    Viết đánh giá
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -455,11 +555,52 @@ const Sessions = () => {
                                 />
                             </div>
                             <button
-                                onClick={handleSubmitReport}
-                                disabled={!reportDesc}
-                                className={`w-full py-3.5 font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${reportDesc ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/20 hover:-translate-y-0.5' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
+                                                onClick={handleSubmitReport}
+                                                disabled={!reportDesc}
+                                                className={`w-full py-3.5 font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${reportDesc ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/20 hover:-translate-y-0.5' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
+                                            >
+                                                <AlertTriangle size={18} /> Gửi Khiếu Nại
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+            {/* COUNTER EVIDENCE MODAL */}
+            {counterModal && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-8 duration-300 border border-slate-100 overflow-hidden flex flex-col">
+                        <div className="bg-amber-50 p-6 border-b border-amber-100 relative flex items-center gap-4">
+                            <button onClick={() => setCounterModal(null)} className="absolute top-6 right-6 w-8 h-8 bg-white hover:bg-amber-100 rounded-full flex items-center justify-center text-amber-500 transition-colors shadow-sm">
+                                <XCircle size={20} />
+                            </button>
+                            <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600 shadow-sm shrink-0">
+                                <ShieldAlert size={32} />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-black text-slate-800">Quyền Phản Biện</h2>
+                                <p className="text-slate-500 font-medium text-sm">Học viên {counterModal.learnerName} đã yêu cầu hoàn tiền.</p>
+                            </div>
+                        </div>
+                        <div className="p-8">
+                            <div className="mb-4 text-sm text-slate-600 bg-blue-50 p-4 rounded-xl border border-blue-100">
+                                <strong>Lưu ý:</strong> Vui lòng cung cấp giải trình của bạn. Admin sẽ dựa vào logs (Lịch sử ra/vào phòng) và giải trình của hai bên để đưa ra phán quyết cuối cùng.
+                            </div>
+                            <div className="mb-8">
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Thông tin phản hồi (Bắt buộc):</label>
+                                <textarea
+                                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm font-medium outline-none focus:border-amber-400 min-h-[120px] resize-none placeholder:text-slate-400"
+                                    placeholder="Thái độ học viên, sự cố hệ thống, v.v..."
+                                    value={counterDesc}
+                                    onChange={e => setCounterDesc(e.target.value)}
+                                />
+                            </div>
+                            <button
+                                onClick={handleSubmitCounter}
+                                disabled={!counterDesc}
+                                className={`w-full py-3.5 font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${counterDesc ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 hover:-translate-y-0.5' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
                             >
-                                <AlertTriangle size={18} /> Gửi Khiếu Nại
+                                <AlertTriangle size={18} /> Gửi Phản Hồi
                             </button>
                         </div>
                     </div>

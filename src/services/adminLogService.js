@@ -2,12 +2,8 @@ import httpClient from '../configuration/axiosClient';
 import API_ENDPOINTS from '../configuration/apiEndpoints';
 
 export const getSystemLogs = async (page = 0, size = 50) => {
-    try {
-        const response = await httpClient.get(API_ENDPOINTS.ADMIN_SYSTEM_LOGS, {
-            params: { page, size }
-        });
-        return response; // Tự động unwrapped bởi axiosClient
-    } catch (error) {
-        throw error;
-    }
+    const response = await httpClient.get(API_ENDPOINTS.ADMIN.LOGS, {
+        params: { page, size }
+    });
+    return response; // Tự động unwrapped bởi axiosClient
 };

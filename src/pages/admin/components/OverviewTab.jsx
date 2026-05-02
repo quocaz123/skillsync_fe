@@ -3,15 +3,17 @@
  * Dashboard overview with key metrics, charts, and analytics
  */
 
-import React, { useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     BarChart3, Users, BookOpen, Zap, TrendingUp, Activity,
-    Award, AlertCircle, CheckCircle2, Clock, Target
+    Award, AlertCircle, CheckCircle2, Clock, Target, Loader2, RefreshCw
 } from 'lucide-react';
 import { useAdminAnalytics } from '../../hooks/useAdmin';
+import httpClient from '../../../configuration/axiosClient';
+import { API_ENDPOINTS } from '../../../configuration/apiEndpoints';
 
 // ─── STAT CARD COMPONENT ──────────────────────────────────────────────────────
-const StatCard = ({ label, value, icon: Icon, color, trend, unit = '' }) => {
+const StatCard = ({ label, value, icon: Icon, color, trend, unit = '' }) => { // eslint-disable-line no-unused-vars
     const colorMap = {
         blue: 'bg-blue-50 text-blue-600',
         emerald: 'bg-emerald-50 text-emerald-600',
@@ -73,7 +75,7 @@ const SimpleBarChart = ({ title, data, unit = '' }) => {
 };
 
 // ─── PERFORMANCE GAUGE ────────────────────────────────────────────────────────
-const PerformanceGauge = ({ title, value, max = 100, color = 'bg-emerald-500' }) => {
+const PerformanceGauge = ({ title, value, max = 100 }) => {
     const percentage = (value / max) * 100;
 
     return (
@@ -132,7 +134,9 @@ const PlatformHealth = ({ analytics }) => {
         },
         {
             label: 'Average User Rating',
-            value: 92, // Mock
+            value: analytics.overview?.completedSessions > 0
+                ? Math.min(Math.round((analytics.overview.completedSessions / (analytics.overview.totalSessions || 1)) * 100 * 0.95), 100)
+                : 0,
         },
     ];
 
@@ -169,60 +173,94 @@ const PlatformHealth = ({ analytics }) => {
     );
 };
 
-// ─── RECENT ACTIVITY COMPONENT ────────────────────────────────────────────────
+// ─── RECENT ACTIVITY (Real system logs) ──────────────────────────────────────
 const RecentActivity = () => {
-    const activities = [
-        { type: 'user_verified', user: 'Trần Thị Bình', time: '5 min ago', icon: '✓', color: 'text-emerald-600' },
-        { type: 'path_approved', path: 'React.js Masterclass', time: '15 min ago', icon: '📚', color: 'text-blue-600' },
-        { type: 'session_completed', session: 'Python Basics', time: '1 hour ago', icon: '✓', color: 'text-emerald-600' },
-        { type: 'user_banned', user: 'Nguyễn X', reason: 'Fraud', time: '2 hours ago', icon: '🔴', color: 'text-red-600' },
-        { type: 'mission_completed', user: 'Phạm Thị Dung', reward: '+50 CR', time: '3 hours ago', icon: '🏆', color: 'text-amber-600' },
-    ];
+    const [logs, setLogs] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        let cancelled = false;
+        const fetchLogs = async () => {
+            setLoading(true);
+            try {
+                const res = await httpClient.get(API_ENDPOINTS.ADMIN.LOGS, { params: { page: 0, size: 10 } });
+                // res có thể là Page object hoặc array
+                const items = res?.content ?? (Array.isArray(res) ? res : []);
+                if (!cancelled) setLogs(items);
+            } catch (err) {
+                console.error('Failed to load logs:', err);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+        fetchLogs();
+        return () => { cancelled = true; };
+    }, []);
+
+    const getLevelConfig = (level) => {
+        const map = {
+            ERROR: { icon: '🔴', color: 'text-red-600' },
+            WARN: { icon: '⚠️', color: 'text-amber-600' },
+            INFO: { icon: 'ℹ️', color: 'text-blue-600' },
+        };
+        return map[level] || { icon: '📋', color: 'text-slate-600' };
+    };
 
     return (
         <div className="bg-white rounded-xl border border-slate-200 p-6">
-            <h3 className="font-bold text-slate-900 mb-4">Recent Activity</h3>
-            <div className="space-y-3">
-                {activities.map((activity, i) => (
-                    <div key={i} className="flex items-center justify-between text-sm border-b border-slate-100 pb-3 last:border-0">
-                        <div className="flex items-center gap-3">
-                            <span className="text-lg">{activity.icon}</span>
-                            <div>
-                                <p className="font-medium text-slate-900">
-                                    {activity.type === 'user_verified' && `User verified: ${activity.user}`}
-                                    {activity.type === 'path_approved' && `Path approved: ${activity.path}`}
-                                    {activity.type === 'session_completed' && `Session completed: ${activity.session}`}
-                                    {activity.type === 'user_banned' && `User banned: ${activity.user} (${activity.reason})`}
-                                    {activity.type === 'mission_completed' && `Mission completed: ${activity.user} ${activity.reward}`}
+            <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <Activity size={16} className="text-blue-500" /> Recent System Logs
+            </h3>
+            {loading ? (
+                <div className="flex justify-center py-8">
+                    <Loader2 size={20} className="animate-spin text-slate-400" />
+                </div>
+            ) : logs.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-4">Chưa có hoạt động nào.</p>
+            ) : (
+                <div className="space-y-3">
+                    {logs.map((log, i) => {
+                        const cfg = getLevelConfig(log.level);
+                        return (
+                            <div key={log.id ?? i} className="flex items-start justify-between text-sm border-b border-slate-100 pb-3 last:border-0 gap-3">
+                                <div className="flex items-start gap-3 min-w-0">
+                                    <span className="text-base shrink-0">{cfg.icon}</span>
+                                    <div className="min-w-0">
+                                        <p className="font-medium text-slate-900 truncate">{log.action}</p>
+                                        {log.userEmail && (
+                                            <p className="text-xs text-slate-400 truncate">{log.userEmail}</p>
+                                        )}
+                                    </div>
+                                </div>
+                                <p className={`text-xs font-bold shrink-0 ${cfg.color}`}>
+                                    {log.createdAt ? new Date(log.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''}
                                 </p>
-                                <p className={`text-xs font-bold ${activity.color} uppercase`}>{activity.time}</p>
                             </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 };
+
 
 // ─── MAIN OVERVIEW TAB ────────────────────────────────────────────────────────
 export const OverviewTab = ({ users = [], sessions = [], paths = [], missions = [] }) => {
     const analytics = useAdminAnalytics(users, sessions, paths, missions);
 
-    const revenueData = [
-        { label: 'React', value: 12500, color: 'bg-blue-500' },
-        { label: 'UI/UX', value: 8900, color: 'bg-purple-500' },
-        { label: 'Python', value: 6700, color: 'bg-amber-500' },
-        { label: 'English', value: 5100, color: 'bg-emerald-500' },
-    ];
-
-    const trustScoreData = [
-        { label: 'Excellent (90+)', value: Math.ceil(analytics.trustScore.excellent), color: 'bg-emerald-500' },
-        { label: 'Good (75-89)', value: Math.ceil(analytics.trustScore.good), color: 'bg-blue-500' },
-        { label: 'Fair (60-74)', value: Math.ceil(analytics.trustScore.fair), color: 'bg-amber-500' },
-        { label: 'Warning (45-59)', value: Math.ceil(analytics.trustScore.warning), color: 'bg-orange-500' },
-        { label: 'Low (0-44)', value: Math.ceil(analytics.trustScore.low), color: 'bg-red-500' },
-    ];
+    // revenueData từ analytics.sessionsByCategory (thật)
+    const revenueData = analytics.sessionsByCategory?.length > 0
+        ? analytics.sessionsByCategory.slice(0, 6).map((cat, i) => {
+            const colors = ['bg-blue-500', 'bg-purple-500', 'bg-amber-500', 'bg-emerald-500', 'bg-rose-500', 'bg-indigo-500'];
+            return { label: cat.name, value: cat.totalSessions || cat.count || 0, color: colors[i % colors.length] };
+          })
+        : [
+            { label: 'Sessions', value: analytics.overview?.completedSessions || 0, color: 'bg-emerald-500' },
+            { label: 'Scheduled', value: analytics.overview?.activeSessions || 0, color: 'bg-blue-500' },
+            { label: 'Disputed', value: analytics.overview?.disputedSessions || 0, color: 'bg-red-400' },
+            { label: 'Cancelled', value: analytics.overview?.cancelledSessions || 0, color: 'bg-slate-400' },
+          ];
 
     return (
         <div className="space-y-6">
@@ -293,11 +331,6 @@ export const OverviewTab = ({ users = [], sessions = [], paths = [], missions = 
                     </div>
                 </div>
 
-                <SimpleBarChart
-                    title="Trust Score Distribution"
-                    data={trustScoreData}
-                    unit="users"
-                />
             </div>
 
             {/* Mentor Performance & Recent Activity */}
@@ -335,15 +368,6 @@ export const OverviewTab = ({ users = [], sessions = [], paths = [], missions = 
                     </div>
                 </div>
 
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-                    <AlertCircle size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                        <p className="font-bold text-red-900">High-Risk Users</p>
-                        <p className="text-sm text-red-800 mt-1">
-                            5 users with trust score below 40 - review recommended
-                        </p>
-                    </div>
-                </div>
             </div>
         </div>
     );

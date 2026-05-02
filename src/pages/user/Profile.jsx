@@ -22,12 +22,13 @@ import {
     UserCircle
 } from '@phosphor-icons/react';
 import { AddSkillModal } from '../../components/profile/AddSkillModal.jsx';
-import { SkillDynamicIcon } from '../../components/common/SkillDynamicIcon.jsx';
+import Avatar from '../../components/common/Avatar';
+import UserSkillCard from '../../components/common/UserSkillCard';
 import { uploadFile } from '../../services/uploadService.js';
 import { getMyProfile, updateAvatar, updateBio } from '../../services/userService.js';
-import { getMyTeachingSkills, deleteTeachingSkill } from '../../services/skillService.js';
-import { trackAction } from '../../services/missionService.js';
+import { getMyTeachingSkills, deleteTeachingSkill, updateSkillPrice, toggleTeachingSkillVisibility } from '../../services/skillService.js';
 import { getReviewsByUserId } from '../../services/reviewService.js';
+import toast from 'react-hot-toast';
 
 const LEVEL_LABEL = {
     BEGINNER: 'Beginner',
@@ -39,7 +40,7 @@ const LEVEL_LABEL = {
 const Profile = () => {
     const { user, setUser } = useStore();
     const [profile, setProfile] = useState(null);
-    const [activeTab, setActiveTab] = useState('learner'); // 'learner' | 'mentor' | 'reviews'
+    const [activeTab, setActiveTab] = useState('mentor'); // 'mentor' | 'reviews'
     const [showAddSkillModal, setShowAddSkillModal] = useState(false);
 
     // Avatar state
@@ -59,6 +60,21 @@ const Profile = () => {
     // Reviews state
     const [reviews, setReviews] = useState([]);
     const [loadingReviews, setLoadingReviews] = useState(false);
+
+    // Price editing state
+    const [editingPriceId, setEditingPriceId] = useState(null);
+    const [newPriceInput, setNewPriceInput] = useState('');
+
+    // Lazy-load reviews when tab is first switched
+    useEffect(() => {
+        if (activeTab !== 'reviews' || reviews.length > 0) return;
+        setLoadingReviews(true);
+        getReviewsByUserId(user?.id)
+            .then(data => setReviews(Array.isArray(data) ? data : []))
+            .catch(() => setReviews([]))
+            .finally(() => setLoadingReviews(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab]);
 
     // Load profile + teaching skills on mount
     useEffect(() => {
@@ -92,7 +108,7 @@ const Profile = () => {
         const file = e.target.files?.[0];
         if (!file) return;
         if (!file.type.startsWith('image/')) {
-            alert('Vui lòng chọn file ảnh (JPG, PNG, WEBP)');
+            toast.error('Vui lòng chọn file ảnh (JPG, PNG, WEBP)');
             return;
         }
 
@@ -101,18 +117,19 @@ const Profile = () => {
         setAvatarUploading(true);
 
         try {
-            const { fileKey } = await uploadFile(file, 'AVATAR');
+            const { fileKey, fileUrl } = await uploadFile(file, 'AVATAR');
             const updatedUser = await updateAvatar(fileKey);
-            const newUrl = updatedUser?.avatarUrl;
+            const newUrl = updatedUser?.avatarUrl ?? fileUrl;
             if (newUrl) {
                 setAvatarUrl(newUrl);
                 setProfile(prev => ({ ...prev, avatarUrl: newUrl }));
                 if (setUser) setUser(prev => ({ ...prev, avatarUrl: newUrl }));
             }
+            toast.success('Cập nhật ảnh đại diện thành công!');
         } catch (err) {
             console.error('Avatar upload failed:', err);
             setAvatarUrl(user?.avatarUrl || null);
-            alert('Upload avatar thất bại. Vui lòng thử lại.');
+            toast.error('Upload avatar thất bại. Vui lòng thử lại.');
         } finally {
             setAvatarUploading(false);
             URL.revokeObjectURL(previewUrl);
@@ -128,22 +145,58 @@ const Profile = () => {
                 if (setUser) setUser(prev => ({ ...prev, bio: updated.bio }));
             }
             setBioEditing(false);
+            toast.success('Đã lưu giới thiệu thành công!');
         } catch (err) {
             console.error('Bio save failed:', err);
-            alert('Lưu bio thất bại. Vui lòng thử lại.');
+            toast.error('Lưu bio thất bại. Vui lòng thử lại.');
         } finally {
             setBioSaving(false);
         }
     };
 
     const handleDeleteSkill = async (skillId) => {
-        if (!confirm('Bạn có chắc muốn xóa kỹ năng dạy này?')) return;
+        // Dùng toast.promise thay cho confirm() native
+        const toastId = toast.loading('Đang xóa kỹ năng...');
         try {
             await deleteTeachingSkill(skillId);
             setTeachingSkills(prev => prev.filter(s => s.id !== skillId));
+            toast.success('Đã xóa kỹ năng dạy thành công!', { id: toastId });
         } catch (err) {
             console.error('Delete skill failed:', err);
-            alert('Xóa thất bại. Vui lòng thử lại.');
+            toast.error('Xóa thất bại. Vui lòng thử lại.', { id: toastId });
+        }
+    };
+
+    const handleToggleSkillVisibility = async (ts) => {
+        try {
+            const updated = await toggleTeachingSkillVisibility(ts.id);
+            setTeachingSkills(prev => prev.map(s => (s.id === ts.id ? { ...s, hidden: updated.hidden } : s)));
+            toast.success(updated.hidden ? 'Đã ẩn khỏi Explore.' : 'Đã hiện trên Explore!');
+        } catch (err) {
+            console.error('Toggle visibility failed:', err);
+            toast.error('Không thể cập nhật trạng thái hiển thị.');
+        }
+    };
+
+    const handleEditPrice = (ts) => {
+        setEditingPriceId(ts.id);
+        setNewPriceInput(String(ts.creditsPerHour || 5));
+    };
+
+    const handleSavePrice = async (ts) => {
+        const priceVal = parseInt(newPriceInput, 10);
+        if (isNaN(priceVal) || priceVal < 1 || priceVal > 500) {
+            toast.error('Giá hợp lệ từ 1 đến 500 credits/giờ.');
+            return;
+        }
+        try {
+            await updateSkillPrice(ts.id, priceVal);
+            setTeachingSkills(prev => prev.map(s => s.id === ts.id ? { ...s, creditsPerHour: priceVal } : s));
+            setEditingPriceId(null);
+            toast.success('Cập nhật giá thành công!');
+        } catch (err) {
+            console.error('Update price failed:', err);
+            toast.error('Cập nhật giá thất bại. Vui lòng thử lại.');
         }
     };
 
@@ -154,12 +207,11 @@ const Profile = () => {
     // Derived display values
     const displayName = profile?.name || user?.name || 'User';
     const credits = profile?.creditsBalance ?? user?.creditsBalance ?? 0;
-    const trustScore = profile?.trustScore ?? 50;
+
     const averageRating = profile?.averageRating;
     const totalTeachingSessions = profile?.totalTeachingSessions ?? 0;
     const totalLearningSessions = profile?.totalLearningSessions ?? 0;
     const totalReviews = profile?.totalReviews ?? 0;
-    const learningInterests = profile?.learningInterests ?? [];
     const joinedDate = profile?.createdAt
         ? new Date(profile.createdAt).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })
         : null;
@@ -228,15 +280,10 @@ const Profile = () => {
                                     </p>
                                 )}
                             </div>
-                            <div className="flex items-center gap-3">
-                                <button className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl font-bold text-sm transition-colors flex items-center gap-2 shadow-sm border border-slate-200/60 active:scale-95">
-                                    <PencilSimple size={18} weight="bold" className="text-slate-500" /> Chỉnh sửa hồ sơ
-                                </button>
-                            </div>
+                            {/* Edit Profile button removed */}
                         </div>
-                    </div>
 
-                    {/* Stats Strip */}
+                        {/* Stats Strip */}
                     <div className="flex items-center justify-between sm:justify-around text-center overflow-x-auto gap-6 hide-scrollbar pt-6 pb-2 border-t border-slate-100">
                         <div className="flex flex-col items-center shrink-0 min-w-[70px] group/stat">
                             <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mb-2 group-hover/stat:scale-110 group-hover/stat:bg-amber-100 transition-all">
@@ -270,13 +317,7 @@ const Profile = () => {
                                 Đánh giá{totalReviews > 0 ? ` (${totalReviews})` : ''}
                             </p>
                         </div>
-                        <div className="flex flex-col items-center shrink-0 min-w-[70px] group/stat">
-                            <div className="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center mb-2 group-hover/stat:scale-110 group-hover/stat:bg-rose-100 transition-all">
-                                <Heartbeat size={26} weight="duotone" className="text-rose-500" />
-                            </div>
-                            <h3 className="text-2xl font-black text-slate-800 tracking-tight">{trustScore}</h3>
-                            <p className="text-slate-400 text-xs sm:text-sm font-bold">Niềm tin</p>
-                        </div>
+
                     </div>
                 </div>
             </div>
@@ -285,22 +326,16 @@ const Profile = () => {
             <div className="flex justify-center">
                 <div className="bg-slate-100/90 backdrop-blur-md p-1.5 rounded-2xl inline-flex shadow-inner border border-slate-200/50">
                     <button
-                        onClick={() => setActiveTab('learner')}
-                        className={`flex items-center gap-2 px-8 py-3 rounded-xl font-extrabold transition-all duration-300 ${activeTab === 'learner' ? 'bg-white text-blue-600 shadow-md scale-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 scale-95 hover:scale-100'}`}
-                    >
-                        <Compass size={20} weight={activeTab === 'learner' ? 'duotone' : 'regular'} /> Học viên
-                    </button>
-                    <button
                         onClick={() => setActiveTab('mentor')}
                         className={`flex items-center gap-2 px-8 py-3 rounded-xl font-extrabold transition-all duration-300 ${activeTab === 'mentor' ? 'bg-white text-purple-600 shadow-md scale-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 scale-95 hover:scale-100'}`}
                     >
-                        <Users size={20} weight={activeTab === 'mentor' ? 'duotone' : 'regular'} /> Giảng viên
+                        <Users size={20} weight={activeTab === 'mentor' ? 'duotone' : 'regular'} /> Hồ sơ mentor
                     </button>
                     <button
                         onClick={() => setActiveTab('reviews')}
                         className={`flex items-center gap-2 px-8 py-3 rounded-xl font-extrabold transition-all duration-300 ${activeTab === 'reviews' ? 'bg-white text-amber-600 shadow-md scale-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 scale-95 hover:scale-100'}`}
                     >
-                        <Star size={20} weight={activeTab === 'reviews' ? 'duotone' : 'regular'} /> Lời khen
+                        <Star size={20} weight={activeTab === 'reviews' ? 'duotone' : 'regular'} /> Đánh giá từ học viên
                     </button>
                 </div>
             </div>
@@ -311,53 +346,30 @@ const Profile = () => {
                 {/* Left Column — Skills */}
                 <div className="lg:col-span-2 space-y-8 animate-[slideIn_0.5s_ease-out]">
                     <div className="bg-white rounded-[2rem] border border-slate-200/60 p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group/skills">
-                        <div className={`absolute top-0 right-0 w-64 h-64 rounded-full mix-blend-multiply filter blur-[80px] opacity-40 -z-0 pointer-events-none transition-colors duration-1000 ${activeTab === 'learner' ? 'bg-blue-100' : 'bg-purple-100'}`}></div>
+                        <div className={`absolute top-0 right-0 w-64 h-64 rounded-full mix-blend-multiply filter blur-[80px] opacity-40 -z-0 pointer-events-none transition-colors duration-1000 ${activeTab === 'mentor' ? 'bg-purple-100' : 'bg-amber-100'}`}></div>
 
                         <div className="relative z-10 flex justify-between items-center mb-8">
                             <div>
                                 <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
-                                    {activeTab === 'learner' ? (
-                                        <><Target size={28} weight="duotone" className="text-blue-500" /> Kỹ năng muốn học</>
-                                    ) : activeTab === 'mentor' ? (
+                                    {activeTab === 'mentor' ? (
                                         <><Lightbulb size={28} weight="duotone" className="text-purple-500" /> Kỹ năng giảng dạy</>
                                     ) : (
                                         <><Star size={28} weight="duotone" className="text-amber-500" /> Đánh giá từ Học viên</>
                                     )}
                                 </h2>
                                 <p className="text-slate-500 mt-1 font-medium text-sm">
-                                    {activeTab === 'learner' ? 'Những chủ đề bạn kỳ vọng nâng cao trình độ' : activeTab === 'mentor' ? 'Chứng minh năng lực của bạn với cộng đồng' : 'Những lời nhận xét mang lại động lực phát triển'}
+                                    {activeTab === 'mentor' ? 'Chứng minh năng lực của bạn với cộng đồng' : 'Những lời nhận xét mang lại động lực phát triển'}
                                 </p>
                             </div>
-                            <button className="bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 w-10 h-10 rounded-xl flex items-center justify-center transition-colors shadow-sm border border-slate-200">
-                                <PencilSimple size={18} weight="bold" />
-                            </button>
-                        </div>
+                                {activeTab === 'mentor' && (
+                                    <button onClick={() => setBioEditing(false)} className="p-2 hover:bg-purple-50 rounded-xl text-purple-400 hover:text-purple-600 transition-all active:scale-90">
+                                        <PencilSimple size={22} weight="duotone" />
+                                    </button>
+                                )}
+                            </div>
 
                         <div className="flex flex-wrap gap-3 relative z-10">
-                            {activeTab === 'learner' ? (
-                                learningInterests.length === 0 ? (
-                                    <div className="w-full py-10 flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                                        <Target size={32} weight="duotone" className="text-slate-300 mb-2" />
-                                        <p className="text-slate-400 font-medium">Bạn chưa đăng ký danh mục mục tiêu kỹ năng nào.</p>
-                                    </div>
-                                ) : (
-                                    learningInterests.map((item, idx) => (
-                                        <div
-                                            key={idx}
-                                            title={item.learningGoal || ''}
-                                            className="flex items-center gap-2.5 px-5 py-3 rounded-2xl border font-bold text-sm transition-all hover:-translate-y-1 bg-gradient-to-br from-blue-50 to-indigo-50/50 border-blue-200/60 shadow-sm text-blue-800 hover:shadow-blue-200 hover:border-blue-300"
-                                        >
-                                            <SkillDynamicIcon skillName={item.skillName} defaultIcon={item.skillIcon} className="text-base" size={16} />
-                                            <span>{item.skillName}</span>
-                                            {item.desiredLevel && (
-                                                <span className="text-[10px] bg-white text-blue-600 border border-blue-100 px-2 py-0.5 rounded-md font-black uppercase tracking-wider shadow-sm">
-                                                    {LEVEL_LABEL[item.desiredLevel] || item.desiredLevel}
-                                                </span>
-                                            )}
-                                        </div>
-                                    ))
-                                )
-                            ) : activeTab === 'mentor' ? (
+                            {activeTab === 'mentor' ? (
                                 loadingSkills ? (
                                     <div className="w-full flex flex-col items-center py-10 gap-2 text-slate-400">
                                         <CircleNotch size={28} weight="bold" className="animate-spin text-purple-400" />
@@ -370,18 +382,41 @@ const Profile = () => {
                                     </div>
                                 ) : (
                                     teachingSkills.map((ts) => (
-                                        <div key={ts.id} className="group relative pr-10 flex items-center gap-2.5 px-5 py-3 rounded-2xl border font-bold text-sm bg-gradient-to-br from-purple-50 to-fuchsia-50/50 border-purple-200/60 shadow-sm text-purple-800 hover:shadow-purple-200 hover:-translate-y-1 transition-all">
-                                            <SkillDynamicIcon skillName={ts.skillName} defaultIcon={ts.skillIcon} className="text-base" size={16} />
-                                            <span>{ts.skillName}</span>
-                                            <span className="text-[10px] bg-white border border-purple-100 text-purple-600 uppercase tracking-wider px-2 py-0.5 rounded-md font-black shadow-sm">{ts.level}</span>
-                                            <button
-                                                onClick={() => handleDeleteSkill(ts.id)}
-                                                className="absolute right-3 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 rounded-lg p-1.5 transition-all shadow-sm"
-                                                title="Xóa kỹ năng"
-                                            >
-                                                <X size={14} weight="bold" />
-                                            </button>
-                                        </div>
+                                        <UserSkillCard
+                                            key={ts.id}
+                                            skill={ts}
+                                            showDelete={true}
+                                            onDelete={handleDeleteSkill}
+                                            className="w-full sm:w-[calc(50%-0.375rem)]"
+                                            actionButtons={
+                                                ts.verificationStatus === 'APPROVED' ? (
+                                                    <>
+                                                        <button type="button" onClick={() => handleToggleSkillVisibility(ts)} className="text-[11px] text-slate-600 hover:bg-slate-100 px-2 py-1 rounded-lg transition-colors flex items-center gap-1 opacity-80 group-hover:opacity-100">
+                                                            {ts.hidden ? 'Hiện Explore' : 'Tạm ẩn'}
+                                                        </button>
+                                                        {editingPriceId === ts.id ? (
+                                                            <span className="flex items-center gap-1">
+                                                                <input
+                                                                    type="number"
+                                                                    min={1} max={500}
+                                                                    value={newPriceInput}
+                                                                    onChange={e => setNewPriceInput(e.target.value)}
+                                                                    className="w-16 text-xs border border-purple-300 rounded-md px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                                                    autoFocus
+                                                                    onKeyDown={e => { if (e.key === 'Enter') handleSavePrice(ts); if (e.key === 'Escape') setEditingPriceId(null); }}
+                                                                />
+                                                                <button onClick={() => handleSavePrice(ts)} className="text-[11px] text-emerald-600 hover:bg-emerald-100 px-2 py-1 rounded-lg transition-colors font-bold">Lưu</button>
+                                                                <button onClick={() => setEditingPriceId(null)} className="text-[11px] text-slate-500 hover:bg-slate-100 px-1.5 py-1 rounded-lg transition-colors">✕</button>
+                                                            </span>
+                                                        ) : (
+                                                            <button onClick={() => handleEditPrice(ts)} className="text-[11px] text-purple-600 hover:bg-purple-100 px-2 py-1 rounded-lg transition-colors flex items-center gap-1 opacity-80 group-hover:opacity-100">
+                                                                <PencilSimple size={12} weight="bold" /> Đổi giá
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                ) : null
+                                            }
+                                        />
                                     ))
                                 )
                             ) : (
@@ -401,9 +436,14 @@ const Profile = () => {
                                             <div key={r.id} className="bg-gradient-to-br from-amber-50 to-yellow-50/30 border border-amber-100/60 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow">
                                                 <div className="flex justify-between items-start mb-4">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-12 h-12 bg-white rounded-[14px] flex items-center justify-center font-extrabold text-amber-600 shadow-sm shrink-0 overflow-hidden border border-amber-100">
-                                                            {r.reviewerAvatar ? <img src={r.reviewerAvatar} alt="avatar" className="w-full h-full object-cover"/> : r.reviewerName?.charAt(0)}
-                                                        </div>
+                                                        <Avatar
+                                                            src={r.reviewerAvatar}
+                                                            fallback={r.reviewerName?.charAt(0)}
+                                                            size="w-12 h-12"
+                                                            rounded="rounded-[14px]"
+                                                            fallbackBg="bg-white"
+                                                            extra="text-amber-600 border border-amber-100"
+                                                        />
                                                         <div>
                                                             <div className="font-extrabold text-slate-800 text-sm mb-0.5">{r.reviewerName}</div>
                                                             <div className="text-xs text-slate-500 font-medium">
@@ -427,12 +467,15 @@ const Profile = () => {
                                 </div>
                             )}
 
-                            {activeTab === 'mentor' && (
+                             {activeTab === 'mentor' && (
                                 <button
                                     onClick={() => setShowAddSkillModal(true)}
-                                    className="col-span-1 min-w-[140px] px-5 py-3 rounded-2xl border-2 border-dashed border-purple-200 text-purple-600 font-extrabold text-sm hover:bg-purple-50 hover:border-purple-400 transition-all flex items-center justify-center gap-2 hover:-translate-y-1"
+                                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 text-slate-500 font-bold hover:bg-purple-50 hover:border-purple-200 hover:text-purple-600 transition-all group/add"
                                 >
-                                    + Thêm mới
+                                    <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm group-hover/add:bg-purple-600 group-hover/add:text-white transition-all">
+                                        <X size={16} weight="bold" className="rotate-45" />
+                                    </div>
+                                    Thêm kỹ năng mới
                                 </button>
                             )}
                         </div>
@@ -448,15 +491,9 @@ const Profile = () => {
                             <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
                                 <UserCircle className="text-indigo-500" weight="duotone" size={24} /> Giới thiệu
                             </h3>
-                            {!bioEditing && (
-                                <button
-                                    onClick={() => { setBioEditing(true); setBioValue(profile?.bio || ''); }}
-                                    className="text-slate-400 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50 w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-                                    title="Chỉnh sửa bio"
-                                >
-                                    <PencilSimple size={16} weight="bold" />
-                                </button>
-                            )}
+                            <button onClick={() => setBioEditing(true)} className="p-2 hover:bg-indigo-50 rounded-xl text-indigo-400 hover:text-indigo-600 transition-all active:scale-90">
+                                <PencilSimple size={20} weight="duotone" />
+                            </button>
                         </div>
 
                         {bioEditing ? (
@@ -509,30 +546,7 @@ const Profile = () => {
                         </div>
                     </div>
 
-                    {/* Trust Score Card */}
-                    <div className="bg-white rounded-[2rem] border border-slate-200/60 p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group">
-                        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-amber-100 rounded-full mix-blend-multiply filter blur-[50px] opacity-60 group-hover:scale-125 transition-transform duration-1000"></div>
-                        <h3 className="text-lg font-black text-slate-900 mb-5 flex items-center gap-2 relative z-10">
-                            <Medal size={24} weight="duotone" className="text-amber-500" /> Điểm phân hạng uy tín
-                        </h3>
-                        <div className="relative z-10">
-                            <div className="flex items-end gap-2 mb-3">
-                                <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-rose-500 tracking-tighter">{trustScore}</span>
-                                <span className="text-slate-400 font-extrabold mb-1">/ 100</span>
-                            </div>
-                            <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden shadow-inner p-0.5">
-                                <div
-                                    className="h-full rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 transition-all duration-1000 shadow-sm"
-                                    style={{ width: `${Math.min(trustScore, 100)}%` }}
-                                />
-                            </div>
-                            <div className="mt-4 bg-amber-50/50 border border-amber-100 text-amber-800 rounded-xl p-3 text-xs font-semibold leading-relaxed">
-                                {trustScore >= 80 ? '🌟 Hạng S: Bạn sở hữu Trust Score tuyệt đối. Được phép dạy mở khóa slot tự do!'
-                                    : trustScore >= 50 ? '✅ Hạng A: Bạn là thành viên tích cực, hoàn thành tốt các chỉ tiêu hệ thống.'
-                                        : '⚠️ Hạng B: Điểm uy tín khá thấp. Cẩn trọng với các đánh giá xấu nhé!'}
-                            </div>
-                        </div>
-                    </div>
+
                 </div>
             </div>
 
@@ -545,6 +559,7 @@ const Profile = () => {
                     }}
                 />
             )}
+        </div>
         </div>
     );
 };

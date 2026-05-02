@@ -1,24 +1,785 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
     Map, Star, Target, BookOpen, ChevronRight, Zap, CheckCircle2, Play,
-    TrendingUp, Clock, ArrowRight, Search, Users, Award, Briefcase, Calendar, MessageCircle, Navigation, Check, Lock, Info, CalendarDays, Book
+    Clock, Search, Users, Book, SlidersHorizontal,
+    X, Sparkles, LayoutGrid, Video, Layers, ChevronDown, BadgeCheck,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import axiosClient from '../../configuration/axiosClient';
+import API_ENDPOINTS from '../../configuration/apiEndpoints';
+import { useStore } from '../../store/index';
 
-import { MY_PATHS_MOCK as myPaths, EXPLORE_PATHS_MOCK as explorePaths } from '../../utils/mockData';
+// ─────────────────────────────────────────────
+// Constants for UI
+// ─────────────────────────────────────────────
 
-const LearningPath = () => {
-    const [activeTab, setActiveTab] = useState('my_paths'); // 'my_paths' | 'explore'
+const CATEGORY_COLORS = {
+    TECH: { from: '#4F46E5', to: '#7C3AED' },
+    DESIGN: { from: '#EC4899', to: '#8B5CF6' },
+    BUSINESS: { from: '#F59E0B', to: '#EF4444' },
+    LANGUAGE: { from: '#10B981', to: '#3B82F6' },
+    SOFT_SKILL: { from: '#8B5CF6', to: '#D946EF' },
+    MARKETING: { from: '#F97316', to: '#F43F5E' },
+    OTHER: { from: '#64748B', to: '#475569' }
+};
+
+const CATEGORY_LABEL = {
+    TECH: 'Công nghệ',
+    DESIGN: 'Thiết kế',
+    BUSINESS: 'Kinh doanh',
+    LANGUAGE: 'Ngôn ngữ',
+    SOFT_SKILL: 'Kỹ năng mềm',
+    MARKETING: 'Marketing',
+    OTHER: 'Khác'
+};
+
+const LEVEL_STYLE = {
+    BEGINNER: { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-200' },
+    INTERMEDIATE: { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-200' },
+    ADVANCED: { bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-200' },
+};
+const LEVEL_LABEL = { BEGINNER: 'Cơ bản', INTERMEDIATE: 'Trung cấp', ADVANCED: 'Nâng cao' };
+
+// ─────────────────────────────────────────────
+// Helper: Map Backend DTO to Frontend UI Object
+// ─────────────────────────────────────────────
+const mapBackendPathToLocal = (p) => ({
+    id: p.id,
+    title: p.title,
+    description: p.shortDescription || p.description,
+    skill: CATEGORY_LABEL[p.category] || p.category,
+    level: p.level,
+    duration: p.duration,
+    emoji: p.emoji || '📚',
+    thumbnailFrom: CATEGORY_COLORS[p.category]?.from || '#6366f1',
+    thumbnailTo: CATEGORY_COLORS[p.category]?.to || '#a855f7',
+    totalCredits: p.totalCredits,
+    learnerCount: p.enrollmentCount || 0,
+    progressPercent: Number(p.progressPercent ?? 0),
+    enrollmentStatus: p.enrollmentStatus || null,
+    moduleCount: p.moduleCount ?? p.modules?.length ?? 0,
+    lessonCount: p.lessonCount ?? (p.modules || []).reduce((sum, m) => sum + (m.lessons?.length || 0), 0),
+    type: p.teacherRole === 'ADMIN' ? 'system' : 'mentor',
+    rating: p.rating != null ? p.rating : 0,
+    totalReviews: p.totalReviews != null ? p.totalReviews : 0,
+    featured: p.isFeatured || false,
+    newest: true,
+    mentor: p.teacherName ? {
+        name: p.teacherName,
+        role: p.teacherRole === 'ADMIN' ? 'Hệ thống SkillSync' : 'Mentor chuyên gia',
+        avatarGrad: 'from-violet-500 to-indigo-500',
+        avatarText: p.teacherName.charAt(0),
+        avatarUrl: p.teacherAvatarUrl,
+        rating: 4.9,
+        verified: true
+    } : null
+});
+
+function LevelBadge({ level }) {
+    const s = LEVEL_STYLE[level] || LEVEL_STYLE.BEGINNER;
+    return (
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-bold ${s.bg} ${s.text} ${s.border}`}>
+            <Target size={10} /> {LEVEL_LABEL[level] || level}
+        </span>
+    );
+}
+
+function TypeBadge({ type }) {
+    if (type === 'mentor') return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-50 text-violet-600 border border-violet-200 text-[11px] font-bold">
+            <Users size={10} /> Mentor-guided
+        </span>
+    );
+    return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-50 text-sky-600 border border-sky-200 text-[11px] font-bold">
+            <Play size={10} /> Tự học
+        </span>
+    );
+}
+
+// ─────────────────────────────────────────────
+// Loading Skeleton Card
+// ─────────────────────────────────────────────
+function SkeletonCard() {
+    return (
+        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden animate-pulse shadow-sm">
+            <div className="h-40 bg-slate-200" />
+            <div className="p-5 space-y-3">
+                <div className="flex gap-2"><div className="h-4 w-16 bg-slate-200 rounded-full" /><div className="h-4 w-20 bg-slate-200 rounded-full" /></div>
+                <div className="h-5 w-3/4 bg-slate-200 rounded-lg" />
+                <div className="h-4 w-full bg-slate-100 rounded-lg" />
+                <div className="h-4 w-2/3 bg-slate-100 rounded-lg" />
+                <div className="flex gap-3 pt-1">
+                    <div className="h-4 w-20 bg-slate-200 rounded-full" />
+                    <div className="h-4 w-20 bg-slate-200 rounded-full" />
+                </div>
+                <div className="h-10 bg-slate-200 rounded-xl mt-2" />
+            </div>
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────
+// Path Card
+// ─────────────────────────────────────────────
+function PathCard({ path }) {
+    const isMentor = path.type === 'mentor';
 
     return (
-        <div className="max-w-5xl mx-auto font-sans pb-12 space-y-6">
+        <Link
+            to={`/app/learning-path/${path.id}`}
+            className="group bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col no-underline text-inherit"
+        >
+            {/* Thumbnail */}
+            <div
+                className="relative h-40 flex items-center justify-center overflow-hidden"
+                style={{ background: `linear-gradient(135deg, ${path.thumbnailFrom}, ${path.thumbnailTo})` }}
+            >
+                <span
+                    className="text-6xl select-none opacity-90 drop-shadow-lg group-hover:scale-110 transition-transform duration-300"
+                    style={{ textShadow: '0 4px 24px rgba(0,0,0,0.18)' }}
+                >{path.emoji}</span>
+
+                {/* Floating badges top-left */}
+                <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+                    <TypeBadge type={path.type} />
+                    <LevelBadge level={path.level} />
+                </div>
+
+                {/* Rating top-right */}
+                {path.rating > 0 && (
+                    <div className="absolute top-3 right-3 bg-black/30 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
+                        <Star size={11} className="text-amber-300 fill-current" /> {path.rating.toFixed(1)}
+                        {path.totalReviews > 0 && <span className="ml-0.5 text-[10px] opacity-80">({path.totalReviews})</span>}
+                    </div>
+                )}
+
+                {/* Gradient overlay bottom */}
+                <div className="absolute bottom-0 inset-x-0 h-12 bg-gradient-to-t from-black/20 to-transparent" />
+            </div>
+
+            {/* Body */}
+            <div className="p-5 flex flex-col flex-1 gap-3">
+                {/* Skill chip */}
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    <BookOpen size={11} className="text-slate-400" /> {path.skill}
+                </div>
+
+                {/* Title */}
+                <h3 className="font-extrabold text-slate-900 text-base leading-snug line-clamp-2 group-hover:text-indigo-700 transition-colors">
+                    {path.title}
+                </h3>
+
+                {/* Description */}
+                <p className="text-slate-500 text-xs leading-relaxed line-clamp-2 flex-1">{path.description}</p>
+
+                {/* Stats row */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-slate-500 font-semibold">
+                    <span className="flex items-center gap-1"><Clock size={11} className="text-slate-400" /> {path.duration}</span>
+                    <span className="flex items-center gap-1"><Layers size={11} className="text-slate-400" /> {path.moduleCount} module</span>
+                    <span className="flex items-center gap-1"><Video size={11} className="text-slate-400" /> {path.lessonCount} bài</span>
+                    <span className="flex items-center gap-1"><Users size={11} className="text-slate-400" /> {path.learnerCount.toLocaleString()} học viên</span>
+                </div>
+
+                {/* Mentor info (mentor paths only) */}
+                {isMentor && path.mentor && (
+                    <div className="flex items-center gap-2.5 py-2.5 px-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${path.mentor.avatarGrad} text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-sm`}>
+                            {path.mentor.avatarText}
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-800 flex items-center gap-1 truncate">
+                                {path.mentor.name}
+                                {path.mentor.verified && <BadgeCheck size={12} className="text-emerald-500 shrink-0" />}
+                            </p>
+                            <p className="text-[10px] text-slate-400 truncate">{path.mentor.role}</p>
+                        </div>
+                        <div className="ml-auto shrink-0 flex items-center gap-1 text-[11px] font-bold text-amber-500">
+                            <Star size={11} className="fill-current" /> {path.mentor.rating}
+                        </div>
+                    </div>
+                )}
+
+                {/* System path badge */}
+                {!isMentor && (
+                    <div className="flex items-center gap-2 py-2 px-3 bg-sky-50 rounded-xl border border-sky-100">
+                        <Sparkles size={14} className="text-sky-500 shrink-0" />
+                        <span className="text-[11px] font-bold text-sky-600">Lộ trình hệ thống SkillSync</span>
+                    </div>
+                )}
+
+                {/* Footer */}
+                <div className="flex items-center justify-between pt-1 mt-auto border-t border-slate-100">
+                    <div className="text-xs font-bold">
+                        {path.totalCredits > 0 ? (
+                            <span className="flex items-center gap-1 text-amber-600">
+                                <Zap size={13} className="fill-current" /> {path.totalCredits} credits
+                            </span>
+                        ) : (
+                            <span className="flex items-center gap-1 text-emerald-600">
+                                <CheckCircle2 size={13} /> Miễn phí
+                            </span>
+                        )}
+                    </div>
+                    <span className="px-4 py-2 bg-indigo-600 group-hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 shadow-sm shadow-indigo-200">
+                        Xem chi tiết <ChevronRight size={13} />
+                    </span>
+                </div>
+            </div>
+        </Link>
+    );
+}
+
+// ─────────────────────────────────────────────
+// Explore Tab Content
+// ─────────────────────────────────────────────
+const SORT_OPTIONS = [
+    { value: 'featured', label: 'Nổi bật' },
+    { value: 'newest', label: 'Mới nhất' },
+    { value: 'popular', label: 'Phổ biến' },
+    { value: 'rating', label: 'Rating cao' },
+];
+const TYPE_LABEL_FILTER = { 'Tất cả': 'Tất cả', mentor: 'Có mentor hướng dẫn', system: 'Tự học' };
+
+function ExploreTab() {
+    const [paths, setPaths] = useState([]);
+    const [keyword, setKeyword] = useState('');
+    const [skillFilter, setSkillFilter] = useState('Tất cả');
+    const [levelFilter, setLevelFilter] = useState('Tất cả');
+    const [typeFilter, setTypeFilter] = useState('Tất cả');
+    const [priceFilter, setPriceFilter] = useState('Tất cả'); // 'Tất cả' | 'free' | 'paid'
+    const [sortBy, setSortBy] = useState('featured');
+    const [loading, setLoading] = useState(true);
+    const [showFilter, setShowFilter] = useState(false);
+
+    useEffect(() => {
+        fetchPaths();
+    }, []);
+
+    const fetchPaths = async () => {
+        setLoading(true);
+        try {
+            const res = await axiosClient.get(API_ENDPOINTS.LEARNING_PATHS.GET_APPROVED);
+            console.log('Learning Paths Response:', res);
+            // axiosClient đã bóc tách apiRes.data nếu khớp pattern, 
+            // nhưng ta handle thêm cả result hoặc mảng trực tiếp cho an toàn tuyệt đối.
+            const data = Array.isArray(res) ? res : (res?.data || res?.result || []);
+            const mapped = data.map(mapBackendPathToLocal);
+            setPaths(mapped);
+        } catch (error) {
+            console.error('Fetch paths error:', error);
+            setPaths([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const ALL_SKILLS = useMemo(() => ['Tất cả', ...Array.from(new Set(paths.map(p => p.skill)))], [paths]);
+    const ALL_LEVELS = ['Tất cả', 'BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
+    const ALL_TYPES = ['Tất cả', 'mentor', 'system'];
+
+    const applyFilters = () => {
+        setLoading(true);
+        setTimeout(() => setLoading(false), 400);
+    };
+
+    const hasActiveFilter = keyword || skillFilter !== 'Tất cả' || levelFilter !== 'Tất cả' || typeFilter !== 'Tất cả' || priceFilter !== 'Tất cả';
+
+    const clearFilters = () => {
+        setKeyword(''); setSkillFilter('Tất cả'); setLevelFilter('Tất cả');
+        setTypeFilter('Tất cả'); setPriceFilter('Tất cả');
+    };
+
+    const filteredPaths = useMemo(() => {
+        let list = [...paths];
+
+        if (keyword.trim()) {
+            const kw = keyword.toLowerCase();
+            list = list.filter(p =>
+                p.title.toLowerCase().includes(kw) ||
+                p.skill.toLowerCase().includes(kw) ||
+                p.description.toLowerCase().includes(kw) ||
+                (p.mentor?.name || '').toLowerCase().includes(kw)
+            );
+        }
+        if (skillFilter !== 'Tất cả') list = list.filter(p => p.skill === skillFilter);
+        if (levelFilter !== 'Tất cả') list = list.filter(p => p.level === levelFilter);
+        if (typeFilter !== 'Tất cả') list = list.filter(p => p.type === typeFilter);
+        if (priceFilter === 'free') list = list.filter(p => p.totalCredits === 0);
+        if (priceFilter === 'paid') list = list.filter(p => p.totalCredits > 0);
+
+        switch (sortBy) {
+            case 'newest': return list.sort((a, b) => (b.newest ? 1 : 0) - (a.newest ? 1 : 0));
+            case 'popular': return list.sort((a, b) => b.learnerCount - a.learnerCount);
+            case 'rating': return list.sort((a, b) => b.rating - a.rating);
+            case 'featured': default:
+                return list.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+        }
+    }, [paths, keyword, skillFilter, levelFilter, typeFilter, priceFilter, sortBy]);
+
+    const recommended = useMemo(() =>
+        paths.filter(p => p.featured).slice(0, 3), [paths]);
+
+
+    return (
+        <div className="space-y-8">
+            {/* ── Page Header ── */}
+            <div className="text-center py-6 px-4 rounded-3xl bg-gradient-to-br from-indigo-50 via-violet-50 to-slate-50 border border-indigo-100/60 relative overflow-hidden">
+                <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute -top-10 -left-10 w-40 h-40 bg-indigo-200 rounded-full opacity-20 blur-3xl" />
+                    <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-violet-200 rounded-full opacity-20 blur-3xl" />
+                </div>
+                <div className="relative z-10">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold mb-3">
+                        <Map size={13} /> Khám phá lộ trình học
+                    </div>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
+                        Tìm lộ trình <span className="text-indigo-600">phù hợp với bạn</span>
+                    </h1>
+                    <p className="text-slate-500 text-sm max-w-md mx-auto">
+                        Chọn lộ trình phù hợp để bắt đầu hành trình học tập — có mentor đồng hành hoặc tự học theo tiến độ của bạn
+                    </p>
+                </div>
+            </div>
+
+            {/* ── Search + Filter Bar ── */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                {/* Search row */}
+                <div className="flex items-center gap-3 p-4 border-b border-slate-100">
+                    <div className="flex-1 flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus-within:border-indigo-400 focus-within:bg-white focus-within:shadow-sm transition-all">
+                        <Search size={16} className="text-slate-400 shrink-0" />
+                        <input
+                            type="text"
+                            placeholder="Tìm theo tên lộ trình, kỹ năng hoặc mentor..."
+                            className="flex-1 bg-transparent text-sm text-slate-800 placeholder-slate-400 outline-none font-medium"
+                            value={keyword}
+                            onChange={e => { setKeyword(e.target.value); applyFilters(); }}
+                        />
+                        {keyword && (
+                            <button onClick={() => setKeyword('')} className="text-slate-400 hover:text-slate-600">
+                                <X size={14} />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Sort */}
+                    <div className="relative shrink-0 hidden sm:block">
+                        <select
+                            value={sortBy}
+                            onChange={e => { setSortBy(e.target.value); applyFilters(); }}
+                            className="appearance-none pl-3 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 outline-none cursor-pointer hover:border-indigo-300 transition-colors"
+                        >
+                            {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                        <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    </div>
+
+                    {/* Filter toggle */}
+                    <button
+                        onClick={() => setShowFilter(!showFilter)}
+                        className={`shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all ${showFilter ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600'}`}
+                    >
+                        <SlidersHorizontal size={15} />
+                        <span className="hidden sm:inline">Lọc</span>
+                        {hasActiveFilter && <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />}
+                    </button>
+                </div>
+
+                {/* Filter panel */}
+                {showFilter && (
+                    <div className="p-4 bg-slate-50/50 grid grid-cols-2 sm:grid-cols-4 gap-3 border-b border-slate-100">
+                        {/* Skill */}
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Kỹ năng</label>
+                            <div className="relative">
+                                <select
+                                    value={skillFilter}
+                                    onChange={e => { setSkillFilter(e.target.value); applyFilters(); }}
+                                    className="w-full appearance-none pl-3 pr-7 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 outline-none cursor-pointer"
+                                >
+                                    {ALL_SKILLS.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                                <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                            </div>
+                        </div>
+
+                        {/* Level */}
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Trình độ</label>
+                            <div className="relative">
+                                <select
+                                    value={levelFilter}
+                                    onChange={e => { setLevelFilter(e.target.value); applyFilters(); }}
+                                    className="w-full appearance-none pl-3 pr-7 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 outline-none cursor-pointer"
+                                >
+                                    {ALL_LEVELS.map(l => <option key={l} value={l}>{l === 'Tất cả' ? 'Tất cả' : LEVEL_LABEL[l]}</option>)}
+                                </select>
+                                <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                            </div>
+                        </div>
+
+                        {/* Type */}
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Loại lộ trình</label>
+                            <div className="relative">
+                                <select
+                                    value={typeFilter}
+                                    onChange={e => { setTypeFilter(e.target.value); applyFilters(); }}
+                                    className="w-full appearance-none pl-3 pr-7 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 outline-none cursor-pointer"
+                                >
+                                    {ALL_TYPES.map(t => <option key={t} value={t}>{TYPE_LABEL_FILTER[t]}</option>)}
+                                </select>
+                                <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                            </div>
+                        </div>
+
+                        {/* Price */}
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Chi phí</label>
+                            <div className="relative">
+                                <select
+                                    value={priceFilter}
+                                    onChange={e => { setPriceFilter(e.target.value); applyFilters(); }}
+                                    className="w-full appearance-none pl-3 pr-7 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 outline-none cursor-pointer"
+                                >
+                                    <option value="Tất cả">Tất cả</option>
+                                    <option value="free">Miễn phí</option>
+                                    <option value="paid">Có trả credits</option>
+                                </select>
+                                <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Active filter chips */}
+                {hasActiveFilter && (
+                    <div className="px-4 py-2.5 flex items-center gap-2 flex-wrap bg-white">
+                        <span className="text-[11px] font-bold text-slate-400">Đang lọc:</span>
+                        {keyword && <Chip label={`"${keyword}"`} onRemove={() => setKeyword('')} />}
+                        {skillFilter !== 'Tất cả' && <Chip label={skillFilter} onRemove={() => setSkillFilter('Tất cả')} />}
+                        {levelFilter !== 'Tất cả' && <Chip label={LEVEL_LABEL[levelFilter]} onRemove={() => setLevelFilter('Tất cả')} />}
+                        {typeFilter !== 'Tất cả' && <Chip label={TYPE_LABEL[typeFilter]} onRemove={() => setTypeFilter('Tất cả')} />}
+                        {priceFilter !== 'Tất cả' && <Chip label={priceFilter === 'free' ? 'Miễn phí' : 'Có trả credits'} onRemove={() => setPriceFilter('Tất cả')} />}
+                        <button onClick={clearFilters} className="text-[11px] text-rose-500 font-bold hover:text-rose-700 ml-1">Xóa tất cả</button>
+                    </div>
+                )}
+            </div>
+
+            {/* ── Featured / Recommended Section (shown when no keyword/filter) ── */}
+            {!hasActiveFilter && (
+                <div>
+                    <div className="flex items-center gap-2 mb-4">
+                        <Sparkles size={17} className="text-amber-500" />
+                        <h2 className="text-base font-extrabold text-slate-800">Gợi ý dành cho bạn</h2>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {recommended.map(path => (
+                            <PathCard key={path.id} path={path} />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* ── Full Grid ── */}
+            <div>
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <LayoutGrid size={16} className="text-slate-500" />
+                        <h2 className="text-base font-extrabold text-slate-800">
+                            {hasActiveFilter ? `Kết quả tìm kiếm` : 'Tất cả lộ trình'}
+                        </h2>
+                        <span className="text-xs text-slate-400 font-medium">
+                            ({loading ? '...' : filteredPaths.length} lộ trình)
+                        </span>
+                    </div>
+                    {/* Mobile sort */}
+                    <div className="relative sm:hidden">
+                        <select
+                            value={sortBy}
+                            onChange={e => setSortBy(e.target.value)}
+                            className="appearance-none pl-3 pr-7 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none cursor-pointer"
+                        >
+                            {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                        <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    </div>
+                </div>
+
+                {/* Loading skeletons */}
+                {loading ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                        {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
+                    </div>
+                ) : filteredPaths.length === 0 ? (
+                    /* Empty state */
+                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                        <div className="w-20 h-20 rounded-3xl bg-slate-100 flex items-center justify-center text-4xl mb-4 shadow-inner">🔍</div>
+                        <h3 className="text-lg font-extrabold text-slate-700 mb-1">Không tìm thấy lộ trình phù hợp</h3>
+                        <p className="text-sm text-slate-400 max-w-xs mb-6">Thử thay đổi từ khóa hoặc xóa bộ lọc để xem thêm kết quả.</p>
+                        <button
+                            onClick={clearFilters}
+                            className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 flex items-center gap-2"
+                        >
+                            <X size={15} /> Xóa bộ lọc
+                        </button>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                        {filteredPaths.map(path => <PathCard key={path.id} path={path} />)}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────
+// Filter chip helper
+// ─────────────────────────────────────────────
+function Chip({ label, onRemove }) {
+    return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full text-[11px] font-bold">
+            {label}
+            <button onClick={onRemove} className="hover:text-rose-500 ml-0.5 transition-colors"><X size={10} /></button>
+        </span>
+    );
+}
+
+// ─────────────────────────────────────────────
+// My Path Card (Lộ trình của tôi — không hiển thị mentor support; CTA chỉ Vào học / Tiếp tục học)
+// ─────────────────────────────────────────────
+function MyPathCard({ path }) {
+    const isCompleted = path.status === 'COMPLETED';
+    const statusBadge = () => {
+        if (isCompleted) return <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold border border-emerald-200">Hoàn thành</span>;
+        return <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold border border-indigo-200">Đang học</span>;
+    };
+
+    const showContinue = !isCompleted && path.progress > 0;
+    const ctaLabel = showContinue ? 'Tiếp tục học' : 'Vào học';
+
+    const ctaButton = () => (
+        <Link
+            to={`/app/learning-path/study/${path.id}`}
+            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm shadow-indigo-200 flex items-center justify-center gap-1.5"
+        >
+            {showContinue ? <Play size={13} className="fill-current" /> : <BookOpen size={13} />}
+            {ctaLabel}
+        </Link>
+    );
+
+    return (
+        <div className={`bg-white rounded-2xl border overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col group
+            ${isCompleted ? 'border-emerald-200' : 'border-indigo-200 hover:-translate-y-0.5'}`}>
+
+            {/* Thumbnail */}
+            <div
+                className="relative h-36 flex items-center justify-center overflow-hidden"
+                style={{ background: `linear-gradient(135deg, ${path.thumbnailFrom}, ${path.thumbnailTo})` }}
+            >
+                <span className="text-5xl select-none opacity-90 drop-shadow-md group-hover:scale-110 transition-transform duration-300">{path.emoji}</span>
+                <div className="absolute top-3 left-3">{statusBadge()}</div>
+            </div>
+
+            {/* Body */}
+            <div className="p-4 flex flex-col flex-1 gap-3">
+                <h3 className="font-extrabold text-slate-900 text-sm leading-snug line-clamp-2">{path.title}</h3>
+
+                {/* Progress */}
+                <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500 font-semibold">Tiến độ</span>
+                        <span className={`font-black ${isCompleted ? 'text-emerald-600' : 'text-indigo-600'}`}>{path.progress}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                            className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                            style={{ width: `${path.progress}%` }}
+                        />
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                        <Layers size={11} className="inline text-slate-400 mr-0.5 align-text-bottom" />
+                        Module: {path.modulesDone}/{path.modulesTotal}
+                    </p>
+                </div>
+
+                {/* Module / bài hiện tại (đang học) hoặc tóm tắt khi đã xong */}
+                {!isCompleted && (path.currentModuleTitle || path.currentLesson) && (
+                    <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100 space-y-1">
+                        {path.currentModuleTitle && (
+                            <p className="text-[10px] text-slate-500 font-semibold line-clamp-1">
+                                <span className="text-slate-400 font-bold uppercase tracking-wider">Module: </span>
+                                {path.currentModuleTitle}
+                            </p>
+                        )}
+                        {path.currentLesson && (
+                            <p className="text-xs font-semibold text-slate-800 line-clamp-2">
+                                <span className="text-slate-400 font-bold text-[10px] uppercase tracking-wider block mb-0.5">Bài hiện tại</span>
+                                {path.currentLesson}
+                            </p>
+                        )}
+                    </div>
+                )}
+                {isCompleted && (
+                    <div className="text-xs text-slate-600">
+                        {path.completedDate ? (
+                            <span className="flex items-center gap-1.5 font-medium text-emerald-700">
+                                <CheckCircle2 size={13} className="shrink-0" /> Hoàn thành ngày {path.completedDate}
+                            </span>
+                        ) : (
+                            <span className="text-slate-500">Đã hoàn thành toàn bộ lộ trình</span>
+                        )}
+                    </div>
+                )}
+
+                <div className="mt-auto pt-1">{ctaButton()}</div>
+            </div>
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────
+// My Paths Tab
+// ─────────────────────────────────────────────
+function MyPathsTab({ onExplore, enrolledPaths = [] }) {
+    const [subTab, setSubTab] = useState('ongoing'); // 'ongoing' | 'completed'
+    const completedLessonsMap = useStore(state => state.completedLessons);
+
+    const myPathsAll = enrolledPaths.map((p) => {
+        const completed = completedLessonsMap[p.id] || [];
+        const totalLessons = p.lessonCount || 1;
+        const calcProgress = Math.floor((completed.length / totalLessons) * 100);
+        const finalProgress = Math.max(0, Math.min(100, isNaN(calcProgress) ? 0 : calcProgress));
+
+        return {
+            id: p.id,
+            title: p.title,
+            emoji: p.emoji || '📚',
+            thumbnailFrom: p.thumbnailFrom || '#6366f1',
+            thumbnailTo: p.thumbnailTo || '#8b5cf6',
+            status: finalProgress >= 100 ? 'COMPLETED' : 'ONGOING',
+            progress: finalProgress,
+            modulesDone: Math.min(Math.floor((finalProgress / 100) * (p.moduleCount || 1)), p.moduleCount || 1),
+            modulesTotal: Math.max(1, p.moduleCount || 1),
+            currentModuleTitle: finalProgress >= 100 ? null : 'Tiếp tục lộ trình',
+            currentLesson: finalProgress >= 100 ? null : 'Bài học kế tiếp',
+            completedDate: finalProgress >= 100 ? new Date().toLocaleDateString('vi-VN') : null,
+        };
+    });
+    const activePaths = myPathsAll.filter(p => p.status !== 'COMPLETED');
+    const completedPaths = myPathsAll.filter(p => p.status === 'COMPLETED');
+
+    const shownPaths = subTab === 'ongoing' ? activePaths : completedPaths;
+
+    return (
+        <div className="space-y-6">
+            {/* Sub-tabs: chỉ Đang học / Đã hoàn thành */}
+            <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl w-fit">
+                <button
+                    type="button"
+                    onClick={() => setSubTab('ongoing')}
+                    className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm transition-all duration-200 ${subTab === 'ongoing' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                    Đang học
+                    {activePaths.length > 0 && <span className="bg-indigo-100 text-indigo-700 text-[10px] font-black px-1.5 py-0.5 rounded-full">{activePaths.length}</span>}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setSubTab('completed')}
+                    className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm transition-all duration-200 ${subTab === 'completed' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                    Đã hoàn thành
+                    {completedPaths.length > 0 && <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-1.5 py-0.5 rounded-full">{completedPaths.length}</span>}
+                </button>
+            </div>
+
+            {/* Cards */}
+            {shownPaths.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div className="w-20 h-20 rounded-3xl bg-slate-100 flex items-center justify-center text-4xl mb-4 shadow-inner">
+                        {subTab === 'ongoing' ? '📚' : '🏆'}
+                    </div>
+                    <h3 className="text-lg font-extrabold text-slate-700 mb-1">
+                        {subTab === 'ongoing' ? 'Bạn chưa đăng ký lộ trình nào' : 'Chưa có lộ trình hoàn thành'}
+                    </h3>
+                    <p className="text-sm text-slate-400 max-w-xs mb-6">
+                        {subTab === 'ongoing'
+                            ? 'Khám phá các lộ trình phù hợp với kỹ năng và mục tiêu của bạn.'
+                            : 'Tiếp tục học để hoàn thành lộ trình đầu tiên của bạn!'}
+                    </p>
+                    {subTab === 'ongoing' && (
+                        <button onClick={onExplore}
+                            className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 flex items-center gap-2">
+                            <Search size={15} /> Khám phá lộ trình
+                        </button>
+                    )}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {shownPaths.map(path => <MyPathCard key={path.id} path={path} />)}
+                    {/* Add new path card */}
+                    {subTab === 'ongoing' && (
+                        <button onClick={onExplore}
+                            className="rounded-2xl border-2 border-dashed border-slate-200 p-8 flex flex-col items-center justify-center gap-3 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50/30 transition-all duration-200 group min-h-[200px]">
+                            <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-indigo-100 flex items-center justify-center transition-colors">
+                                <Search size={22} className="group-hover:text-indigo-500" />
+                            </div>
+                            <span className="font-bold text-sm">Tìm lộ trình mới</span>
+                        </button>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────
+// Main Page
+// ─────────────────────────────────────────────
+const LearningPath = () => {
+    const addEnrolledPath = useStore(state => state.addEnrolledPath);
+    const [activeTab, setActiveTab] = useState('my_paths'); // 'my_paths' | 'explore'
+    const [explorePaths, setExplorePaths] = useState([]);
+    const [enrolledPaths, setEnrolledPaths] = useState([]);
+
+    useEffect(() => {
+        const fetchExplorePaths = async () => {
+            try {
+                const res = await axiosClient.get(API_ENDPOINTS.LEARNING_PATHS.GET_APPROVED);
+                const data = Array.isArray(res) ? res : (res?.data || res?.result || []);
+                setExplorePaths(data.map(mapBackendPathToLocal));
+            } catch {
+                setExplorePaths([]);
+            }
+        };
+        fetchExplorePaths();
+    }, []);
+
+    useEffect(() => {
+        const fetchEnrolled = async () => {
+            try {
+                const res = await axiosClient.get(API_ENDPOINTS.LEARNING_PATHS.GET_ENROLLED);
+                const data = Array.isArray(res) ? res : (res?.data || res?.result || []);
+                const mapped = data.map(mapBackendPathToLocal);
+                setEnrolledPaths(mapped);
+                mapped.forEach((path) => addEnrolledPath(path.id));
+            } catch {
+                setEnrolledPaths([]);
+            }
+        };
+        fetchEnrolled();
+    }, [addEnrolledPath]);
+
+    return (
+        <div className="max-w-6xl mx-auto font-sans pb-16 space-y-6">
             {/* Header & Tabs */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
                 <div>
                     <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-                        <Map className="text-blue-600" size={28} /> Lộ trình học tập
+                        <Map className="text-indigo-600" size={26} />
+                        {activeTab === 'my_paths' ? 'Lộ trình của tôi' : 'Khám phá lộ trình'}
                     </h1>
-                    <p className="text-slate-500 mt-1 text-sm font-medium">Học theo lộ trình của giáo viên • 1 GV xuyên suốt • Tự động hoàn thành khi đủ điều kiện</p>
                 </div>
                 <div className="flex bg-slate-100/80 p-1.5 rounded-2xl shadow-inner shrink-0">
                     <button
@@ -36,311 +797,18 @@ const LearningPath = () => {
                 </div>
             </div>
 
-            {/* TAB CONTENT: Lộ trình của tôi */}
+
+            {/* TAB: Lộ trình của tôi */}
             {activeTab === 'my_paths' && (
-                <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-                    {/* Left Sidebar: List of active paths */}
-                    <div className="xl:col-span-1 space-y-4">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Đang học ({myPaths.length})</h3>
-                        {myPaths.map(path => (
-                            <div key={path.id} className="bg-white rounded-[1.5rem] border-2 border-indigo-500 p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
-                                <div className="flex items-center gap-3 mb-3">
-                                    <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl shrink-0">
-                                        {path.emoji}
-                                    </div>
-                                    <h4 className="font-bold text-indigo-700 text-sm leading-tight">{path.title}</h4>
-                                </div>
-                                <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl">
-                                    <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0">{path.mentor.avatarText}</div>
-                                    <div className="min-w-0">
-                                        <p className="text-xs font-bold text-slate-900 flex items-center gap-1">
-                                            {path.mentor.name} {path.mentor.verified && <CheckCircle2 size={12} className="text-emerald-500" />}
-                                        </p>
-                                        <p className="text-[10px] text-slate-500 truncate">{path.mentor.role}</p>
-                                    </div>
-                                </div>
-                                <div className="mt-3 text-[10px] text-slate-400 font-medium">1/5 module • Đăng ký 01/01/2026</div>
-                            </div>
-                        ))}
-
-                        <button onClick={() => setActiveTab('explore')} className="w-full bg-slate-50 rounded-[1.5rem] border-2 border-dashed border-slate-200 p-6 flex flex-col items-center justify-center gap-2 text-slate-500 hover:bg-slate-100 hover:border-slate-300 hover:text-slate-700 transition-colors group">
-                            <div className="text-2xl font-light">+</div>
-                            <span className="font-bold text-sm">Tìm lộ trình mới</span>
-                        </button>
-                    </div>
-
-                    {/* Right Content: Active Path Detail */}
-                    <div className="xl:col-span-3 space-y-6">
-                        {myPaths.map(path => (
-                            <div key={path.id}>
-                                {/* BIG BANNER */}
-                                <div className="bg-[#6B72FF] rounded-3xl p-5 lg:p-6 text-white relative overflow-hidden shadow-xl shadow-indigo-900/20 mb-5">
-                                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-[60px] -translate-y-10 translate-x-20 pointer-events-none"></div>
-
-                                    <div className="flex flex-col lg:flex-row gap-6 relative z-10">
-                                        {/* Path Info */}
-                                        <div className="flex-1">
-                                            <div className="flex items-start gap-4 mb-3">
-                                                <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-2xl shadow-sm border border-white/20 shrink-0">
-                                                    {path.emoji}
-                                                </div>
-                                                <div>
-                                                    <h2 className="text-xl lg:text-2xl font-extrabold tracking-tight mb-1">{path.title}</h2>
-                                                    <p className="text-white/80 font-medium text-xs leading-relaxed max-w-2xl">{path.description}</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex flex-wrap items-center gap-3 mt-6">
-                                                <span className="px-3 py-1.5 bg-black/20 rounded-full font-bold text-xs flex items-center gap-1.5 backdrop-blur-sm border border-white/10">
-                                                    <Clock size={14} className="text-indigo-200" /> {path.duration}
-                                                </span>
-                                                <span className="px-3 py-1.5 bg-black/20 rounded-full font-bold text-xs flex items-center gap-1.5 backdrop-blur-sm border border-white/10">
-                                                    <Target size={14} className="text-indigo-200" /> {path.level}
-                                                </span>
-                                                <span className="px-3 py-1.5 bg-amber-500/20 rounded-full font-bold text-xs text-amber-200 flex items-center gap-1.5 backdrop-blur-sm border border-amber-500/30">
-                                                    <Zap size={14} className="text-amber-300 fill-current" /> {path.totalCredits} credits trọn gói
-                                                </span>
-                                            </div>
-
-                                            {/* Mentor inside Banner */}
-                                            <div className="mt-8 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex items-center justify-between gap-4 max-w-xl">
-                                                <div className="flex items-center gap-3 min-w-0">
-                                                    <div className="w-12 h-12 rounded-xl bg-white text-indigo-600 flex items-center justify-center font-extrabold text-lg shrink-0 shadow-sm">{path.mentor.avatarText}</div>
-                                                    <div className="min-w-0">
-                                                        <p className="font-extrabold text-base flex items-center gap-1">
-                                                            {path.mentor.name} <CheckCircle2 size={14} className="text-emerald-400" />
-                                                        </p>
-                                                        <p className="text-xs text-indigo-100 truncate mb-1">{path.mentor.role}</p>
-                                                        <div className="flex items-center gap-2 text-[10px] font-medium text-indigo-200">
-                                                            <span className="flex items-center gap-1"><Star size={10} className="text-amber-300 fill-current" /> {path.mentor.rating}</span>
-                                                            <span>• {path.mentor.students} học viên</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <button className="shrink-0 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl font-bold text-sm transition-colors flex items-center gap-2 border border-white/20">
-                                                    <MessageCircle size={16} /> Nhắn GV
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Progress Widget */}
-                                        <div className="shrink-0 flex items-center lg:items-end justify-center">
-                                            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 text-center w-32 h-24 flex flex-col justify-center">
-                                                <div className="text-3xl font-black tracking-tighter">{path.progress}%</div>
-                                                <div className="text-xs font-bold text-indigo-100 uppercase tracking-widest mt-1">xong</div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Progress bar line */}
-                                    <div className="absolute bottom-0 left-0 w-full h-1.5 bg-black/20">
-                                        <div className="h-full bg-white rounded-r-full shadow-[0_0_10px_rgba(255,255,255,0.8)]" style={{ width: `${path.progress}%` }}></div>
-                                    </div>
-                                </div>
-
-                                {/* CRITERIA HELPER */}
-                                <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-50/80 rounded-2xl p-4 border border-slate-100 mb-6">
-                                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs">
-                                        <span className="font-bold text-slate-500">Hoàn thành module khi đủ 3:</span>
-                                        <span className="flex items-center gap-1.5 font-semibold text-slate-700 bg-white px-2.5 py-1 rounded-lg shadow-sm border border-slate-200"><CalendarDays size={14} className="text-blue-500" /> Đủ buổi học</span>
-                                        <span className="flex items-center gap-1.5 font-semibold text-slate-700 bg-white px-2.5 py-1 rounded-lg shadow-sm border border-slate-200"><Target size={14} className="text-orange-500" /> Quiz ≥67%</span>
-                                        <span className="flex items-center gap-1.5 font-semibold text-slate-700 bg-white px-2.5 py-1 rounded-lg shadow-sm border border-slate-200"><CheckCircle2 size={14} className="text-emerald-500" /> Tự đánh dấu</span>
-                                    </div>
-                                    <div className="text-xs font-bold text-amber-500 flex items-center gap-1">
-                                        <Zap size={14} className="fill-current" /> Tự động mở khoá module tiếp theo
-                                    </div>
-                                </div>
-
-                                {/* MODULES TIMELINE/LIST */}
-                                <div className="space-y-4">
-                                    {path.modules.map((mod, idx) => {
-                                        const isCompleted = mod.status === 'completed';
-                                        const isOngoing = mod.status === 'ongoing';
-                                        const isLocked = mod.status === 'locked';
-
-                                        return (
-                                            <div key={mod.id} className={`rounded-2xl border-2 transition-all duration-300 relative overflow-hidden bg-white 
-                                                ${isOngoing ? 'border-indigo-500 shadow-lg shadow-indigo-100 scale-[1.02] z-10' :
-                                                    isCompleted ? 'border-emerald-400 opacity-90' :
-                                                        'border-slate-200 opacity-80 hover:opacity-100'} 
-                                            `}>
-                                                <div className="p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
-
-                                                    {/* Left info */}
-                                                    <div className="flex items-center gap-4 w-full sm:w-auto">
-                                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0
-                                                            ${isOngoing ? 'bg-indigo-500 text-white shadow-md' :
-                                                                isCompleted ? 'bg-emerald-500 text-white shadow-md' :
-                                                                    'bg-slate-100 text-slate-400'}
-                                                        `}>
-                                                            {isCompleted ? <Check size={24} strokeWidth={3} /> :
-                                                                isOngoing ? path.emoji :
-                                                                    'b'}
-                                                        </div>
-                                                        <div className="min-w-0 flex-1">
-                                                            {isOngoing && <div className="text-[10px] font-black text-orange-500 tracking-wider uppercase mb-1 flex items-center gap-1"><Zap size={10} className="fill-current" /> MODULE ĐANG HỌC</div>}
-                                                            {isCompleted && <div className="text-[10px] items-center text-slate-400 font-bold uppercase tracking-widest flex justify-between">Module {idx + 1}</div>}
-                                                            {!isOngoing && !isCompleted && <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 shadow-sm">Module {idx + 1}</div>}
-
-                                                            <h3 className={`font-extrabold ${isOngoing ? 'text-xl text-slate-900 mb-1' : isCompleted ? 'text-lg text-emerald-600' : 'text-lg text-slate-700'}`}>
-                                                                {isOngoing ? `Module ${idx + 1}: ${mod.title}` : mod.title} {isCompleted && <span className="text-xs text-emerald-500 ml-2 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">✓ {mod.completedDate}</span>}
-                                                            </h3>
-
-                                                            {isOngoing && (
-                                                                <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-                                                                    <span>{mod.criteria} tiêu chí</span>
-                                                                    <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                                                                    <span>{mod.progress}%</span>
-                                                                    <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                                                                    <span>{mod.sessionsNeeded} buổi cần thiết</span>
-                                                                </div>
-                                                            )}
-                                                            {isLocked && (
-                                                                <div className="flex items-center gap-2 text-xs font-semibold mt-1">
-                                                                    <span className="flex items-center gap-1 text-slate-400"><CalendarDays size={12} /> {mod.sessionsBooked}/{mod.sessionsNeeded}b</span>
-                                                                    <span className="flex items-center gap-1 text-slate-400"><Target size={12} /> — </span>
-                                                                    <span className="flex items-center gap-1 text-slate-400"><CheckCircle2 size={12} /> — </span>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Right Action */}
-                                                    <div className="shrink-0 w-full sm:w-auto">
-                                                        {isOngoing && (
-                                                            <button className="w-full sm:w-auto px-6 py-3 bg-[#5A63F6] hover:bg-[#4a53e6] text-white font-bold rounded-xl transition-colors shadow-md flex items-center justify-center gap-2">
-                                                                + Đặt lịch <ArrowRight size={16} />
-                                                            </button>
-                                                        )}
-                                                        {isCompleted && (
-                                                            <button className="w-full sm:w-auto p-2 text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center">
-                                                                <ChevronRight size={20} className="rotate-90" />
-                                                            </button>
-                                                        )}
-                                                        {isLocked && (
-                                                            <button className="w-full sm:w-auto px-6 py-2.5 bg-white border border-slate-200 text-slate-500 font-bold rounded-xl hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
-                                                                Bắt đầu <ChevronRight size={16} className="rotate-90" />
-                                                            </button>
-                                                        )}
-                                                    </div>
-
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                <MyPathsTab
+                    onExplore={() => setActiveTab('explore')}
+                    enrolledPaths={enrolledPaths}
+                    explorePaths={explorePaths}
+                />
             )}
 
-            {/* TAB CONTENT: Khám phá */}
-            {activeTab === 'explore' && (
-                <div className="space-y-6 animate-in fade-in duration-500">
-                    <div className="text-slate-500 font-medium mb-6">Khám phá lộ trình được thiết kế bởi các giáo viên chuyên gia • Đăng ký = học với GV đó suốt lộ trình</div>
-
-                    {explorePaths.map(path => (
-                        <div key={path.id} className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-
-                            {/* Card Header Banner */}
-                            <div className="p-5 md:p-6 border-b border-slate-100 flex flex-col md:flex-row gap-5 justify-between items-start md:items-center relative">
-                                {path.enrolled && <div className="absolute top-0 right-10 w-24 h-[8px] bg-emerald-400 rounded-b-xl"></div>}
-                                <div className="flex gap-4 items-start md:items-center">
-                                    <div className={`w-12 h-12 rounded-xl ${path.logoBg} ${path.logoText} flex items-center justify-center text-2xl font-bold shrink-0 shadow-sm`}>
-                                        {path.emoji}
-                                    </div>
-                                    <div>
-                                        <div className="flex flex-wrap items-center gap-3 mb-1">
-                                            <h2 className="text-xl font-extrabold text-slate-900">{path.title}</h2>
-                                            {path.enrolled && <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-200 text-[10px] font-bold rounded-full flex items-center gap-1">✓ Đã đăng ký</span>}
-                                        </div>
-                                        <p className="text-slate-600 text-sm max-w-2xl mb-3">{path.description}</p>
-                                        <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-500">
-                                            <span className="flex items-center gap-1.5"><Navigation size={14} className="text-blue-500" /> {path.category}</span>
-                                            <span className="flex items-center gap-1.5"><Clock size={14} className="text-slate-400" /> {path.duration}</span>
-                                            <span className="flex items-center gap-1.5"><Target size={14} className="text-emerald-500" /> {path.level}</span>
-                                            <span className="flex items-center gap-1.5 text-amber-600 font-bold"><Zap size={14} className="fill-current" /> {path.totalCredits} credits</span>
-                                            <span className="flex items-center gap-1.5"><Users size={14} className="text-slate-400" /> {path.students} học viên</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="shrink-0 w-full md:w-auto mt-4 md:mt-0">
-                                    {path.enrolled ? (
-                                        <button onClick={() => setActiveTab('my_paths')} className="w-full md:w-auto px-6 py-3 bg-emerald-50 text-emerald-600 border border-emerald-200 font-bold rounded-xl hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2">
-                                            <Play size={16} className="fill-current" /> Xem tiến độ
-                                        </button>
-                                    ) : (
-                                        <button className="w-full md:w-auto px-8 py-3 bg-[#6B72FF] text-white font-bold rounded-xl shadow-md shadow-indigo-200 hover:bg-indigo-600 hover:-translate-y-0.5 transition-all">
-                                            Đăng ký học →
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Card Content: Mentor + Modules Sidebar Layout */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 bg-slate-50/50">
-                                {/* Left: Mentor Info */}
-                                <div className="p-5 md:p-6 border-r border-slate-100/50">
-                                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5"><Briefcase size={12} className="text-emerald-500" /> GIÁO VIÊN</h4>
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white font-extrabold text-xl flex items-center justify-center shadow-sm shrink-0">
-                                            {path.mentor.avatarText}
-                                        </div>
-                                        <div>
-                                            <h5 className="font-extrabold text-slate-900 flex items-center gap-1">
-                                                {path.mentor.name} {path.mentor.verified && <CheckCircle2 size={14} className="text-emerald-500" />}
-                                            </h5>
-                                            <p className="text-xs text-slate-500 mt-0.5 leading-snug max-w-[160px]">{path.mentor.role}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex divide-x divide-slate-200 mb-4 bg-white rounded-xl border border-slate-200 p-2 shadow-sm text-center">
-                                        <div className="flex-1 px-2">
-                                            <div className="text-lg font-black text-slate-800 flex justify-center items-center gap-1">{path.mentor.rating} <Star size={12} className="text-amber-400 fill-current" /></div>
-                                            <div className="text-[9px] font-bold text-slate-400 uppercase">Rating</div>
-                                        </div>
-                                        <div className="flex-1 px-2">
-                                            <div className="text-lg font-black text-slate-800">{path.mentor.students}</div>
-                                            <div className="text-[9px] font-bold text-slate-400 uppercase">HV</div>
-                                        </div>
-                                        <div className="flex-1 px-2">
-                                            <div className="text-lg font-black text-blue-600">{path.mentor.graduates}</div>
-                                            <div className="text-[9px] font-bold text-slate-400 uppercase">Tốt nghiệp</div>
-                                        </div>
-                                    </div>
-
-                                    <div className="text-xs font-bold text-slate-500 flex items-center gap-1.5 justify-center bg-orange-50 text-orange-600 rounded-lg py-2">
-                                        <Zap size={12} className="fill-current" /> {path.mentor.costPerSession} credits/buổi • {path.mentor.totalSessions} buổi tổng
-                                    </div>
-                                </div>
-
-                                {/* Right: Modules Syllabus */}
-                                <div className="md:col-span-2 p-5 md:p-6">
-                                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5"><Book size={12} className="text-emerald-500" /> {path.modules.length} MODULES</h4>
-
-                                    <div className="space-y-4 relative">
-                                        {/* Vertical line connector */}
-                                        <div className="absolute top-4 bottom-4 left-3 w-0.5 bg-slate-200 z-0 hidden sm:block"></div>
-
-                                        {path.modules.map((mod, idx) => (
-                                            <div key={mod.id} className="relative z-10 flex gap-4 items-start hover:bg-white p-3 -mx-3 rounded-xl transition-colors">
-                                                <div className="w-6 h-6 rounded-full bg-white border-2 border-slate-300 text-slate-500 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
-                                                    {path.emoji}
-                                                </div>
-                                                <div>
-                                                    <h5 className="font-extrabold text-slate-800 text-sm mb-1">{idx + 1}. {mod.title}</h5>
-                                                    <p className="text-xs font-medium text-slate-500">{mod.desc}</p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
+            {/* TAB: Khám phá */}
+            {activeTab === 'explore' && <ExploreTab />}
         </div>
     );
 };

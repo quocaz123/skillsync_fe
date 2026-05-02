@@ -12,26 +12,44 @@ import {
     getSlotsBySkill, createSlotsBatch, deleteSlot,
     getMySessions, approveSession, rejectSession
 } from '../../services/sessionService';
+import { toggleTeachingSkillVisibility } from '../../services/skillService.js';
 import { toastError, toastSuccess } from "../../utils/toastUtils";
+import ConfirmModal from '../../components/common/ConfirmModal';
+import Avatar from '../../components/common/Avatar';
+import SessionStatusBadge from '../../components/common/SessionStatusBadge';
+import { SkillDynamicIcon } from '../../components/common/SkillDynamicIcon';
+import UserSkillCard from '../../components/common/UserSkillCard';
+import { getTodayYMD, getMinTimeHHMMForDate } from '../../utils/dateUtils';
+
 
 const { TEACHING_SKILLS } = API_ENDPOINTS;
 
+/** So sánh giờ "HH:mm" — phút từ nửa đêm */
+function timeToMinutes(t) {
+    if (!t || typeof t !== 'string') return NaN;
+    const [h, m] = t.split(':').map(Number);
+    if (Number.isNaN(h) || Number.isNaN(m)) return NaN;
+    return h * 60 + m;
+}
+
+/** Giờ kết thúc mặc định = bắt đầu + 1h (cùng ngày) */
+function addOneHourTime(timeStr) {
+    const [h, m] = timeStr.split(':').map(Number);
+    const d = new Date(2000, 0, 1, h, m || 0, 0, 0);
+    d.setHours(d.getHours() + 1);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
 // â”€â”€ SlotChip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const SlotChip = ({ slot, skillId, onDeleted }) => {
+const SlotChip = ({ slot, onDeleted }) => {
     const cfg = {
         OPEN: { border: 'border-emerald-300 bg-emerald-50', label: '⏳ Trống', labelCls: 'text-emerald-600' },
         BOOKED: { border: 'border-sky-300 bg-sky-50', label: 'Đã đặt', labelCls: 'text-sky-600' },
+        PENDING: { border: 'border-amber-300 bg-amber-50', label: '⏳ Yêu cầu', labelCls: 'text-amber-600' },
     }[slot.status] ?? { border: 'border-slate-200 bg-slate-50', label: slot.status, labelCls: 'text-slate-500' };
 
-    const handleDelete = async () => {
-        if (!window.confirm('Xóa slot này?')) return;
-        try {
-            await deleteSlot(skillId, slot.id);
-            onDeleted(slot.id);
-            toastSuccess("Đã xóa slot.");
-        } catch (e) {
-            toastError(e, "Không thể xóa slot đã được đặt.");
-        }
+    const handleDelete = () => {
+        onDeleted(slot.id);
     };
 
     const d = new Date(`${slot.slotDate}T${slot.slotTime}`);
@@ -65,8 +83,8 @@ const SlotChip = ({ slot, skillId, onDeleted }) => {
 // â”€â”€ Skill Description Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SkillCard = ({ skill }) => (
     <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 flex items-start gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-white border border-violet-200 flex items-center justify-center text-2xl shrink-0 shadow-sm">
-            {skill.skillIcon || 'ðŸ“˜'}
+        <div className="w-12 h-12 rounded-2xl bg-white border border-violet-200 flex items-center justify-center text-xl shrink-0 shadow-sm overflow-hidden text-violet-600">
+            <SkillDynamicIcon skillName={skill.skillName} defaultIcon={skill.skillIcon} size={22} />
         </div>
         <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -89,7 +107,7 @@ const SkillCard = ({ skill }) => (
 // â”€â”€ TabSchedule â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const EMPTY_ROW = () => ({ date: '', startTime: '', endTime: '' });
 
-const TabSchedule = ({ skills }) => {
+const TabSchedule = ({ skills, onToggleVisibility }) => {
     const [selectedSkill, setSelectedSkill] = useState(skills[0] ?? null);
     const [slots, setSlots] = useState([]);
     const [loadingSlots, setLoadingSlots] = useState(false);
@@ -98,8 +116,12 @@ const TabSchedule = ({ skills }) => {
     const [rows, setRows] = useState([EMPTY_ROW()]);
     const [creating, setCreating] = useState(false);
     const [createMsg, setCreateMsg] = useState('');
+    
+    // Modal state
+    const [confirmDeleteSlotId, setConfirmDeleteSlotId] = useState(null);
 
-    const today = new Date().toISOString().split('T')[0];
+    /** Từ hôm nay trở đi (không chọn ngày đã qua) */
+    const minSlotDate = getTodayYMD();
 
     const loadSlots = useCallback(async (skill) => {
         if (!skill) return;
@@ -117,20 +139,64 @@ const TabSchedule = ({ skills }) => {
     useEffect(() => {
         if (selectedSkill) {
             loadSlots(selectedSkill);
-            setRows([EMPTY_ROW(selectedSkill.creditsPerHour || 5)]);
+            setRows([EMPTY_ROW()]);
         }
     }, [selectedSkill, loadSlots]);
 
+    useEffect(() => {
+        setSelectedSkill(prev => {
+            if (!prev) return prev;
+            const fresh = skills.find(s => s.id === prev.id);
+            return fresh ?? prev;
+        });
+    }, [skills]);
+
     const updateRow = (i, field, value) =>
-        setRows(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: value } : r));
+        setRows(prev => prev.map((r, idx) => {
+            if (idx !== i) return r;
+            const next = { ...r, [field]: value };
+            if (field === 'date') {
+                const minT = getMinTimeHHMMForDate(value);
+                if (minT && next.startTime && timeToMinutes(next.startTime) <= timeToMinutes(minT)) {
+                    next.startTime = '';
+                    next.endTime = '';
+                }
+            }
+            if (field === 'startTime' && next.endTime) {
+                const endM = timeToMinutes(next.endTime);
+                const startM = timeToMinutes(next.startTime);
+                if (!Number.isNaN(endM) && !Number.isNaN(startM) && endM <= startM) {
+                    next.endTime = addOneHourTime(next.startTime);
+                }
+            }
+            return next;
+        }));
 
     const addRow = () => setRows(prev => [...prev, EMPTY_ROW(selectedSkill?.creditsPerHour || 5)]);
     const removeRow = (i) => setRows(prev => prev.filter((_, idx) => idx !== i));
 
-    const validRows = rows.filter(r => r.date && r.startTime && r.creditCost > 0);
+    const validRows = rows.filter(r => r.date && r.startTime);
 
     const handleCreate = async () => {
         if (!selectedSkill || validRows.length === 0) return;
+
+        for (const r of validRows) {
+            if (r.endTime) {
+                const sm = timeToMinutes(r.startTime);
+                const em = timeToMinutes(r.endTime);
+                if (!Number.isNaN(sm) && !Number.isNaN(em) && em <= sm) {
+                    toastError(null, 'Giờ kết thúc phải sau giờ bắt đầu (ví dụ không thể bắt đầu 5:00 mà kết thúc 4:00).');
+                    return;
+                }
+            }
+            const tStr = r.startTime.length === 5 ? `${r.startTime}:00` : r.startTime;
+            const startAt = new Date(`${r.date}T${tStr}`);
+            if (Number.isFinite(startAt.getTime()) && startAt.getTime() <= Date.now()) {
+                toastError(null, 'Không thể tạo slot trong quá khứ. Chọn ngày/giờ sau thời điểm hiện tại.');
+                return;
+            }
+        }
+
         setCreating(true);
         setCreateMsg('');
         try {
@@ -138,7 +204,7 @@ const TabSchedule = ({ skills }) => {
                 date: r.date,
                 time: r.startTime,
                 endTime: r.endTime || null,
-                creditCost: r.creditCost
+                creditCost: selectedSkill.creditsPerHour || 0
             }));
             const newSlots = await createSlotsBatch(selectedSkill.id, slotsPayload);
             setSlots(prev => [...prev, ...(Array.isArray(newSlots) ? newSlots : [])]);
@@ -164,21 +230,25 @@ const TabSchedule = ({ skills }) => {
     return (
         <div className="flex flex-col lg:flex-row gap-5">
             {/* Skill picker */}
-            <div className="lg:w-52 shrink-0 space-y-3">
+            <div className="lg:w-60 shrink-0 space-y-2">
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Chọn kỹ năng dạy:</p>
                 {skills.map(s => (
-                    <button key={s.id}
+                    <UserSkillCard
+                        key={s.id}
+                        skill={s}
+                        selected={selectedSkill?.id === s.id}
                         onClick={() => { setSelectedSkill(s); setCreateMsg(''); }}
-                        className={`w-full text-left p-4 rounded-2xl border-2 transition-all ${selectedSkill?.id === s.id ? 'border-violet-400 bg-violet-50' : 'border-slate-100 bg-white hover:border-slate-200'}`}
-                    >
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="text-base">{s.skillIcon || '📘'}</span>
-                            <span className={`font-bold text-sm ${selectedSkill?.id === s.id ? 'text-violet-700' : 'text-slate-700'}`}>{s.skillName}</span>
-                        </div>
-                        <p className="text-[11px] text-slate-400">
-                            {slots.filter(sl => sl.teachingSkillId === s.id && sl.status === 'OPEN').length} slot trống
-                        </p>
-                    </button>
+                        showStatusBadge={false}
+                        actionButtons={
+                            <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); onToggleVisibility?.(s); }}
+                                className={`text-[11px] font-extrabold px-2.5 py-1 rounded-lg transition-colors ${s.hidden ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}
+                            >
+                                {s.hidden ? 'Bật hiện' : 'Tạm ẩn'}
+                            </button>
+                        }
+                    />
                 ))}
             </div>
 
@@ -186,7 +256,16 @@ const TabSchedule = ({ skills }) => {
             <div className="flex-1 bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-6">
 
                 {/* Skill description */}
-                {selectedSkill && <SkillCard skill={selectedSkill} />}
+                {selectedSkill && (
+                    <>
+                        {selectedSkill.hidden && (
+                            <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-2.5 text-xs font-semibold text-amber-900">
+                                Kỹ năng đang <strong>tạm ẩn</strong>: không xuất hiện trên Khám phá / gợi ý AI; học viên mới không đặt lịch. Lịch &amp; buổi học đã có vẫn giữ nguyên.
+                            </div>
+                        )}
+                        <SkillCard skill={selectedSkill} />
+                    </>
+                )}
 
                 {/* Existing slots */}
                 <div>
@@ -201,18 +280,38 @@ const TabSchedule = ({ skills }) => {
                     ) : slots.length === 0 ? (
                         <p className="text-sm text-slate-400">Chưa có slot nào. Hãy thêm bên dưới.</p>
                     ) : (
-                        <div className="flex flex-wrap gap-2">
-                            {slots.map(sl => (
+                        <div className="flex flex-wrap gap-2 max-h-56 overflow-y-auto custom-scrollbar p-1 border border-slate-100 rounded-xl bg-slate-50/30">
+                            {slots.filter(sl => sl.status !== 'CANCELLED').map(sl => (
                                 <SlotChip
                                     key={sl.id}
                                     slot={sl}
                                     skillId={selectedSkill?.id}
-                                    onDeleted={(id) => setSlots(prev => prev.filter(s => s.id !== id))}
+                                    onDeleted={(id) => setConfirmDeleteSlotId(id)}
                                 />
                             ))}
                         </div>
                     )}
                 </div>
+
+                <ConfirmModal 
+                    isOpen={!!confirmDeleteSlotId} 
+                    onCancel={() => setConfirmDeleteSlotId(null)} 
+                    onConfirm={async () => {
+                        try {
+                            await deleteSlot(selectedSkill?.id, confirmDeleteSlotId);
+                            setSlots(prev => prev.filter(s => s.id !== confirmDeleteSlotId));
+                            toastSuccess("Đã xóa slot thành công.");
+                        } catch (e) {
+                            toastError(e, "Không thể xóa slot đã được đặt.");
+                        } finally {
+                            setConfirmDeleteSlotId(null);
+                        }
+                    }}
+                    title="Xác nhận xoá Slot" 
+                    message="Slot sẽ bị loại bỏ khỏi hệ thống. Hành động này không thể hoàn tác."
+                    type="danger"
+                    confirmText="Vâng, Xoá slot"
+                />
 
                 {/* Add slots form */}
                 <div className="border-t border-slate-100 pt-5">
@@ -224,25 +323,25 @@ const TabSchedule = ({ skills }) => {
 
                     <div className="space-y-2 mb-4">
                         {/* Header labels */}
-                        <div className="grid grid-cols-[1fr_1fr_1fr_80px_auto] gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1">
+                        <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider px-1">
                             <span>Ngày dạy</span>
                             <span>Bắt đầu</span>
                             <span>Kết thúc</span>
-                            <span>Credits</span>
                             <span></span>
                         </div>
 
                         {rows.map((row, i) => (
-                            <div key={i} className="grid grid-cols-[1fr_1fr_1fr_80px_auto] gap-2 items-center">
+                            <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center">
                                 <input
                                     type="date"
-                                    min={today}
+                                    min={minSlotDate}
                                     value={row.date}
                                     onChange={e => updateRow(i, 'date', e.target.value)}
                                     className="px-3 py-2.5 rounded-xl border-2 border-slate-100 bg-slate-50 text-sm font-semibold text-slate-700 focus:border-violet-400 focus:bg-white outline-none transition-all w-full"
                                 />
                                 <input
                                     type="time"
+                                    min={getMinTimeHHMMForDate(row.date) ?? undefined}
                                     value={row.startTime}
                                     onChange={e => updateRow(i, 'startTime', e.target.value)}
                                     className="px-3 py-2.5 rounded-xl border-2 border-slate-100 bg-slate-50 text-sm font-semibold text-slate-700 focus:border-violet-400 focus:bg-white outline-none transition-all w-full"
@@ -253,16 +352,6 @@ const TabSchedule = ({ skills }) => {
                                     onChange={e => updateRow(i, 'endTime', e.target.value)}
                                     className="px-3 py-2.5 rounded-xl border-2 border-slate-100 bg-slate-50 text-sm font-semibold text-slate-700 focus:border-violet-400 focus:bg-white outline-none transition-all w-full"
                                 />
-                                <div className="flex items-center gap-1 bg-amber-50 border-2 border-amber-100 rounded-xl px-2 py-2.5 w-full">
-                                    <Lightning size={14} weight="fill" className="text-amber-400 shrink-0" />
-                                    <input
-                                        type="number"
-                                        min={1}
-                                        value={row.creditCost || ''}
-                                        onChange={e => updateRow(i, 'creditCost', Math.max(1, parseInt(e.target.value) || 1))}
-                                        className="w-full bg-transparent text-sm font-extrabold text-amber-700 focus:outline-none"
-                                    />
-                                </div>
                                 {rows.length > 1 ? (
                                     <button onClick={() => removeRow(i)}
                                         className="w-8 h-8 rounded-xl bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-all shrink-0">
@@ -289,8 +378,8 @@ const TabSchedule = ({ skills }) => {
                             onClick={handleCreate}
                             disabled={creating || validRows.length === 0}
                             className={`ml-auto flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${!creating && validRows.length > 0
-                                    ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm'
-                                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm'
+                                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                                 }`}
                         >
                             {creating ? <Spinner size={14} className="animate-spin" /> : <Plus size={14} weight="bold" />}
@@ -317,16 +406,16 @@ const TabSubjects = ({ skills, onSelectSkill }) => {
             {skills.map(skill => (
                 <div key={skill.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                     <div className="p-6 pb-4 flex flex-col md:flex-row md:items-start gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-violet-100 flex items-center justify-center text-2xl shrink-0">
-                            {skill.skillIcon || '📘'}
+                        <div className="w-12 h-12 rounded-2xl bg-violet-100 flex items-center justify-center text-xl shrink-0 text-violet-600">
+                            <SkillDynamicIcon skillName={skill.skillName} defaultIcon={skill.skillIcon} size={22} />
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-2 mb-1">
                                 <h3 className="font-extrabold text-slate-900 text-lg">{skill.skillName}</h3>
                                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{skill.level}</span>
                                 <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${skill.verificationStatus === 'APPROVED'
-                                        ? 'bg-emerald-100 text-emerald-600'
-                                        : 'bg-amber-100 text-amber-600'
+                                    ? 'bg-emerald-100 text-emerald-600'
+                                    : 'bg-amber-100 text-amber-600'
                                     }`}>
                                     {skill.verificationStatus === 'APPROVED' ? '✅ Đã duyệt' : '⏳ Chờ duyệt'}
                                 </span>
@@ -366,6 +455,7 @@ const TabRequests = ({ navigate }) => {
     const [scheduledSessions, setScheduledSessions] = useState([]);
     const [pendingSessions, setPendingSessions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [rejectConfirmId, setRejectConfirmId] = useState(null);
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -398,14 +488,20 @@ const TabRequests = ({ navigate }) => {
         }
     };
 
-    const handleReject = async (id) => {
-        if (!window.confirm('Bạn có chắc muốn từ chối yêu cầu này?')) return;
+    const handleReject = (id) => {
+        setRejectConfirmId(id);
+    };
+
+    const confirmReject = async () => {
+        if (!rejectConfirmId) return;
         try {
-            await rejectSession(id);
+            await rejectSession(rejectConfirmId);
             loadData();
             toastSuccess("Đã từ chối lịch học.");
         } catch (e) {
             toastError(e, "Không thể từ chối yêu cầu này.");
+        } finally {
+            setRejectConfirmId(null);
         }
     };
 
@@ -432,14 +528,20 @@ const TabRequests = ({ navigate }) => {
                                 <div className="absolute top-0 left-0 w-1 bg-violet-400 bottom-0" />
                                 <div className="flex flex-col md:flex-row md:items-start gap-4">
                                     <div className="flex items-start gap-3 flex-1">
-                                        <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center font-extrabold text-sm shrink-0">
-                                            {session.learnerName?.charAt(0) || 'L'}
-                                        </div>
+                                        <Avatar
+                                            src={session.learnerAvatar}
+                                            fallback={session.learnerName?.charAt(0) || 'L'}
+                                            size="w-10 h-10"
+                                            rounded="rounded-xl"
+                                            extra="bg-violet-100 text-violet-600 font-extrabold"
+                                        />
                                         <div className="flex-1">
                                             <div className="flex flex-wrap items-center gap-2 mb-1.5">
                                                 <span className="font-extrabold text-slate-900 text-sm">{session.learnerName}</span>
                                                 <span className="text-[11px] text-slate-500">muốn học</span>
-                                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-xl bg-slate-100 text-slate-700">{session.skillIcon} {session.skillName}</span>
+                                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-xl bg-slate-100 text-slate-700 flex items-center gap-1">
+                                                    <SkillDynamicIcon skillName={session.skillName} defaultIcon={session.skillIcon} size={12} /> {session.skillName}
+                                                </span>
                                             </div>
                                             <div className="flex flex-wrap gap-3 text-xs text-slate-600 font-medium bg-slate-50 border border-slate-100 px-3 py-2 rounded-xl inline-flex mb-3">
                                                 <span className="flex items-center gap-1"><CalendarCheck size={14} weight="duotone" className="text-violet-500" />
@@ -490,15 +592,21 @@ const TabRequests = ({ navigate }) => {
                             <div key={session.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
                                 <div className="flex flex-col md:flex-row md:items-center gap-4">
                                     <div className="flex items-center gap-3 flex-1">
-                                        <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm shrink-0 border border-slate-200">
-                                            {session.learnerName?.charAt(0) || 'L'}
-                                        </div>
+                                        <Avatar
+                                            src={session.learnerAvatar}
+                                            fallback={session.learnerName?.charAt(0) || 'L'}
+                                            size="w-10 h-10"
+                                            rounded="rounded-full"
+                                            extra="bg-slate-100 text-slate-600 border border-slate-200"
+                                        />
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-1">
                                                 <span className="font-bold text-slate-800 text-sm">{session.learnerName}</span>
-                                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold">Chờ học</span>
+                                                <SessionStatusBadge status="SCHEDULED" extra="text-[10px] px-2 py-0.5 rounded-full" />
                                             </div>
-                                            <p className="text-xs text-slate-500 mb-1">Dạy: {session.skillIcon} {session.skillName}</p>
+                                            <div className="text-xs text-slate-500 mb-1 flex items-center gap-1">
+                                                Dạy: <SkillDynamicIcon skillName={session.skillName} defaultIcon={session.skillIcon} size={12} /> {session.skillName}
+                                            </div>
                                             <div className="flex gap-3 text-xs text-slate-500 font-semibold">
                                                 <span>Ngày: {dt.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}</span>
                                                 <span>Giờ: {dt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -517,6 +625,16 @@ const TabRequests = ({ navigate }) => {
                     })}
                 </div>
             )}
+            
+            <ConfirmModal 
+                isOpen={!!rejectConfirmId} 
+                onCancel={() => setRejectConfirmId(null)} 
+                onConfirm={confirmReject} 
+                title="Từ chối yêu cầu học" 
+                message="Bạn sắp từ chối lịch học này. Học viên sẽ nhận được thông báo và tiền sẽ không được chuyển vào Escrow."
+                type="warning"
+                confirmText="Từ chối yêu cầu"
+            />
         </div>
     );
 };
@@ -533,21 +651,32 @@ const TeachingManagement = () => {
     const [skills, setSkills] = useState([]);
     const [loadingSkills, setLoadingSkills] = useState(true);
 
-    // Chá»‰ láº¥y ká»¹ nÄƒng Ä‘Ã£ Ä‘Æ°á»£c APPROVED
-    useEffect(() => {
-        const load = async () => {
-            try {
-                const res = await httpClient.get(TEACHING_SKILLS.GET_MY);
-                const data = res?.result ?? (Array.isArray(res) ? res : []);
-                setSkills(data.filter(s => s.verificationStatus === 'APPROVED'));
-            } catch (_) {
-                setSkills([]);
-            } finally {
-                setLoadingSkills(false);
-            }
-        };
-        load();
+    const loadApprovedSkills = useCallback(async () => {
+        setLoadingSkills(true);
+        try {
+            const res = await httpClient.get(TEACHING_SKILLS.GET_MY);
+            const data = Array.isArray(res) ? res : [];
+            setSkills(data.filter(s => s.verificationStatus === 'APPROVED'));
+        } catch {
+            setSkills([]);
+        } finally {
+            setLoadingSkills(false);
+        }
     }, []);
+
+    useEffect(() => {
+        loadApprovedSkills();
+    }, [loadApprovedSkills]);
+
+    const handleToggleVisibility = async (skill) => {
+        try {
+            const updated = await toggleTeachingSkillVisibility(skill.id);
+            setSkills(prev => prev.map(s => (s.id === skill.id ? { ...s, hidden: updated.hidden } : s)));
+            toastSuccess(updated.hidden ? 'Đã tạm ẩn — Explore & AI không gợi ý kỹ năng này nữa.' : 'Đã hiển thị lại trên Explore & AI.');
+        } catch (e) {
+            toastError(e, 'Không thể đổi trạng thái hiển thị.');
+        }
+    };
 
     return (
         <div className="max-w-6xl mx-auto font-sans pb-4 space-y-5 sm:space-y-6">
@@ -560,7 +689,7 @@ const TeachingManagement = () => {
                     <p className="text-sm text-slate-400 mt-1">Xem danh sách đã duyệt · tạo lịch rảnh · quản lý yêu cầu · vào lớp</p>
                 </div>
                 <button
-                    onClick={() => navigate('/app/teaching/create')}
+                    onClick={() => navigate('/app/profile')}
                     className="flex items-center justify-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white font-bold text-sm rounded-xl shadow-md shadow-violet-200 active:scale-95 transition-all"
                 >
                     <Plus size={16} weight="bold" /> Đăng ký kỹ năng mới
@@ -593,7 +722,7 @@ const TeachingManagement = () => {
                     </div>
                 ) : (
                     <>
-                        {activeTab === 'schedule' && <TabSchedule skills={skills} />}
+                        {activeTab === 'schedule' && <TabSchedule skills={skills} onToggleVisibility={handleToggleVisibility} />}
                         {activeTab === 'requests' && <TabRequests navigate={navigate} />}
                     </>
                 )}
