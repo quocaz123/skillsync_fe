@@ -86,6 +86,9 @@ axiosClient.interceptors.response.use(
             } catch (refreshError) {
                 processQueue(refreshError);
                 useStore.getState().logout();
+                if (window.location.pathname !== '/login') {
+                    window.location.href = '/login?session_expired=true';
+                }
                 return Promise.reject(refreshError);
             } finally {
                 isRefreshing = false;

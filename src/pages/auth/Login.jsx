@@ -118,7 +118,7 @@ const Login = () => {
                                 to="/forgot-password"
                                 className="text-sm font-medium text-primary-600 hover:text-primary-700"
                             >
-                                Quên mật khẩu? / Thiết lập mật khẩu
+                                Forgot password?
                             </Link>
                         </div>
                         <div className="relative">
@@ -164,9 +164,7 @@ const Login = () => {
                     </Link>
                 </div>
 
-                <p className="text-xs text-center text-slate-400 mt-4">
-                    Tài khoản admin do backend gán role ADMIN — không còn mock theo email.
-                </p>
+               
             </div>
         </div>
     );

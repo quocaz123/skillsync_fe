@@ -68,7 +68,7 @@ const AdminUsers = () => {
         u.email?.toLowerCase().includes(search.toLowerCase())
     );
 
-    const totalBanned = users.filter(u => u.banned).length;
+    const totalBanned = users.filter(u => u.status === 'BANNED').length;
     const totalMentors = users.filter(u => u.role === 'MENTOR').length;
 
     return (
@@ -168,7 +168,7 @@ const AdminUsers = () => {
                                             {u.creditsBalance ?? 0}
                                         </td>
                                         <td className="px-6 py-4">
-                                            {u.banned ? (
+                                            {u.status === 'BANNED' ? (
                                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-50 text-rose-700 border border-rose-100 rounded-full text-[11px] font-extrabold">
                                                     <ShieldSlash size={12} weight="fill" /> Bị cấm
                                                 </span>
@@ -184,16 +184,16 @@ const AdminUsers = () => {
                                                     onClick={() => handleToggleClick(u)}
                                                     disabled={togglingId === u.id}
                                                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-50
-                                                        ${u.banned
+                                                        ${u.status === 'BANNED'
                                                             ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-500 hover:text-white border border-emerald-200'
                                                             : 'bg-rose-50 text-rose-700 hover:bg-rose-500 hover:text-white border border-rose-200'
                                                         }`}
                                                 >
                                                     {togglingId === u.id
                                                         ? <CircleNotch size={14} className="animate-spin" />
-                                                        : u.banned ? <ShieldCheck size={14} weight="duotone" /> : <ShieldSlash size={14} weight="duotone" />
+                                                        : u.status === 'BANNED' ? <ShieldCheck size={14} weight="duotone" /> : <ShieldSlash size={14} weight="duotone" />
                                                     }
-                                                    {u.banned ? 'Gỡ cấm' : 'Cấm'}
+                                                    {u.status === 'BANNED' ? 'Gỡ cấm' : 'Cấm'}
                                                 </button>
                                             </div>
                                         </td>
@@ -209,12 +209,12 @@ const AdminUsers = () => {
                 isOpen={!!confirmUserToggle}
                 onCancel={() => setConfirmUserToggle(null)}
                 onConfirm={executeToggleBan}
-                title={confirmUserToggle?.banned ? "Gỡ cấm người dùng" : "Cấm người dùng"}
-                message={confirmUserToggle?.banned 
-                    ? `Bạn có chắc muốn khôi phục quyền truy cập cho tài khoản "${confirmUserToggle?.email}"?` 
+                title={confirmUserToggle?.status === 'BANNED' ? "Gỡ cấm người dùng" : "Cấm người dùng"}
+                message={confirmUserToggle?.status === 'BANNED'
+                    ? `Bạn có chắc muốn khôi phục quyền truy cập cho tài khoản "${confirmUserToggle?.email}"?`
                     : `Tài khoản "${confirmUserToggle?.email}" sẽ bị khóa và không thể đăng nhập. Hệ thống sẽ ghi nhận lịch sử xử phạt.`}
-                type={confirmUserToggle?.banned ? "success" : "danger"}
-                confirmText={confirmUserToggle?.banned ? "Xác nhận gỡ cấm" : "Khóa tài khoản"}
+                type={confirmUserToggle?.status === 'BANNED' ? "success" : "danger"}
+                confirmText={confirmUserToggle?.status === 'BANNED' ? "Xác nhận gỡ cấm" : "Khóa tài khoản"}
             />
         </div>
     );

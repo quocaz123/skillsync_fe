@@ -41,6 +41,7 @@ const SidebarContent = ({ onLinkClick, isCollapsed, location, user, credits, han
                         { path: '/app/explore', label: 'Khám phá', icon: Compass },
                         { path: '/app/sessions', label: 'Buổi học', icon: Clock },
                         { path: '/app/teaching', label: 'Quản lý dạy', icon: ChalkboardTeacher },
+                        { path: '/mentor/learning-paths', label: 'Quản lí khóa học', icon: NotePencil },
                         { path: '/app/community', label: 'Cộng đồng', icon: UsersThree },
                         { path: '/app/learning-path', label: 'Lộ trình học', icon: Path },
                         { path: '/app/missions', label: 'Nhiệm vụ', icon: Target },
