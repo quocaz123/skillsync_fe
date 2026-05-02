@@ -19,9 +19,10 @@ const useNotificationSocket = (onNewNotification, onUnreadCountChange) => {
     useEffect(() => {
         if (!isAuthenticated) return;
 
-        // Use standard path for SockJS. SockJS fallback includes cookie implicitly if withCredentials is true
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/skillsync';
-        const socketUrl = `${baseUrl}/ws`;
+        // SockJS: có thể trỏ ws subdomain riêng (cloudflared). Mặc định cùng host với API.
+        const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/skillsync';
+        const wsBase = import.meta.env.VITE_WS_BASE_URL || apiBase;
+        const socketUrl = `${wsBase}/ws`;
 
         const stompClient = new Client({
             webSocketFactory: () => new SockJS(socketUrl),

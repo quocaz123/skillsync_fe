@@ -33,6 +33,7 @@ out/
 .env.production.local
 .env.test
 .env.test.local
+.env.example
 
 # ============================================
 # IDE & EDITOR SETTINGS
