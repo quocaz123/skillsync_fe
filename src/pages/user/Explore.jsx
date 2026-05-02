@@ -417,6 +417,7 @@ const Explore = () => {
         }
     }, [location.state, mentors, loadingMentors]);
 
+    // Tải danh mục skill sau (idle / micro-delay) để ưu tiên request Explore — cảm nhận tải nhanh hơn.
     useEffect(() => {
         const loadSkills = async () => {
             try {
@@ -426,7 +427,12 @@ const Explore = () => {
                 console.error('Lỗi lấy danh sách skills:', err);
             }
         };
-        loadSkills();
+        if (typeof requestIdleCallback !== 'undefined') {
+            const id = requestIdleCallback(() => { loadSkills(); }, { timeout: 2500 });
+            return () => cancelIdleCallback(id);
+        }
+        const t = setTimeout(loadSkills, 1);
+        return () => clearTimeout(t);
     }, []);
 
     // Fetch lịch trống khi click vào mentor
