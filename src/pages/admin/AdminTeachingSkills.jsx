@@ -166,12 +166,17 @@ const AdminTeachingSkills = () => {
         <div className="overflow-x-auto min-h-[300px]">
           {loading ? (
             <div className="flex items-center justify-center h-40 text-slate-400 gap-2">
-              <CircleNotch size={20} className="animate-spin text-[#5A63F6]" /> Đang tải dữ liệu...
+              <CircleNotch size={20} className="animate-spin text-[#5A63F6]" />{" "}
+              Đang tải dữ liệu...
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center">
               <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3">
-                <CheckCircle size={24} weight="duotone" className="text-slate-300" />
+                <CheckCircle
+                  size={24}
+                  weight="duotone"
+                  className="text-slate-300"
+                />
               </div>
               <p className="font-bold text-slate-600">
                 Không có hồ sơ nào cần duyệt
@@ -272,8 +277,12 @@ const AdminTeachingSkills = () => {
           <div className="bg-white w-full max-w-3xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
               <h2 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-                <ShieldCheck size={18} weight="duotone" className="text-[#5A63F6]" /> Xét duyệt hồ sơ
-                giảng dạy
+                <ShieldCheck
+                  size={18}
+                  weight="duotone"
+                  className="text-[#5A63F6]"
+                />{" "}
+                Xét duyệt hồ sơ giảng dạy
               </h2>
               <button
                 onClick={() => setSelectedSkill(null)}

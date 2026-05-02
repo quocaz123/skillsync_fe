@@ -12,7 +12,9 @@
   --color-primary-800: #5b21b6;
   --color-primary-900: #4c1d95;
 
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "sans-serif";
+  --font-sans:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    "sans-serif";
 }
 
 @layer base {
@@ -140,7 +142,6 @@
 }
 
 @keyframes glowPulse {
-
   0%,
   100% {
     opacity: 1;
@@ -149,7 +150,7 @@
   }
 
   50% {
-    opacity: .7;
+    opacity: 0.7;
     transform: scale(1.05);
     box-shadow: 0 0 40px rgba(124, 58, 237, 0.1);
   }
@@ -186,5 +187,129 @@
 
   100% {
     transform: translateY(-50%);
+  }
+}
+
+/* Glow Blob Animations for Hero Banner */
+@keyframes glowBlobLeft {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes glowBlobRight {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(-360deg);
+  }
+}
+
+/* Custom Pulse Animations */
+@keyframes customPulseLeft {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes customPulseRight {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+/* Slide In Animation */
+@keyframes slideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Animation Utility Classes */
+@layer utilities {
+  .animate-glow-blob-left {
+    animation: glowBlobLeft 8s linear infinite;
+    will-change: transform;
+    backface-visibility: hidden;
+    perspective: 1000px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .animate-glow-blob-right {
+    animation: glowBlobRight 10s linear infinite reverse;
+    will-change: transform;
+    backface-visibility: hidden;
+    perspective: 1000px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .animate-custom-pulse-left {
+    animation: customPulseLeft 6s ease-in-out infinite;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    perspective: 1000px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .animate-custom-pulse-right {
+    animation: customPulseRight 8s ease-in-out infinite;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    perspective: 1000px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .animate-slide-in {
+    animation: slideIn 0.5s ease-out;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    perspective: 1000px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Custom Scrollbar Styles */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(124, 58, 237, 0.4) transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(124, 58, 237, 0.4);
+    border-radius: 3px;
+    transition: background 0.3s ease;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(124, 58, 237, 0.6);
   }
 }
