@@ -76,6 +76,13 @@ const Profile = () => {
           if (p.avatarUrl) setAvatarUrl(p.avatarUrl);
           if (setUser) setUser((prev) => ({ ...prev, ...p }));
           setBioValue(p.bio || "");
+
+          if (p.totalTeachingSessions > 0) {
+            trackAction("FIRST_SESSION_TAUGHT").catch(console.error);
+          }
+          if (p.totalLearningSessions > 0) {
+            trackAction("FIRST_SESSION_JOINED").catch(console.error);
+          }
         }
       })
       .catch((err) => console.error("Failed to load profile:", err));
@@ -115,6 +122,7 @@ const Profile = () => {
         setAvatarUrl(newUrl);
         setProfile((prev) => ({ ...prev, avatarUrl: newUrl }));
         if (setUser) setUser((prev) => ({ ...prev, avatarUrl: newUrl }));
+        trackAction("UPDATE_PROFILE").catch(console.error);
       }
     } catch (err) {
       console.error("Avatar upload failed:", err);
@@ -133,6 +141,7 @@ const Profile = () => {
       if (updated) {
         setProfile((prev) => ({ ...prev, bio: updated.bio }));
         if (setUser) setUser((prev) => ({ ...prev, bio: updated.bio }));
+        trackAction("UPDATE_PROFILE").catch(console.error);
       }
       setBioEditing(false);
     } catch (err) {

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "../../store";
 import { getMySessions, confirmSession } from "../../services/sessionService";
+import { trackAction } from "../../services/missionService";
 import { createSessionReport } from "../../services/reportService";
 import { createSessionReview } from "../../services/reviewService";
 import {
@@ -143,6 +144,7 @@ const Sessions = () => {
           s.id === sessionId ? { ...s, status: "COMPLETED" } : s,
         ),
       );
+      trackAction("FIRST_SESSION_JOINED").catch(console.error);
       alert("Đã xác nhận hoàn thành buổi học!");
     } catch (error) {
       alert(
