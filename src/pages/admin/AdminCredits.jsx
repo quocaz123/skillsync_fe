@@ -7,6 +7,9 @@ import {
   ArrowsClockwise,
   X,
   CurrencyCircleDollar,
+  Coins,
+  ChartBar,
+  ClipboardText,
 } from "@phosphor-icons/react";
 import httpClient from "../../configuration/axiosClient";
 import API_ENDPOINTS from "../../configuration/apiEndpoints";
@@ -196,10 +199,10 @@ const AdminCredits = () => {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Credits tương tác", value: totalCirculating.toLocaleString(), icon: "💰", bg: "bg-amber-50", border: "border-amber-100", color: "text-amber-700" },
-          { label: "GD hôm nay", value: todayCount.toLocaleString(), icon: "📊", bg: "bg-blue-50", border: "border-blue-100", color: "text-blue-700" },
-          { label: "Tổng giao dịch", value: (Array.isArray(transactions) ? transactions.length : 0).toLocaleString(), icon: "📋", bg: "bg-slate-50", border: "border-slate-100", color: "text-slate-700" },
-          { label: "Giao dịch nghi ngờ", value: totalSuspicious.toLocaleString(), icon: "⚠️", bg: "bg-rose-50", border: "border-rose-100", color: "text-rose-700" },
+          { label: "Credits tương tác", value: totalCirculating.toLocaleString(), icon: <Coins size={24} weight="duotone" className="text-amber-600" />, bg: "bg-amber-50", border: "border-amber-100", color: "text-amber-700" },
+          { label: "GD hôm nay", value: todayCount.toLocaleString(), icon: <ChartBar size={24} weight="duotone" className="text-blue-600" />, bg: "bg-blue-50", border: "border-blue-100", color: "text-blue-700" },
+          { label: "Tổng giao dịch", value: (Array.isArray(transactions) ? transactions.length : 0).toLocaleString(), icon: <ClipboardText size={24} weight="duotone" className="text-slate-600" />, bg: "bg-slate-50", border: "border-slate-100", color: "text-slate-700" },
+          { label: "Giao dịch nghi ngờ", value: totalSuspicious.toLocaleString(), icon: <Warning size={24} weight="duotone" className="text-rose-600" />, bg: "bg-rose-50", border: "border-rose-100", color: "text-rose-700" },
         ].map((s) => (
           <div key={s.label} className={`${s.bg} border ${s.border} rounded-2xl p-5 flex items-center gap-4`}>
             <div className="w-10 h-10 rounded-2xl bg-white/70 border border-white flex items-center justify-center text-xl">
@@ -236,7 +239,7 @@ const AdminCredits = () => {
       <div className="flex items-center gap-3 flex-wrap">
         <input
           type="text"
-          placeholder="🔍 Tìm theo tên/email/userId/txId..."
+          placeholder="Tìm theo tên/email/userId/txId..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="flex-1 min-w-[240px] border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#5A63F6] focus:ring-1 focus:ring-[#5A63F6] shadow-sm bg-white"
@@ -434,7 +437,7 @@ const AdminCredits = () => {
                 </label>
                 <input
                   type="text"
-                  placeholder="🔍 Tìm nhanh Tên hoặc Email..."
+                  placeholder="Tìm nhanh Tên hoặc Email..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
                   className="w-full border border-slate-200 rounded-t-2xl border-b-0 px-6 py-4 text-base bg-slate-50 text-slate-700 outline-none"
