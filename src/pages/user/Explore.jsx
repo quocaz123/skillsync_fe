@@ -83,7 +83,6 @@ const TabIntro = ({ mentor }) => (
 // ─── TAB: Bằng chứng năng lực ────────────────────────────────────────────
 const TabCredentials = ({ mentor }) => (
     <div className="space-y-5">
-        {/* Trust Score */}
         {mentor.evidences.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-100 p-6">
             <h3 className="font-extrabold text-slate-900 text-sm mb-1 flex items-center gap-2">

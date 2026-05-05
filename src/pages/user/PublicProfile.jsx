@@ -86,7 +86,6 @@ const PublicProfile = () => {
   const joinedDate = profile.createdAt
     ? new Date(profile.createdAt).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })
     : null;
-  const trustScore = profile.trustScore ?? 50;
   const averageRating = profile.averageRating;
   const totalTeachingSessions = profile.totalTeachingSessions ?? 0;
   const totalLearningSessions = profile.totalLearningSessions ?? 0;
@@ -156,7 +155,6 @@ const PublicProfile = () => {
               { icon: ChalkboardTeacher, label: 'Buổi dạy', value: totalTeachingSessions, color: 'text-indigo-500', bg: 'bg-indigo-50' },
               { icon: Laptop, label: 'Buổi học', value: totalLearningSessions, color: 'text-emerald-500', bg: 'bg-emerald-50' },
               { icon: Star, label: 'Đánh giá', value: averageRating != null ? averageRating.toFixed(1) : '—', color: 'text-yellow-500', bg: 'bg-yellow-50', fill: true },
-              { icon: Heartbeat, label: 'Niềm tin', value: trustScore, color: 'text-rose-500', bg: 'bg-rose-50' },
             ].map(({ icon: Icon, label, value, color, bg, fill }) => (
               <div key={label} className="flex flex-col items-center shrink-0 min-w-[70px]">
                 <div className={`w-11 h-11 ${bg} rounded-2xl flex items-center justify-center mb-2`}>
@@ -243,33 +241,6 @@ const PublicProfile = () => {
             ) : (
               <p className="text-slate-400 text-sm italic">Người dùng chưa viết giới thiệu.</p>
             )}
-          </div>
-
-          {/* Trust Score */}
-          <div className="bg-white rounded-[2rem] border border-slate-200/60 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-            <h3 className="text-base font-black text-slate-900 mb-4 flex items-center gap-2">
-              <Medal size={22} weight="duotone" className="text-amber-500" />
-              Điểm uy tín
-            </h3>
-            <div className="flex items-end gap-1 mb-3">
-              <span className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-rose-500">
-                {trustScore}
-              </span>
-              <span className="text-slate-400 font-bold mb-0.5">/ 100</span>
-            </div>
-            <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-amber-400 to-rose-500 transition-all duration-700"
-                style={{ width: `${Math.min(trustScore, 100)}%` }}
-              />
-            </div>
-            <p className="text-xs text-slate-500 mt-3 bg-amber-50 p-3 rounded-xl border border-amber-100">
-              {trustScore >= 80
-                ? '🌟 Hạng S — Trust Score xuất sắc!'
-                : trustScore >= 50
-                ? '✅ Hạng A — Thành viên tích cực'
-                : '⚠️ Hạng B — Cần cải thiện'}
-            </p>
           </div>
 
           {/* CTA đặt lịch */}

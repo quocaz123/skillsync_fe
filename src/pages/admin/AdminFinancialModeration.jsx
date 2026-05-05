@@ -544,7 +544,7 @@ const AdminFinancialModeration = () => {
                                             </li>
                                             <li className="flex items-start gap-2">
                                                 <Warning size={20} className="text-rose-500 shrink-0 mt-0.5" weight="fill" /> 
-                                                <span>Gia sư <b className="text-slate-800">{confirmModal.reportedName}</b> sẽ bị phạt <b>1 gậy (1 strike)</b> và trừ <b>5 điểm uy tín</b>.</span>
+                                                <span>Gia sư <b className="text-slate-800">{confirmModal.reportedName}</b> sẽ bị ghi nhận vi phạm vào hệ thống.</span>
                                             </li>
                                         </ul>
                                     </>

@@ -161,7 +161,6 @@ const Profile = () => {
   // Derived display values
   const displayName = profile?.name || user?.name || "User";
   const credits = profile?.creditsBalance ?? user?.creditsBalance ?? 0;
-  const trustScore = profile?.trustScore ?? 50;
   const averageRating = profile?.averageRating;
   const totalTeachingSessions = profile?.totalTeachingSessions ?? 0;
   const totalLearningSessions = profile?.totalLearningSessions ?? 0;
@@ -322,21 +321,6 @@ const Profile = () => {
               </h3>
               <p className="text-slate-400 text-xs sm:text-sm font-bold">
                 Đánh giá{totalReviews > 0 ? ` (${totalReviews})` : ""}
-              </p>
-            </div>
-            <div className="flex flex-col items-center shrink-0 min-w-[70px] group/stat">
-              <div className="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center mb-2 group-hover/stat:scale-110 group-hover/stat:bg-rose-100 transition-all">
-                <Heartbeat
-                  size={26}
-                  weight="duotone"
-                  className="text-rose-500"
-                />
-              </div>
-              <h3 className="text-2xl font-black text-slate-800 tracking-tight">
-                {trustScore}
-              </h3>
-              <p className="text-slate-400 text-xs sm:text-sm font-bold">
-                Niềm tin
               </p>
             </div>
           </div>
@@ -698,38 +682,6 @@ const Profile = () => {
                   Tham gia từ {joinedDate}
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* Trust Score Card */}
-          <div className="bg-white rounded-[2rem] border border-slate-200/60 p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group">
-            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-amber-100 rounded-full mix-blend-multiply filter blur-[50px] opacity-60 group-hover:scale-125 transition-transform duration-1000"></div>
-            <h3 className="text-lg font-black text-slate-900 mb-5 flex items-center gap-2 relative z-10">
-              <Medal size={24} weight="duotone" className="text-amber-500" />{" "}
-              Điểm phân hạng uy tín
-            </h3>
-            <div className="relative z-10">
-              <div className="flex items-end gap-2 mb-3">
-                <span className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-rose-500 tracking-tighter">
-                  {trustScore}
-                </span>
-                <span className="text-slate-400 font-extrabold mb-1">
-                  / 100
-                </span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden shadow-inner p-0.5">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 transition-all duration-1000 shadow-sm"
-                  style={{ width: `${Math.min(trustScore, 100)}%` }}
-                />
-              </div>
-              <div className="mt-4 bg-amber-50/50 border border-amber-100 text-amber-800 rounded-xl p-3 text-xs font-semibold leading-relaxed">
-                {trustScore >= 80
-                  ? "🌟 Hạng S: Bạn sở hữu Trust Score tuyệt đối. Được phép dạy mở khóa slot tự do!"
-                  : trustScore >= 50
-                    ? "✅ Hạng A: Bạn là thành viên tích cực, hoàn thành tốt các chỉ tiêu hệ thống."
-                    : "⚠️ Hạng B: Điểm uy tín khá thấp. Cẩn trọng với các đánh giá xấu nhé!"}
-              </div>
             </div>
           </div>
         </div>
