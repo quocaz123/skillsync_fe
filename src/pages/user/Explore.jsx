@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useStore } from '../../store';
 import * as sessionService from '../../services/sessionService';
-import { getAllSkills, getExploreTeachingSkills } from '../../services/skillService';
+import { getAllSkills, getExploreTeachingSkills, getApprovedTeachingSkills } from '../../services/skillService';
 import { getMyProfile } from '../../services/userService';
 import {
     MagnifyingGlass, Star, Sparkle, ArrowLeft, ChatCircle,
@@ -414,6 +414,21 @@ const Explore = () => {
             setActiveTab('intro');
             // Xoá state khỏi history để không bị re-trigger khi navigate lại
             window.history.replaceState({}, '');
+        } else {
+            // Mentor might not be on the first page, let's fetch and map it
+            getApprovedTeachingSkills().then(allSkills => {
+                const mySkills = Array.isArray(allSkills) ? allSkills.filter(s => String(s.teacherId) === String(targetId)) : [];
+                if (mySkills.length > 0) {
+                    const mapped = mapSkillToMentor(mySkills[0]); // open the first matching skill
+                    setSelectedMentor(mapped);
+                    setBookingStep(0);
+                    setActiveTab('intro');
+                    window.history.replaceState({}, '');
+                } else {
+                    // Fallback if somehow not found at all
+                    window.history.replaceState({}, '');
+                }
+            }).catch(e => console.error("Error fetching mentor skill", e));
         }
     }, [location.state, mentors, loadingMentors]);
 

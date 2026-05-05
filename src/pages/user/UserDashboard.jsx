@@ -14,6 +14,12 @@ import {
   Calendar,
   Sparkle,
   CircleNotch,
+  Trophy,
+  ChatCircle,
+  Target,
+  Certificate,
+  UsersThree,
+  Rocket,
 } from "@phosphor-icons/react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -248,100 +254,147 @@ const UserDashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto font-sans pb-10 space-y-6 sm:space-y-8">
-      {/* ─── HERO BANNER (ANIMATED MULTI-LAYER) ─── */}
+      {/* ─── HERO BANNER (ANIMATED) ─── */}
       <div
-        className="relative rounded-3xl px-6 py-8 sm:p-12 shadow-xl border border-white/20 bg-slate-900 group"
+        className="relative rounded-3xl px-6 py-10 sm:px-12 sm:py-14 shadow-xl border border-white/20 bg-slate-900 group"
         style={{ overflow: "hidden", isolation: "isolate" }}
       >
-        {/* Background Base with Rounded Corners */}
-        <div
-          className="absolute inset-0 rounded-3xl bg-gradient-to-br from-[#4f46e5] via-[#7c3aed] to-[#c026d3]"
-          style={{ pointerEvents: "none" }}
-        />
+        {/* Background gradient */}
+        <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-[#4f46e5] via-[#7c3aed] to-[#c026d3]" style={{ pointerEvents: "none" }} />
 
-        {/* Animated Gradient Blob 1 - Left side - positioned inside container */}
-        <div
-          className="absolute -top-20 -left-20 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-glow-blob-left"
-          style={{ pointerEvents: "none" }}
-        />
+        {/* Animated blobs */}
+        <div className="absolute -top-20 -left-20 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-glow-blob-left" style={{ pointerEvents: "none" }} />
+        <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-fuchsia-400 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-glow-blob-right" style={{ pointerEvents: "none" }} />
+        <div className="absolute inset-0 rounded-3xl bg-black/5" style={{ pointerEvents: "none" }} />
 
-        {/* Animated Gradient Blob 2 - Right side - positioned inside container */}
-        <div
-          className="absolute -bottom-20 -right-20 w-96 h-96 bg-fuchsia-400 rounded-full mix-blend-multiply filter blur-3xl opacity-40 animate-glow-blob-right"
-          style={{ pointerEvents: "none" }}
-        />
+        {/* ─── Floating Skill Icons (right visual) ─── */}
+        <div className="absolute right-0 top-0 bottom-0 w-80 hidden sm:flex items-center justify-center pointer-events-none" style={{ zIndex: 5 }}>
+          {/* Grid dots background */}
+          <div className="absolute inset-0 opacity-10"
+            style={{
+              backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)",
+              backgroundSize: "22px 22px",
+            }}
+          />
 
-        {/* Glass Overlay - NO BLUR, just tint */}
-        <div
-          className="absolute inset-0 rounded-3xl bg-black/5"
-          style={{ pointerEvents: "none" }}
-        />
+          {/* Orbit ring */}
+          <div className="absolute w-52 h-52 rounded-full border border-white/10 animate-spin" style={{ animationDuration: "20s" }} />
+          <div className="absolute w-36 h-36 rounded-full border border-white/15 animate-spin" style={{ animationDuration: "14s", animationDirection: "reverse" }} />
 
-        {/* Decorative floating elements */}
-        <div className="absolute top-8 right-12 w-6 h-6 rounded-full bg-white/20 animate-pulse" />
-        <div className="absolute bottom-12 right-1/3 w-3 h-3 rounded-full bg-white/30 animate-ping" />
-
-        {/* Banner Content (Relative to stay above absolute backgrounds) */}
-        <div className="relative z-20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-          {/* Left: Text */}
-          <div className="max-w-xl">
-            <div
-              className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-white/95 text-[11px] font-bold mb-4 border border-white/20 shadow-inner"
-              style={{ textShadow: "0 1px 3px rgba(0, 0, 0, 0.2)" }}
-            >
-              <Sparkle
-                size={12}
-                weight="fill"
-                className="text-yellow-300 animate-pulse"
-              />
-              <span>{getGreeting()}</span>
-              <span className="w-1 h-1 rounded-full bg-white/50" />
-              <span>{getDateString()}</span>
+          {/* Floating icon cards */}
+          <div className="absolute top-8 right-12 bg-white/15 backdrop-blur-md border border-white/20 rounded-2xl px-3 py-2.5 flex items-center gap-2 shadow-lg animate-float">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shrink-0 shadow-md">
+              <Robot size={15} weight="fill" className="text-white" />
             </div>
-
-            <h1
-              className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight mb-2"
-              style={{ textShadow: "0 4px 15px rgba(0, 0, 0, 0.3)" }}
-            >
-              Sẵn sàng nâng tầm kỹ năng, {displayName.split(" ")[0]}?
-            </h1>
-            <p
-              className="text-sm sm:text-base text-white/85 font-medium mb-6 leading-relaxed"
-              style={{ textShadow: "0 2px 8px rgba(0, 0, 0, 0.2)" }}
-            >
-              Khám phá hàng ngàn mentor chất lượng, hoặc chia sẻ kiến thức của
-              chính bạn. Nền tảng trao đổi kỹ năng đột phá nhất.
-            </p>
-
-            {/* CTA Buttons */}
-            <div className="flex flex-wrap gap-3">
-              <Link to="/app/explore">
-                <button className="flex items-center gap-2 px-6 py-3 bg-white text-violet-700 font-extrabold text-sm rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:shadow-[0_0_25px_rgba(255,255,255,0.5)] hover:bg-slate-50 hover:-translate-y-0.5 active:scale-95 transition-all duration-300">
-                  <MagnifyingGlass size={16} weight="bold" /> Tìm Mentor
-                </button>
-              </Link>
-              <Link to="/app/teaching/create">
-                <button className="flex items-center gap-2 px-6 py-3 bg-white/15 backdrop-blur-md text-white font-bold text-sm rounded-xl border border-white/30 hover:bg-white/25 hover:-translate-y-0.5 active:scale-95 transition-all duration-300">
-                  <Calendar size={16} weight="duotone" /> Mở lớp mới
-                </button>
-              </Link>
+            <div>
+              <p className="text-white text-[10px] font-black leading-none">AI Matching</p>
+              <p className="text-white/60 text-[9px] font-medium mt-0.5">Gợi ý mentor</p>
             </div>
           </div>
 
-          {/* Right: Floating Glass Card for Credits */}
-          <div className="flex items-center justify-center p-6 bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2rem] shadow-2xl relative overflow-hidden group-hover:bg-white/15 transition-colors duration-500 min-w-[200px]">
-            <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent opacity-50" />
-            <div className="relative z-10 flex flex-col items-center gap-2">
-              <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30 mb-1">
-                <Lightning size={28} weight="fill" className="text-white" />
-              </div>
-              <span className="text-white font-black text-4xl tracking-tight drop-shadow-md">
-                {credits ?? 0}
-              </span>
-              <span className="text-white/70 text-xs font-bold uppercase tracking-widest">
-                Số dư Credits
-              </span>
+          <div className="absolute bottom-10 right-14 bg-white/15 backdrop-blur-md border border-white/20 rounded-2xl px-3 py-2.5 flex items-center gap-2 shadow-lg animate-float-delayed">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shrink-0 shadow-md">
+              <BookOpen size={15} weight="fill" className="text-white" />
             </div>
+            <div>
+              <p className="text-white text-[10px] font-black leading-none">Kỹ năng</p>
+              <p className="text-white/60 text-[9px] font-medium mt-0.5">500+ lĩnh vực</p>
+            </div>
+          </div>
+
+          <div className="absolute top-1/2 right-6 -translate-y-1/2 bg-white/15 backdrop-blur-md border border-white/20 rounded-2xl px-3 py-2.5 flex items-center gap-2 shadow-lg animate-float-fast">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shrink-0 shadow-md">
+              <ChalkboardTeacher size={15} weight="fill" className="text-white" />
+            </div>
+            <div>
+              <p className="text-white text-[10px] font-black leading-none">Mentor</p>
+              <p className="text-white/60 text-[9px] font-medium mt-0.5">1:1 coaching</p>
+            </div>
+          </div>
+
+          {/* Ping dots */}
+          <div className="absolute top-1/3 right-32 w-2 h-2 rounded-full bg-white/50 animate-ping" />
+          <div className="absolute bottom-1/3 right-28 w-1.5 h-1.5 rounded-full bg-yellow-300/70 animate-pulse" />
+          <div className="absolute top-1/2 right-48 w-2.5 h-2.5 rounded-full bg-white/30 animate-ping" style={{ animationDelay: "0.7s" }} />
+
+          {/* Extra floating solo icons */}
+          <div className="absolute top-5 left-10 w-9 h-9 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-lg shadow-pink-500/30 animate-float" style={{ animationDelay: "0.3s" }}>
+            <Trophy size={17} weight="fill" className="text-white" />
+          </div>
+
+          <div className="absolute bottom-5 left-16 w-9 h-9 rounded-xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center shadow-lg shadow-sky-400/30 animate-float-delayed" style={{ animationDelay: "0.8s" }}>
+            <UsersThree size={17} weight="fill" className="text-white" />
+          </div>
+
+          <div className="absolute top-1/3 left-5 w-8 h-8 rounded-xl bg-gradient-to-br from-lime-400 to-green-600 flex items-center justify-center shadow-lg shadow-lime-400/30 animate-float-fast" style={{ animationDelay: "0.5s" }}>
+            <Target size={16} weight="fill" className="text-white" />
+          </div>
+
+          <div className="absolute bottom-1/4 left-1 w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-600 flex items-center justify-center shadow-lg shadow-cyan-400/30 animate-float" style={{ animationDelay: "1.2s" }}>
+            <ChatCircle size={16} weight="fill" className="text-white" />
+          </div>
+
+          <div className="absolute top-2/3 right-36 w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-amber-600 flex items-center justify-center shadow-lg shadow-yellow-400/30 animate-float-fast" style={{ animationDelay: "0.2s" }}>
+            <Rocket size={15} weight="fill" className="text-white" />
+          </div>
+
+          <div className="absolute top-14 right-40 w-7 h-7 rounded-full bg-gradient-to-br from-fuchsia-400 to-purple-600 flex items-center justify-center shadow-md shadow-fuchsia-400/30 animate-float-delayed" style={{ animationDelay: "0.6s" }}>
+            <Certificate size={14} weight="fill" className="text-white" />
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="relative z-20 max-w-xl">
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-white/95 text-[11px] font-bold mb-4 border border-white/20 shadow-inner"
+            style={{ textShadow: "0 1px 3px rgba(0, 0, 0, 0.2)" }}
+          >
+            <Sparkle size={12} weight="fill" className="text-yellow-300 animate-pulse" />
+            <span>{getGreeting()}</span>
+            <span className="w-1 h-1 rounded-full bg-white/50" />
+            <span>{getDateString()}</span>
+          </div>
+
+          <h1
+            className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight mb-3"
+            style={{ textShadow: "0 4px 15px rgba(0, 0, 0, 0.3)" }}
+          >
+            Sẵn sàng nâng tầm kỹ năng,{" "}
+            <span className="text-yellow-300 drop-shadow-lg">{displayName.split(" ")[0]}</span>?
+          </h1>
+
+          <p
+            className="text-sm sm:text-base text-white/85 font-medium mb-5 leading-relaxed max-w-md"
+            style={{ textShadow: "0 2px 8px rgba(0, 0, 0, 0.2)" }}
+          >
+            Khám phá hàng ngàn mentor chất lượng, hoặc chia sẻ kiến thức của chính bạn.
+            Nền tảng trao đổi kỹ năng đột phá nhất.
+          </p>
+
+          {/* Quick stats row */}
+          <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center gap-1.5 bg-white/10 border border-white/15 rounded-xl px-3 py-1.5">
+              <Star size={12} weight="fill" className="text-yellow-300" />
+              <span className="text-white text-xs font-extrabold">500+ Mentor</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-white/10 border border-white/15 rounded-xl px-3 py-1.5">
+              <BookOpen size={12} weight="fill" className="text-sky-300" />
+              <span className="text-white text-xs font-extrabold">1000+ Buổi học</span>
+            </div>
+          </div>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-wrap gap-3">
+            <Link to="/app/explore">
+              <button className="flex items-center gap-2 px-6 py-3 bg-white text-violet-700 font-extrabold text-sm rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:shadow-[0_0_25px_rgba(255,255,255,0.5)] hover:bg-slate-50 hover:-translate-y-0.5 active:scale-95 transition-all duration-300">
+                <MagnifyingGlass size={16} weight="bold" /> Tìm Mentor
+              </button>
+            </Link>
+            <Link to="/app/teaching/create">
+              <button className="flex items-center gap-2 px-6 py-3 bg-white/15 backdrop-blur-md text-white font-bold text-sm rounded-xl border border-white/30 hover:bg-white/25 hover:-translate-y-0.5 active:scale-95 transition-all duration-300">
+                <Calendar size={16} weight="duotone" /> Mở lớp mới
+              </button>
+            </Link>
           </div>
         </div>
       </div>
@@ -473,35 +526,7 @@ const UserDashboard = () => {
         </div>
       </div>
 
-      {/* ─── AI RECOMMENDATIONS ─── */}
-      <div className="relative pt-2">
-        <div className="flex items-center justify-between mb-5 px-1">
-          <h2 className="font-black text-slate-800 text-xl flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center shadow-md">
-              <Robot size={18} weight="fill" className="text-white" />
-            </div>
-            Gợi ý xịn dành riêng cho bạn
-          </h2>
-          <Link
-            to="/app/explore"
-            className="flex items-center gap-1 text-xs font-extrabold text-violet-600 hover:text-violet-800 transition-colors"
-          >
-            Khám phá thêm <ArrowRight size={13} weight="bold" />
-          </Link>
-        </div>
 
-        {loadingData ? (
-          <div className="flex justify-center py-10">
-            <CircleNotch size={32} className="animate-spin text-violet-500" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {recommendedMentors.map((t, i) => (
-              <TeacherCard key={t.id || i} teacher={t} />
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 };

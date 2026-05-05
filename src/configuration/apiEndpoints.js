@@ -23,7 +23,9 @@ export const API_ENDPOINTS = {
     UPDATE_AVATAR: "/api/users/me/avatar",
     UPDATE_BIO: "/api/users/me/bio",
     SET_PASSWORD: "/api/users/me/password",
+    SEARCH: (q, size = 8) => `/api/users/search?q=${encodeURIComponent(q)}&size=${size}`,
   },
+
 
   SKILLS: {
     GET_ALL: "/api/skills",

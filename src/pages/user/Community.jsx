@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   UsersThree,
   ChatCircle,
@@ -22,6 +23,7 @@ import {
   ListBullets,
   WarningCircle,
 } from "@phosphor-icons/react";
+import MentionInput from "../../components/community/MentionInput";
 
 import { useStore } from "../../store";
 import {
@@ -39,6 +41,7 @@ import {
   toggleForumSave,
   toggleForumVote,
   updateForumPost,
+  deleteForumComment,
 } from "../../services/forumService";
 
 const UI_POST_TYPE_TO_BACKEND = {
@@ -120,6 +123,51 @@ const normalizeKeyword = (value) =>
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
 
+/**
+ * Chuyển đổi @[Tên](uuid) trong text thành React Link clickable.
+ * Ngăn XSS vì không dùng dangerouslySetInnerHTML.
+ */
+const renderMentions = (text) => {
+  if (!text) return null;
+  const parts = text.split(/(@\[[^\]]+\]\([^)]+\))/g);
+  return parts.map((part, i) => {
+    const match = part.match(/^@\[([^\]]+)\]\(([^)]+)\)$/);
+    if (match) {
+      const [, displayName, userId] = match;
+      return (
+        <Link
+          key={i}
+          to={`/app/profile/${userId}`}
+          onClick={(e) => e.stopPropagation()}
+          className="text-violet-600 font-bold hover:underline hover:text-violet-700 transition-colors"
+        >
+          @{displayName}
+        </Link>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
+};
+
+/**
+ * Chuyển đổi @Name lại thành @[Name](uuid) trước khi gửi lên backend.
+ * Dùng danh sách mentions được select qua MentionInput.
+ */
+const transformCommentWithMentions = (text, mentionsList) => {
+  if (!text || !mentionsList || mentionsList.length === 0) return text;
+  let transformed = text;
+  // Sắp xếp tên dài trước để replace chính xác (tránh lỗi trùng một phần tên)
+  const sortedMentions = [...mentionsList].sort((a, b) => b.displayName.length - a.displayName.length);
+  
+  sortedMentions.forEach(m => {
+    // Escape regex characters
+    const nameRegex = m.displayName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`@${nameRegex}`, 'g');
+    transformed = transformed.replace(regex, `@[${m.displayName}](${m.id})`);
+  });
+  return transformed;
+};
+
 const formatRelativeTimeLabel = (input) => {
   if (!input) return "";
   const createdAt = new Date(input);
@@ -136,14 +184,16 @@ const formatRelativeTimeLabel = (input) => {
   return createdAt.toLocaleDateString("vi-VN");
 };
 
-const CommentItem = ({ comment, depth = 0, onLike, onReply, timeOverride }) => {
+const CommentItem = ({ comment, depth = 0, onLike, onReply, onDelete, currentUser, timeOverride }) => {
   const [showReplyBox, setShowReplyBox] = useState(false);
   const [replyText, setReplyText] = useState("");
+  const [replyMentions, setReplyMentions] = useState([]);
 
   const handleSendReply = () => {
     if (!replyText.trim()) return;
-    onReply(comment.id, replyText.trim());
+    onReply(comment.id, replyText.trim(), replyMentions);
     setReplyText("");
+    setReplyMentions([]);
     setShowReplyBox(false);
   };
 
@@ -160,8 +210,8 @@ const CommentItem = ({ comment, depth = 0, onLike, onReply, timeOverride }) => {
             <p className="font-bold text-sm text-slate-900 mb-0.5">
               {comment.authorName}
             </p>
-            <p className="text-sm text-slate-600 whitespace-pre-wrap">
-              {comment.content}
+            <p className="text-sm text-slate-600 whitespace-pre-wrap break-words">
+              {renderMentions(comment.content)}
             </p>
           </div>
           <div className="flex items-center gap-3 mt-1.5 ml-1 text-xs font-medium text-slate-500 flex-wrap">
@@ -182,24 +232,44 @@ const CommentItem = ({ comment, depth = 0, onLike, onReply, timeOverride }) => {
             >
               Phản hồi
             </button>
+            {currentUser?.id === comment.authorId && (
+              <button
+                onClick={() => onDelete(comment.id)}
+                className="hover:text-red-500 ml-2"
+              >
+                Xóa
+              </button>
+            )}
           </div>
 
           {showReplyBox && (
-            <div className="mt-3 flex gap-2">
-              <input
-                type="text"
+            <div className="mt-3">
+              <MentionInput
                 value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                placeholder="Viết phản hồi..."
-                className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-violet-400 bg-white"
+                onChange={setReplyText}
+                onMentionsChange={(m) => setReplyMentions(prev => [...prev.filter(x => x.id !== m.id), m])}
+                placeholder="Viết phản hồi... Gõ @ để tag ai đó"
+                rows={2}
               />
-              <button
-                onClick={handleSendReply}
-                disabled={!replyText.trim()}
-                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${replyText.trim() ? "bg-violet-600 text-white hover:bg-violet-700" : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
-              >
-                Gửi
-              </button>
+              <div className="flex gap-2 mt-2 justify-end">
+                <button
+                  onClick={() => setShowReplyBox(false)}
+                  className="px-3 py-2 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 transition-all"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleSendReply}
+                  disabled={!replyText.trim()}
+                  className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                    replyText.trim()
+                      ? "bg-violet-600 text-white hover:bg-violet-700"
+                      : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                  }`}
+                >
+                  Gửi
+                </button>
+              </div>
             </div>
           )}
 
@@ -212,6 +282,8 @@ const CommentItem = ({ comment, depth = 0, onLike, onReply, timeOverride }) => {
                   depth={depth + 1}
                   onLike={onLike}
                   onReply={onReply}
+                  onDelete={onDelete}
+                  currentUser={currentUser}
                 />
               ))}
             </div>
@@ -582,6 +654,45 @@ const EditPostModal = ({ post, categories, onClose, onSave }) => {
   );
 };
 
+// ─── DeleteCommentConfirmModal ─────────────────────────────
+const DeleteCommentConfirmModal = ({ onClose, onConfirm }) => {
+  return (
+    <div
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="p-6">
+          <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mb-4">
+            <WarningCircle size={24} weight="fill" className="text-red-600" />
+          </div>
+          <h3 className="font-extrabold text-slate-900 text-lg mb-2">
+            Xác nhận xóa bình luận?
+          </h3>
+          <p className="text-sm text-slate-500 mb-6">
+            Hành động này không thể hoàn tác. Bình luận sẽ bị xóa vĩnh viễn.
+          </p>
+
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl font-bold text-sm border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all"
+            >
+              Hủy
+            </button>
+            <button
+              onClick={onConfirm}
+              className="flex-1 py-2.5 rounded-xl font-bold text-sm bg-red-500 text-white hover:bg-red-600 transition-all"
+            >
+              Xóa
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── DeleteConfirmModal ───────────────────────────────────
 const DeleteConfirmModal = ({ post, onClose, onConfirm }) => {
   if (!post) return null;
@@ -901,9 +1012,12 @@ const PostDetailModal = ({
   onAddComment,
   onToggleCommentLike,
   onReplyComment,
+  onDeleteComment,
+  currentUser,
   commentTimeOverrides,
 }) => {
   const [comment, setComment] = useState("");
+  const [commentMentions, setCommentMentions] = useState([]);
   const comments = Array.isArray(post.comments_detail)
     ? post.comments_detail
     : [];
@@ -1014,28 +1128,31 @@ const PostDetailModal = ({
               </h3>
 
               {/* Comment Input */}
-              <div className="flex gap-3 mb-6">
-                <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500 shrink-0">
-                  U
-                </div>
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    placeholder="Viết bình luận của bạn..."
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    className="w-full border border-slate-200 rounded-xl pl-4 pr-12 py-2.5 text-sm outline-none focus:border-violet-400 focus:bg-white transition-all bg-white placeholder-slate-400"
-                  />
+              <div className="mb-6">
+                <MentionInput
+                  value={comment}
+                  onChange={setComment}
+                  onMentionsChange={(m) => setCommentMentions(prev => [...prev.filter(x => x.id !== m.id), m])}
+                  placeholder="Viết bình luận... Gõ @ để tag mentor hoặc người dùng"
+                  rows={2}
+                />
+                <div className="flex justify-end mt-2">
                   <button
                     onClick={() => {
                       if (!comment.trim()) return;
-                      onAddComment(post.id, comment.trim());
+                      onAddComment(post.id, comment.trim(), null, commentMentions);
                       setComment("");
+                      setCommentMentions([]);
                     }}
                     disabled={!comment.trim()}
-                    className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-colors ${comment.trim() ? "text-violet-600 bg-violet-50 hover:bg-violet-100" : "text-slate-300"}`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                      comment.trim()
+                        ? "bg-violet-600 text-white hover:bg-violet-700 shadow-sm"
+                        : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                    }`}
                   >
-                    <PaperPlaneRight size={16} weight="fill" />
+                    <PaperPlaneRight size={15} weight="fill" />
+                    Gửi bình luận
                   </button>
                 </div>
               </div>
@@ -1050,9 +1167,11 @@ const PostDetailModal = ({
                       onLike={(commentId) =>
                         onToggleCommentLike(post.id, commentId)
                       }
-                      onReply={(parentCommentId, replyContent) =>
-                        onReplyComment(post.id, parentCommentId, replyContent)
+                      onReply={(parentCommentId, replyContent, replyMentions) =>
+                        onReplyComment(post.id, parentCommentId, replyContent, replyMentions)
                       }
+                      onDelete={(commentId) => onDeleteComment(post.id, commentId)}
+                      currentUser={currentUser}
                       timeOverride={commentTimeOverrides?.[commentItem.id]}
                     />
                   ))
@@ -1085,9 +1204,11 @@ const Community = () => {
   const [activePost, setActivePost] = useState(null);
   const [editingPost, setEditingPost] = useState(null);
   const [deletingPostId, setDeletingPostId] = useState(null);
+  const [deletingCommentInfo, setDeletingCommentInfo] = useState(null);
   const [categories, setCategories] = useState([]);
   const [posts, setPosts] = useState([]);
   const [trendingPosts, setTrendingPosts] = useState([]);
+  const [commentMentions, setCommentMentions] = useState([]);
   const [myPosts, setMyPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [, setSaving] = useState(false);
@@ -1616,11 +1737,68 @@ const Community = () => {
     });
   };
 
-  const handleAddComment = async (postId, content, parentCommentId = null) => {
+  const removeCommentFromTree = (comments, commentIdToRemove) => {
+    if (!Array.isArray(comments)) return [];
+    
+    return comments
+      .filter(c => c.id !== commentIdToRemove)
+      .map(comment => ({
+        ...comment,
+        replies: removeCommentFromTree(comment.replies || [], commentIdToRemove)
+      }));
+  };
+
+  const handleDeleteComment = (postId, commentId) => {
+    setDeletingCommentInfo({ postId, commentId });
+  };
+
+  const confirmDeleteComment = async () => {
+    if (!deletingCommentInfo) return;
+    const { postId, commentId } = deletingCommentInfo;
+    
+    try {
+      setSaving(true);
+      await deleteForumComment(commentId);
+      
+      const applyCommentDelete = (post) => {
+        if (post.id !== postId) return post;
+        
+        return {
+          ...post,
+          comments: Math.max(0, Number(post.comments || 0) - 1),
+          comments_detail: removeCommentFromTree(
+            Array.isArray(post.comments_detail) ? post.comments_detail : [],
+            commentId
+          ),
+        };
+      };
+
+      setPosts((current) => current.map(applyCommentDelete));
+      setMyPosts((current) => current.map(applyCommentDelete));
+      setActivePost((current) =>
+        current?.id === postId ? applyCommentDelete(current) : current,
+      );
+      setDeletingCommentInfo(null);
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Không thể xóa bình luận.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddComment = async (postId, content, parentCommentId = null, customMentions = null) => {
+    // Dùng customMentions (nếu là reply) hoặc commentMentions (nếu là root)
+    const finalMentions = customMentions !== null ? customMentions : commentMentions;
+    const transformedContent = transformCommentWithMentions(content, finalMentions);
+
     try {
       setSaving(true);
       const createdComment = await addForumComment(postId, {
-        content,
+        content: transformedContent,
         parentCommentId,
       });
       if (createdComment?.id) {
@@ -1659,8 +1837,8 @@ const Community = () => {
     }
   };
 
-  const handleReplyComment = async (postId, parentCommentId, content) => {
-    await handleAddComment(postId, content, parentCommentId);
+  const handleReplyComment = async (postId, parentCommentId, content, replyMentions) => {
+    await handleAddComment(postId, content, parentCommentId, replyMentions);
   };
 
   const handleToggleCommentLike = async (postId, commentId) => {
@@ -2275,6 +2453,8 @@ const Community = () => {
           onAddComment={handleAddComment}
           onToggleCommentLike={handleToggleCommentLike}
           onReplyComment={handleReplyComment}
+          onDeleteComment={handleDeleteComment}
+          currentUser={user}
           commentTimeOverrides={commentTimeOverrides}
         />
       )}
@@ -2291,6 +2471,12 @@ const Community = () => {
           post={myPosts.find((p) => p.id === deletingPostId)}
           onClose={() => setDeletingPostId(null)}
           onConfirm={handleDeletePost}
+        />
+      )}
+      {deletingCommentInfo && (
+        <DeleteCommentConfirmModal
+          onClose={() => setDeletingCommentInfo(null)}
+          onConfirm={confirmDeleteComment}
         />
       )}
     </div>

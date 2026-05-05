@@ -33,6 +33,7 @@ import CreateTeachingSession from './pages/user/CreateTeachingSession';
 import MentorLearningPathManagementPage from './pages/user/MentorLearningPathManagementPage';
 import AdminAiConfig from './pages/admin/AdminAiConfig';
 import Community from './pages/user/Community';
+import PublicProfile from './pages/user/PublicProfile';
 import VideoCallPage from './pages/user/VideoCallPage';
 import Missions from './pages/user/Missions';
 import { useStore } from './store';
@@ -109,7 +110,9 @@ function App() {
           <Route path="teaching/create" element={<CreateTeachingSession />} />
           <Route path="call/:sessionId" element={<VideoCallPage />} />
           <Route path="community" element={<Community />} />
+          <Route path="profile/:userId" element={<PublicProfile />} />
           <Route path="missions" element={<Missions />} />
+
         </Route>
 
         {/* Admin Routes (Protected) */}

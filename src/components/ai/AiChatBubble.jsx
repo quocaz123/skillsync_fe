@@ -15,17 +15,17 @@ import { aiService } from '../../services/aiService';
 import { useNavigate } from 'react-router-dom';
 
 const LOADING_PHASES = [
-  '✨ Đang nhận diện yêu cầu...',
-  '🔍 Truy xuất Mentor...',
-  '🤔 Phân tích độ phù hợp...',
-  '🏆 Sắp xong rồi!',
+  'Đang nhận diện yêu cầu...',
+  'Truy xuất Mentor...',
+  'Phân tích độ phù hợp...',
+  'Sắp xong rồi!',
 ];
 
 const QUICK_PROMPTS = [
-  '🎯 Tôi muốn học để đi thực tập',
-  '💻 Gợi ý mentor học ReactJS',
-  '📊 Chuyển sang Data Science',
-  '🔒 Học Cybersecurity từ đầu',
+  'Tôi muốn học để đi thực tập',
+  'Gợi ý mentor học ReactJS',
+  'Chuyển sang Data Science',
+  'Học Cybersecurity từ đầu',
 ];
 
 const LEVEL_CONFIG = {
