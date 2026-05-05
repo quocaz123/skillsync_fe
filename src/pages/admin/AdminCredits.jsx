@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle,
-  Download,
+  Warning,
   Eye,
   Flag,
   Plus,
-  RefreshCw,
+  ArrowsClockwise,
   X,
-  Zap,
-} from "lucide-react";
+  CurrencyCircleDollar,
+} from "@phosphor-icons/react";
 import httpClient from "../../configuration/axiosClient";
 import API_ENDPOINTS from "../../configuration/apiEndpoints";
 import { toastError, toastSuccess } from "../../utils/toastUtils";
@@ -170,7 +169,7 @@ const AdminCredits = () => {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
-            <Zap size={20} className="text-amber-500" /> Credits &amp; Giao dịch
+            <CurrencyCircleDollar size={24} weight="duotone" className="text-amber-500" /> Credits &amp; Giao dịch
           </h1>
           <p className="text-sm text-slate-400 font-medium mt-1">
             Kiểm soát dòng credit trên toàn hệ thống
@@ -182,7 +181,7 @@ const AdminCredits = () => {
             disabled={loading}
             className="flex items-center gap-1.5 px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-bold text-sm transition-colors disabled:opacity-50"
           >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Làm mới
+            <ArrowsClockwise size={16} className={loading ? "animate-spin" : ""} /> Làm mới
           </button>
           <button
             type="button"
@@ -322,7 +321,7 @@ const AdminCredits = () => {
                           </p>
                           {t.suspicious && (
                             <span className="inline-flex items-center gap-1 text-xs text-rose-600 font-bold mt-1">
-                              <AlertTriangle size={12} /> Nghi ngờ
+                              <Warning size={14} weight="bold" /> Nghi ngờ
                             </span>
                           )}
                         </td>
@@ -417,7 +416,7 @@ const AdminCredits = () => {
           <div className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl">
             <div className="flex justify-between items-center p-8 border-b border-slate-100 bg-slate-50/50">
               <h3 className="font-extrabold text-2xl text-slate-900 flex items-center gap-2">
-                <Plus size={24} className="text-amber-500" /> Cấp / Trừ Credits
+                <Plus size={24} weight="bold" className="text-amber-500" /> Cấp / Trừ Credits
               </h3>
               <button
                 type="button"
@@ -525,7 +524,7 @@ const AdminCredits = () => {
           <div className="bg-white rounded-2xl max-w-sm w-full overflow-hidden shadow-xl border border-slate-100">
             <div className="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50">
               <h3 className="font-extrabold text-lg text-slate-900 flex items-center gap-2">
-                <Zap size={18} className="text-amber-500" /> Chi tiết giao dịch
+                <CurrencyCircleDollar size={20} weight="duotone" className="text-amber-500" /> Chi tiết giao dịch
               </h3>
               <button
                 type="button"
@@ -580,7 +579,7 @@ const AdminCredits = () => {
               </div>
               {selectedTx.suspicious && (
                 <div className="text-sm font-bold text-rose-700 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 flex items-center gap-2">
-                  <AlertTriangle size={16} /> Giao dịch bị gắn cờ nghi ngờ (mức &gt; 500 credits).
+                  <Warning size={18} weight="bold" /> Giao dịch bị gắn cờ nghi ngờ (mức &gt; 500 credits).
                 </div>
               )}
             </div>

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import axiosClient from '../../configuration/axiosClient';
 import API_ENDPOINTS from '../../configuration/apiEndpoints';
 import { useStore } from '../../store';
-import { Eye, CheckCircle2, XCircle, Map, Coins, Hourglass, Users, Plus } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, MapTrifold, Coins, Hourglass, Plus } from '@phosphor-icons/react';
 import PathPreviewModal from '../user/learning-path-management/PathPreviewModal';
 import CreatePathModal from '../user/learning-path-management/CreatePathModal';
 import { toastSuccess, toastError } from '../../utils/toastUtils';
@@ -229,7 +229,7 @@ const AdminPaths = () => {
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
-                        <Map size={22} className="text-[#5A63F6]" /> Quản lý Lộ trình Học
+                        <MapTrifold size={24} weight="duotone" className="text-[#5A63F6]" /> Quản lý Lộ trình Học
                     </h1>
                     <p className="text-sm text-slate-400 font-medium mt-1">Duyệt và kiểm soát chất lượng lộ trình do Mentor tạo lên</p>
                 </div>
@@ -244,7 +244,7 @@ const AdminPaths = () => {
                         onClick={() => setIsCreateOpen(true)}
                         className="flex items-center gap-2 bg-[#5A63F6] hover:bg-indigo-600 text-white font-bold text-sm px-5 py-2.5 rounded-xl shadow-md transition-all active:scale-95"
                     >
-                        <Plus size={16} /> Tạo lộ trình mới
+                        <Plus size={16} weight="bold" /> Tạo lộ trình mới
                     </button>
                 </div>
             </div>
@@ -252,9 +252,9 @@ const AdminPaths = () => {
             {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
-                    { label: 'Tổng lộ trình', value: paths.length, icon: <Map size={28} className="text-slate-600" />, bg: 'bg-slate-50', border: 'border-slate-100', color: 'text-slate-700' },
-                    { label: 'Chờ duyệt', value: pending, icon: <Hourglass size={28} className="text-amber-600" />, bg: 'bg-amber-50', border: 'border-amber-100', color: 'text-amber-700' },
-                    { label: 'Đang hoạt động', value: active, icon: <CheckCircle2 size={28} className="text-emerald-600" />, bg: 'bg-emerald-50', border: 'border-emerald-100', color: 'text-emerald-700' },
+                    { label: 'Tổng lộ trình', value: paths.length, icon: <MapTrifold size={28} weight="duotone" className="text-slate-600" />, bg: 'bg-slate-50', border: 'border-slate-100', color: 'text-slate-700' },
+                    { label: 'Chờ duyệt', value: pending, icon: <Hourglass size={28} weight="duotone" className="text-amber-600" />, bg: 'bg-amber-50', border: 'border-amber-100', color: 'text-amber-700' },
+                    { label: 'Đang hoạt động', value: active, icon: <CheckCircle size={28} weight="duotone" className="text-emerald-600" />, bg: 'bg-emerald-50', border: 'border-emerald-100', color: 'text-emerald-700' },
                 ].map((s) => (
                     <div key={s.label} className={`${s.bg} border ${s.border} rounded-2xl p-5 flex items-center gap-4 hover:shadow-sm transition-all`}>
                         {s.icon}
@@ -315,7 +315,7 @@ const AdminPaths = () => {
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 text-white flex items-center justify-center shrink-0 shadow-sm">
-                                                <Map size={16} />
+                                                <MapTrifold size={20} weight="duotone" />
                                             </div>
                                             <div>
                                                 <div className="font-bold text-slate-900 text-sm">{path.title}</div>
@@ -339,7 +339,7 @@ const AdminPaths = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className="flex items-center gap-1 font-extrabold text-amber-600">
-                                            <Coins size={15} /> {path.price} CR
+                                            <Coins size={16} weight="bold" /> {path.price} CR
                                         </span>
                                     </td>
 
@@ -364,7 +364,7 @@ const AdminPaths = () => {
                                                         className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-500 hover:text-white text-emerald-600 font-bold transition-all shadow-sm"
                                                         title="Duyệt lộ trình"
                                                     >
-                                                        <CheckCircle2 size={16} />
+                                                        <CheckCircle size={16} weight="bold" />
                                                     </button>
                                                     <button
                                                         type="button"
@@ -372,7 +372,7 @@ const AdminPaths = () => {
                                                         className="p-2 rounded-xl bg-rose-50 hover:bg-rose-500 hover:text-white text-rose-600 font-bold transition-all shadow-sm"
                                                         title="Từ chối"
                                                     >
-                                                        <XCircle size={16} />
+                                                        <XCircle size={16} weight="bold" />
                                                     </button>
                                                 </>
                                             )}
