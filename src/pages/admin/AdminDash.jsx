@@ -98,20 +98,17 @@ const AdminDash = () => {
         { Icon: Users, label: 'Tổng người dùng', value: stats?.totalUsers, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', linkTo: '/admin/users' },
         { Icon: CalendarBlank, label: 'Tổng Sessions', value: stats?.totalSessions, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', linkTo: '/admin/sessions' },
         { Icon: CheckCircle, label: 'Đã hoàn thành', value: stats?.completedSessions, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', weight: 'fill' },
-        { Icon: Warning, label: 'Tranh chấp', value: stats?.disputedSessions, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-100', weight: 'duotone', alert: stats?.disputedSessions > 0, linkTo: '/admin/escrow' },
+        { Icon: Flag, label: 'Báo cáo & Tranh chấp', value: stats?.pendingReports, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', alert: stats?.pendingReports > 0, linkTo: '/admin/financial-moderation' },
         { Icon: ShieldCheck, label: 'Kỹ năng chờ duyệt', value: stats?.pendingSkills, color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-100', alert: stats?.pendingSkills > 0, linkTo: '/admin/teaching-skills' },
-        { Icon: Flag, label: 'Báo cáo chờ xử lý', value: stats?.pendingReports, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', alert: stats?.pendingReports > 0, linkTo: '/admin/reports' },
-        { Icon: LockKey, label: 'Credits Escrow', value: stats?.escrowedCredits, color: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-100', linkTo: '/admin/escrow' },
         { Icon: BookOpen, label: 'Bài viết chờ duyệt', value: stats?.pendingForumPosts, color: 'text-teal-600', bg: 'bg-teal-50', border: 'border-teal-100', alert: stats?.pendingForumPosts > 0, linkTo: '/admin/forum-posts' },
     ];
 
     const quickLinks = [
         { Icon: ShieldCheck, label: 'Xét duyệt Mentor', desc: `${stats?.pendingSkills ?? '...'} hồ sơ chờ`, to: '/admin/teaching-skills', color: 'text-violet-600', bg: 'bg-white' },
-        { Icon: Flag, label: 'Xử lý Báo cáo', desc: `${stats?.pendingReports ?? '...'} báo cáo PENDING`, to: '/admin/reports', color: 'text-rose-600', bg: 'bg-white' },
-        { Icon: LockKey, label: 'Phán xử Escrow', desc: `${stats?.disputedSessions ?? '...'} session DISPUTED`, to: '/admin/escrow', color: 'text-slate-700', bg: 'bg-white' },
+        { Icon: Flag, label: 'Tài chính & Báo cáo', desc: `${stats?.pendingReports ?? '...'} báo cáo PENDING`, to: '/admin/financial-moderation', color: 'text-rose-600', bg: 'bg-white' },
         { Icon: BookOpen, label: 'Duyệt Bài viết', desc: `${stats?.pendingForumPosts ?? '...'} bài chờ`, to: '/admin/forum-posts', color: 'text-teal-600', bg: 'bg-white' },
         { Icon: Users, label: 'Quản lý Người dùng', desc: `${stats?.totalUsers ?? '...'} tài khoản`, to: '/admin/users', color: 'text-indigo-600', bg: 'bg-white' },
-        { Icon: CurrencyCircleDollar, label: 'Credits & Giao dịch', desc: `${stats?.totalTransactions ?? '...'} giao dịch`, to: '/admin/credits', color: 'text-amber-600', bg: 'bg-white' },
+        { Icon: CurrencyCircleDollar, label: 'Lịch sử Giao dịch', desc: `${stats?.totalTransactions ?? '...'} giao dịch`, to: '/admin/credits', color: 'text-amber-600', bg: 'bg-white' },
     ];
 
     return (
