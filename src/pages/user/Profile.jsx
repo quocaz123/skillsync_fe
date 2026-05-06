@@ -6,7 +6,6 @@ import {
   Star,
   Medal,
   PencilSimple,
-  Compass,
   Users,
   ShieldCheck,
   At,
@@ -17,13 +16,13 @@ import {
   CircleNotch,
   X,
   Heartbeat,
-  Target,
   Lightbulb,
   UserCircle,
 } from "@phosphor-icons/react";
 import { AddSkillModal } from "../../components/profile/AddSkillModal.jsx";
 import { SkillDynamicIcon } from "../../components/common/SkillDynamicIcon.jsx";
 import { uploadFile } from "../../services/uploadService.js";
+import { toastError, toastSuccess } from "../../utils/toastUtils.js";
 import {
   getMyProfile,
   updateAvatar,
@@ -46,7 +45,7 @@ const LEVEL_LABEL = {
 const Profile = () => {
   const { user, setUser } = useStore();
   const [profile, setProfile] = useState(null);
-  const [activeTab, setActiveTab] = useState("learner"); // 'learner' | 'mentor' | 'reviews'
+  const [activeTab, setActiveTab] = useState("mentor"); // 'mentor' | 'reviews'
   const [showAddSkillModal, setShowAddSkillModal] = useState(false);
 
   // Avatar state
@@ -106,7 +105,7 @@ const Profile = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      alert("Vui lòng chọn file ảnh (JPG, PNG, WEBP)");
+      toastError(null, "Vui lòng chọn file ảnh (JPG, PNG, WEBP)");
       return;
     }
 
@@ -127,7 +126,7 @@ const Profile = () => {
     } catch (err) {
       console.error("Avatar upload failed:", err);
       setAvatarUrl(user?.avatarUrl || null);
-      alert("Upload avatar thất bại. Vui lòng thử lại.");
+      toastError(err, "Upload avatar thất bại. Vui lòng thử lại.");
     } finally {
       setAvatarUploading(false);
       URL.revokeObjectURL(previewUrl);
@@ -142,11 +141,12 @@ const Profile = () => {
         setProfile((prev) => ({ ...prev, bio: updated.bio }));
         if (setUser) setUser((prev) => ({ ...prev, bio: updated.bio }));
         trackAction("UPDATE_PROFILE").catch(console.error);
+        toastSuccess("Đã lưu giới thiệu.");
       }
       setBioEditing(false);
     } catch (err) {
       console.error("Bio save failed:", err);
-      alert("Lưu bio thất bại. Vui lòng thử lại.");
+      toastError(err, "Lưu giới thiệu thất bại. Vui lòng thử lại.");
     } finally {
       setBioSaving(false);
     }
@@ -157,9 +157,10 @@ const Profile = () => {
     try {
       await deleteTeachingSkill(skillId);
       setTeachingSkills((prev) => prev.filter((s) => s.id !== skillId));
+      toastSuccess("Đã xoá kỹ năng giảng dạy.");
     } catch (err) {
       console.error("Delete skill failed:", err);
-      alert("Xóa thất bại. Vui lòng thử lại.");
+      toastError(err, "Xoá thất bại. Vui lòng thử lại.");
     }
   };
 
@@ -174,12 +175,11 @@ const Profile = () => {
   const totalTeachingSessions = profile?.totalTeachingSessions ?? 0;
   const totalLearningSessions = profile?.totalLearningSessions ?? 0;
   const totalReviews = profile?.totalReviews ?? 0;
-  const learningInterests = profile?.learningInterests ?? [];
   const joinedDate = profile?.createdAt
     ? new Date(profile.createdAt).toLocaleDateString("vi-VN", {
-        month: "long",
-        year: "numeric",
-      })
+      month: "long",
+      year: "numeric",
+    })
     : null;
 
   return (
@@ -265,16 +265,7 @@ const Profile = () => {
                   </p>
                 )}
               </div>
-              <div className="flex items-center gap-3">
-                <button className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl font-bold text-sm transition-colors flex items-center gap-2 shadow-sm border border-slate-200/60 active:scale-95">
-                  <PencilSimple
-                    size={18}
-                    weight="bold"
-                    className="text-slate-500"
-                  />{" "}
-                  Chỉnh sửa hồ sơ
-                </button>
-              </div>
+
             </div>
           </div>
 
@@ -340,16 +331,6 @@ const Profile = () => {
       <div className="flex justify-center">
         <div className="bg-slate-100/90 backdrop-blur-md p-1.5 rounded-2xl inline-flex shadow-inner border border-slate-200/50">
           <button
-            onClick={() => setActiveTab("learner")}
-            className={`flex items-center gap-2 px-8 py-3 rounded-xl font-extrabold transition-all duration-300 ${activeTab === "learner" ? "bg-white text-blue-600 shadow-md scale-100" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 scale-95 hover:scale-100"}`}
-          >
-            <Compass
-              size={20}
-              weight={activeTab === "learner" ? "duotone" : "regular"}
-            />{" "}
-            Học viên
-          </button>
-          <button
             onClick={() => setActiveTab("mentor")}
             className={`flex items-center gap-2 px-8 py-3 rounded-xl font-extrabold transition-all duration-300 ${activeTab === "mentor" ? "bg-white text-purple-600 shadow-md scale-100" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 scale-95 hover:scale-100"}`}
           >
@@ -378,22 +359,13 @@ const Profile = () => {
         <div className="lg:col-span-2 space-y-8 animate-slide-in">
           <div className="bg-white rounded-[2rem] border border-slate-200/60 p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group/skills">
             <div
-              className={`absolute top-0 right-0 w-64 h-64 rounded-full mix-blend-multiply filter blur-[80px] opacity-40 -z-0 pointer-events-none transition-colors duration-1000 ${activeTab === "learner" ? "bg-blue-100" : "bg-purple-100"}`}
+              className={`absolute top-0 right-0 w-64 h-64 rounded-full mix-blend-multiply filter blur-[80px] opacity-40 -z-0 pointer-events-none transition-colors duration-1000 ${activeTab === "mentor" ? "bg-purple-100" : "bg-amber-100"}`}
             ></div>
 
             <div className="relative z-10 flex justify-between items-center mb-8">
               <div>
                 <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
-                  {activeTab === "learner" ? (
-                    <>
-                      <Target
-                        size={28}
-                        weight="duotone"
-                        className="text-blue-500"
-                      />{" "}
-                      Kỹ năng muốn học
-                    </>
-                  ) : activeTab === "mentor" ? (
+                  {activeTab === "mentor" ? (
                     <>
                       <Lightbulb
                         size={28}
@@ -409,59 +381,20 @@ const Profile = () => {
                         weight="duotone"
                         className="text-amber-500"
                       />{" "}
-                      Đánh giá từ Học viên
+                      Đánh giá
                     </>
                   )}
                 </h2>
                 <p className="text-slate-500 mt-1 font-medium text-sm">
-                  {activeTab === "learner"
-                    ? "Những chủ đề bạn kỳ vọng nâng cao trình độ"
-                    : activeTab === "mentor"
-                      ? "Chứng minh năng lực của bạn với cộng đồng"
-                      : "Những lời nhận xét mang lại động lực phát triển"}
+                  {activeTab === "mentor"
+                    ? "Chứng minh năng lực của bạn với cộng đồng"
+                    : "Những lời nhận xét mang lại động lực phát triển"}
                 </p>
               </div>
-              <button className="bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 w-10 h-10 rounded-xl flex items-center justify-center transition-colors shadow-sm border border-slate-200">
-                <PencilSimple size={18} weight="bold" />
-              </button>
             </div>
 
             <div className="flex flex-wrap gap-3 relative z-10">
-              {activeTab === "learner" ? (
-                learningInterests.length === 0 ? (
-                  <div className="w-full py-10 flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                    <Target
-                      size={32}
-                      weight="duotone"
-                      className="text-slate-300 mb-2"
-                    />
-                    <p className="text-slate-400 font-medium">
-                      Bạn chưa đăng ký danh mục mục tiêu kỹ năng nào.
-                    </p>
-                  </div>
-                ) : (
-                  learningInterests.map((item, idx) => (
-                    <div
-                      key={idx}
-                      title={item.learningGoal || ""}
-                      className="flex items-center gap-2.5 px-5 py-3 rounded-2xl border font-bold text-sm transition-all hover:-translate-y-1 bg-gradient-to-br from-blue-50 to-indigo-50/50 border-blue-200/60 shadow-sm text-blue-800 hover:shadow-blue-200 hover:border-blue-300"
-                    >
-                      <SkillDynamicIcon
-                        skillName={item.skillName}
-                        defaultIcon={item.skillIcon}
-                        className="text-base"
-                        size={16}
-                      />
-                      <span>{item.skillName}</span>
-                      {item.desiredLevel && (
-                        <span className="text-[10px] bg-white text-blue-600 border border-blue-100 px-2 py-0.5 rounded-md font-black uppercase tracking-wider shadow-sm">
-                          {LEVEL_LABEL[item.desiredLevel] || item.desiredLevel}
-                        </span>
-                      )}
-                    </div>
-                  ))
-                )
-              ) : activeTab === "mentor" ? (
+              {activeTab === "mentor" ? (
                 loadingSkills ? (
                   <div className="w-full flex flex-col items-center py-10 gap-2 text-slate-400">
                     <CircleNotch

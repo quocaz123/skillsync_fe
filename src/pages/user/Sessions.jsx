@@ -5,6 +5,8 @@ import { getMySessions, confirmSession } from "../../services/sessionService";
 import { trackAction } from "../../services/missionService";
 import { createSessionReport } from "../../services/reportService";
 import { createSessionReview } from "../../services/reviewService";
+import { toastError, toastSuccess } from "../../utils/toastUtils";
+import { SkillDynamicIcon } from "../../components/common/SkillDynamicIcon.jsx";
 import {
   Clock,
   CheckCircle2,
@@ -126,10 +128,7 @@ const Sessions = () => {
       setReviewModal(null);
       setActiveTab("past");
     } catch (error) {
-      alert(
-        "Lỗi gửi đánh giá: " +
-        (error.response?.data?.message || "Không thành công"),
-      );
+      toastError(error, "Lỗi gửi đánh giá. Vui lòng thử lại.");
     }
   };
 
@@ -138,16 +137,13 @@ const Sessions = () => {
       await confirmSession(sessionId);
       setSessions((prev) =>
         prev.map((s) =>
-          s.id === sessionId ? { ...s, status: "COMPLETED" } : s,
+          s.id === sessionId ? { ...s, status: "COMPLETED", mentorPaid: true } : s,
         ),
       );
       trackAction("FIRST_SESSION_JOINED").catch(console.error);
-      alert("Đã xác nhận hoàn thành buổi học!");
+      toastSuccess("Đã chuyển tiền cho Mentor.");
     } catch (error) {
-      alert(
-        "Lỗi xác nhận: " +
-        (error.response?.data?.message || "Không thành công"),
-      );
+      toastError(error, "Chuyển tiền thất bại. Vui lòng thử lại.");
     }
   };
 
@@ -166,13 +162,10 @@ const Sessions = () => {
           s.id === reportModal.id ? { ...s, status: "DISPUTED" } : s,
         ),
       );
-      alert("Đã gửi báo cáo sự cố thành công!");
+      toastSuccess("Đã gửi báo cáo sự cố.");
       setReportModal(null);
     } catch (error) {
-      alert(
-        "Lỗi gửi báo cáo: " +
-        (error.response?.data?.message || "Không thành công"),
-      );
+      toastError(error, "Gửi báo cáo thất bại. Vui lòng thử lại.");
     }
   };
 
@@ -298,9 +291,13 @@ const Sessions = () => {
                     <div className="p-6 md:p-8 flex flex-col md:flex-row gap-6 items-start md:items-center">
                       <div className="relative shrink-0">
                         <div className="w-20 h-20 rounded-[1.5rem] bg-indigo-100 flex items-center justify-center text-3xl font-black text-indigo-600 overflow-hidden border-4 border-white shadow-sm">
-                          {session.skillIcon ||
-                            session.skillName?.charAt(0) ||
-                            "📘"}
+                          <SkillDynamicIcon
+                            skillName={session.skillName}
+                            defaultIcon={session.skillIcon || "📘"}
+                            className="text-indigo-600"
+                            size={34}
+                            weight="duotone"
+                          />
                         </div>
                         <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center z-20 shadow-sm border border-slate-100">
                           <div className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center">
@@ -426,9 +423,13 @@ const Sessions = () => {
                     <div className="bg-slate-50/50 p-6 border-b border-slate-100 flex items-start justify-between gap-4">
                       <div className="flex items-center gap-4">
                         <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-2xl font-black text-slate-700 shadow-sm shrink-0">
-                          {session.skillIcon ||
-                            session.skillName?.charAt(0) ||
-                            "📘"}
+                          <SkillDynamicIcon
+                            skillName={session.skillName}
+                            defaultIcon={session.skillIcon || "📘"}
+                            className="text-slate-700"
+                            size={26}
+                            weight="duotone"
+                          />
                         </div>
                         <div>
                           <h3 className="font-black text-slate-900 text-lg leading-tight mb-1">
@@ -487,28 +488,32 @@ const Sessions = () => {
                           {!isTeacher(session) &&
                             session.status === "COMPLETED" && (
                               <>
-                                <button
-                                  onClick={() =>
-                                    handleConfirmSession(session.id)
-                                  }
-                                  className="text-xs font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-4 py-2 rounded-lg transition-colors flex items-center gap-1"
-                                >
-                                  <CheckCircle2 size={14} /> Chuyển tiền Mentor
-                                </button>
-                                <button
-                                  onClick={() => handleOpenReport(session)}
-                                  className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg transition-colors flex items-center gap-1"
-                                >
-                                  <ShieldAlert size={14} /> Báo cáo sự cố
-                                </button>
+                                {!session.mentorPaid && (
+                                  <>
+                                    <button
+                                      onClick={() => handleConfirmSession(session.id)}
+                                      className="text-xs font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-4 py-2 rounded-lg transition-colors flex items-center gap-1"
+                                    >
+                                      <CheckCircle2 size={14} /> Chuyển tiền Mentor
+                                    </button>
+                                    <button
+                                      onClick={() => handleOpenReport(session)}
+                                      className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg transition-colors flex items-center gap-1"
+                                    >
+                                      <ShieldAlert size={14} /> Báo cáo sự cố
+                                    </button>
+                                  </>
+                                )}
                               </>
                             )}
-                          <button
-                            onClick={() => handleOpenReview(session)}
-                            className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-lg transition-colors"
-                          >
-                            Viết đánh giá
-                          </button>
+                          {session.status === "COMPLETED" && !session.review && (
+                            <button
+                              onClick={() => handleOpenReview(session)}
+                              className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-lg transition-colors"
+                            >
+                              Viết đánh giá
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>

@@ -119,8 +119,8 @@ const AdminPaths = () => {
                 status: p.status === 'APPROVED'
                     ? 'active'
                     : p.status === 'REJECTED'
-                      ? 'rejected'
-                      : (p.status === 'DRAFT' ? 'draft' : 'pending'),
+                        ? 'rejected'
+                        : (p.status === 'DRAFT' ? 'draft' : 'pending'),
                 category: p.category || 'OTHER',
                 level: p.level || '—',
                 rejectionReason: p.rejectionReason || null,
@@ -270,10 +270,10 @@ const AdminPaths = () => {
             <div className="flex flex-wrap items-center gap-2">
                 {[
                     { id: 'all', label: 'Tất cả' },
-                    { id: 'draft', label: '📝 Nháp' },
-                    { id: 'pending', label: '⏳ Chờ duyệt' },
-                    { id: 'active', label: '✅ Đang mở' },
-                    { id: 'rejected', label: '❌ Từ chối' },
+                    { id: 'draft', label: 'Nháp' },
+                    { id: 'pending', label: 'Chờ duyệt' },
+                    { id: 'active', label: 'Đang mở' },
+                    { id: 'rejected', label: 'Từ chối' },
                 ].map((f) => (
                     <button
                         key={f.id}
@@ -282,7 +282,7 @@ const AdminPaths = () => {
                         className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${filter === f.id
                             ? 'bg-[#5A63F6] text-white shadow-md shadow-indigo-200'
                             : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'
-                        }`}
+                            }`}
                     >
                         {f.label}
                     </button>
