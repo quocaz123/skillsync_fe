@@ -12,13 +12,14 @@ import SetPasswordModal from '../auth/SetPasswordModal';
 import MissionWelcomePopup from './MissionWelcomePopup';
 import NotificationDropdown from './NotificationDropdown';
 import AiChatBubble from '../ai/AiChatBubble';
+import logo from '../../assets/logo.png';
 
 const SidebarContent = ({ onLinkClick, isCollapsed, location, user, credits, handleLogout }) => (
     <>
         {/* Logo */}
         <div className="h-16 flex items-center px-4 border-b border-slate-200 shrink-0">
             <div className="flex items-center gap-3 overflow-hidden ml-1">
-                <img src="/logo.png" alt="SkillSync logo" className="w-8 h-8 object-contain shrink-0" />
+                <img src={logo} alt="SkillSync logo" className="w-8 h-8 object-contain shrink-0" />
                 {!isCollapsed && (
                     <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-600 to-violet-800 shrink-0 whitespace-nowrap animate-in fade-in duration-300">
                         SkillSync
@@ -299,7 +300,7 @@ const MainLayout = () => {
                         </h2>
                         {/* Mobile logo (only shown when drawer is closed) */}
                         <div className="flex items-center gap-2 sm:hidden">
-                            <img src="/logo.png" alt="" className="w-6 h-6 object-contain" />
+                            <img src={logo} alt="" className="w-6 h-6 object-contain" />
                             <span className="text-sm font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-600 to-violet-800">SkillSync</span>
                         </div>
                     </div>

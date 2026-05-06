@@ -44,17 +44,14 @@ const StarRating = ({ rating, setRating }) => (
   </div>
 );
 
-// ─── Join-time guard ────────────────────────────────────────────────────────
-// Returns: { state: 'no-time' | 'too-early' | 'ready' | 'ended', minutesLeft, label }
+
 const getJoinStatus = (session) => {
   if (!session.slotDate || !session.slotTime) return { state: "no-time" };
   const slotDt = new Date(`${session.slotDate}T${session.slotTime}`);
   const now = new Date();
   const diffMs = slotDt - now;
   const diffMin = Math.ceil(diffMs / 60000);
-  // Allow join 15 minutes before start
   if (diffMin > 15) return { state: "too-early", minutesLeft: diffMin };
-  // Allow up to 24h after start (backend enforces this too)
   const afterMs = now - slotDt;
   if (afterMs > 24 * 60 * 60 * 1000) return { state: "ended" };
   return { state: "ready" };
@@ -131,7 +128,7 @@ const Sessions = () => {
     } catch (error) {
       alert(
         "Lỗi gửi đánh giá: " +
-          (error.response?.data?.message || "Không thành công"),
+        (error.response?.data?.message || "Không thành công"),
       );
     }
   };
@@ -149,7 +146,7 @@ const Sessions = () => {
     } catch (error) {
       alert(
         "Lỗi xác nhận: " +
-          (error.response?.data?.message || "Không thành công"),
+        (error.response?.data?.message || "Không thành công"),
       );
     }
   };
@@ -174,7 +171,7 @@ const Sessions = () => {
     } catch (error) {
       alert(
         "Lỗi gửi báo cáo: " +
-          (error.response?.data?.message || "Không thành công"),
+        (error.response?.data?.message || "Không thành công"),
       );
     }
   };

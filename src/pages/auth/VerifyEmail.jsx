@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { verifyEmail, resendVerificationOtp } from '../../services/authService';
 import { Mail, KeyRound, CheckCircle2 } from 'lucide-react';
+import logo from '../../assets/logo.png';
 
 /** Đồng bộ với AuthConstants.OTP_VALID_MINUTES (backend skill_be) */
 const OTP_VALID_MINUTES = 15;
@@ -70,7 +71,7 @@ const VerifyEmail = () => {
             <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
                 <div className="text-center mb-6">
                     <Link to="/" className="inline-block w-14 h-14 mb-3">
-                        <img src="/logo.png" alt="SkillSync" className="w-full h-full object-contain" />
+                        <img src={logo} alt="SkillSync" className="w-full h-full object-contain" />
                     </Link>
                     <h1 className="text-2xl font-bold text-slate-900">Xác minh email</h1>
                     <p className="text-slate-500 text-sm mt-2">

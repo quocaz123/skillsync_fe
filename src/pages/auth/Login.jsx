@@ -5,6 +5,7 @@ import { login as apiLogin } from '../../services/authService';
 import { getMyProfile } from '../../services/userService';
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import logo from '../../assets/logo.png';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -75,7 +76,7 @@ const Login = () => {
             <div className="w-full max-w-md bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 p-8 relative z-10">
                 <div className="text-center mb-8">
                     <Link to="/" className="inline-block w-16 h-16 mb-4 mx-auto transition-transform hover:scale-105">
-                        <img src="/logo.png" alt="SkillSync Logo" className="w-full h-full object-contain" />
+                        <img src={logo} alt="SkillSync Logo" className="w-full h-full object-contain" />
                     </Link>
                     <h2 className="text-3xl font-bold text-slate-900">Welcome back</h2>
                     <p className="text-slate-500 mt-2 font-medium">Log in to your SkillSync account</p>
