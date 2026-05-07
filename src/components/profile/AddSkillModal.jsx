@@ -30,45 +30,51 @@ const LEVELS = [
     id: "BEGINNER",
     label: "Beginner",
     years: "1–2 năm",
-    icon: "🌱",
     color: "text-emerald-500 bg-emerald-50 border-emerald-200",
+    icon: <GraduationCap size={34} weight="duotone" className="text-emerald-500" />,
   },
   {
     id: "INTERMEDIATE",
     label: "Intermediate",
     years: "2–4 năm",
-    icon: "🚀",
     color: "text-orange-500 bg-orange-50 border-orange-200",
+    icon: <Medal size={34} weight="duotone" className="text-orange-500" />,
   },
   {
     id: "ADVANCED",
     label: "Advanced",
     years: "4+ năm",
-    icon: "💎",
     color: "text-violet-500 bg-violet-50 border-violet-200",
+    icon: <Certificate size={34} weight="duotone" className="text-violet-500" />,
   },
 ];
 
+// Backend hiện không tính điểm/trust score và cũng không enforce "bắt buộc".
+// FE giữ điểm như một chỉ báo UX (ước lượng).
 const EVIDENCE_DEFS = [
   {
     id: "cert",
     label: "Chứng chỉ chuyên môn",
-    type: "mandatory",
+    type: "recommended",
     pts: 40,
     uploadType: "TEACHING_EVIDENCE",
     acceptUrl: false,
     icon: Certificate,
     tips: "IELTS, TOEIC, JLPT, AWS, Google... tải lên ảnh/PDF chứng chỉ",
+    accept: "image/*,application/pdf",
+    acceptText: "PNG, JPG, PDF (Max 100MB)",
   },
   {
     id: "video",
     label: "Video bằng chứng giảng dạy / tự giới thiệu",
-    type: "mandatory",
+    type: "recommended",
     pts: 30,
     uploadType: "TEACHING_EVIDENCE",
     acceptUrl: true,
     icon: VideoCamera,
     tips: "Độ dài tối thiểu 2 phút để học viên đáng giá kỹ năng nói/trình bày",
+    accept: "video/mp4,.mp4",
+    acceptText: "Chỉ hỗ trợ video MP4 (Max 100MB)",
   },
   {
     id: "linkedin",
@@ -89,16 +95,8 @@ const EVIDENCE_DEFS = [
     acceptUrl: true,
     icon: Briefcase,
     tips: "Link GitHub, Behance, Portfolio hoặc file chứng minh",
-  },
-  {
-    id: "teaching",
-    label: "Chứng chỉ sư phạm",
-    type: "optional",
-    pts: 5,
-    uploadType: "TEACHING_EVIDENCE",
-    acceptUrl: false,
-    icon: GraduationCap,
-    tips: "TESOL, CELTA, bằng Sư phạm...",
+    accept: "image/*,application/pdf,video/mp4,.mp4",
+    acceptText: "PNG, JPG, PDF, MP4 (Max 100MB)",
   },
 ];
 
@@ -145,8 +143,8 @@ export const AddSkillModal = ({ onClose, onSave }) => {
   }, []);
 
   // Computed
-  const mandatoryCount = EVIDENCE_DEFS.filter(
-    (e) => e.type === "mandatory" && evidenceData[e.id]?.done,
+  const recommendedCount = EVIDENCE_DEFS.filter(
+    (e) => e.type === "recommended" && evidenceData[e.id]?.done,
   ).length;
   const score = EVIDENCE_DEFS.reduce(
     (acc, ev) => (evidenceData[ev.id]?.done ? acc + ev.pts : acc),
@@ -278,7 +276,7 @@ export const AddSkillModal = ({ onClose, onSave }) => {
         <div className="px-8 py-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white/80 backdrop-blur-md z-10">
           <div>
             <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
-              🎓{" "}
+              {" "}
               {step === 1
                 ? "Thêm kỹ năng dạy"
                 : step === 2
@@ -382,7 +380,7 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                             {categoryLabel[skill.category] || skill.category}
                           </p>
                           <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-md bg-cyan-50/80 text-cyan-700 border border-cyan-100/50">
-                            💻 2 bằng chứng bắt buộc
+                            💻 2 minh chứng khuyến nghị
                           </span>
                         </button>
                       );
@@ -473,7 +471,7 @@ export const AddSkillModal = ({ onClose, onSave }) => {
               {/* Field 1: About me / Experience */}
               <div>
                 <label className="block text-sm font-extrabold text-slate-900 mb-1.5">
-                  👤 Giới thiệu bản thân <span className="text-red-500">*</span>
+                  Giới thiệu bản thân <span className="text-red-500">*</span>
                 </label>
                 <p className="text-xs text-slate-400 mb-2">
                   Kinh nghiệm thực tế của bạn với kỹ năng này (tối thiểu 20 ký
@@ -484,22 +482,20 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                   onChange={(e) => setExperienceDesc(e.target.value)}
                   placeholder={`Ví dụ: Tôi có 3 năm kinh nghiệm làm việc với ${selectedSkill?.name} tại các công ty startup và agency. Đã triển khai hơn 10 dự án thực tế từ nhỏ đến lớn...`}
                   rows={4}
-                  className={`w-full px-4 py-3 rounded-xl border-2 text-sm outline-none transition focus:bg-white resize-none ${
-                    experienceDesc.trim().length > 0 &&
-                    experienceDesc.trim().length < 20
+                  className={`w-full px-4 py-3 rounded-xl border-2 text-sm outline-none transition focus:bg-white resize-none ${experienceDesc.trim().length > 0 &&
+                      experienceDesc.trim().length < 20
                       ? "border-red-300 bg-red-50/50 focus:border-red-400"
                       : experienceDesc.trim().length >= 20
                         ? "border-emerald-300 bg-emerald-50/30 focus:border-emerald-400"
                         : "border-slate-200 bg-slate-50 focus:border-indigo-400"
-                  }`}
+                    }`}
                 />
                 <div className="flex justify-between mt-1">
                   <span
-                    className={`text-xs font-medium ${
-                      experienceDesc.trim().length < 20
+                    className={`text-xs font-medium ${experienceDesc.trim().length < 20
                         ? "text-red-400"
                         : "text-emerald-500"
-                    }`}
+                      }`}
                   >
                     {experienceDesc.trim().length >= 20
                       ? "✓ Đạt yêu cầu"
@@ -514,7 +510,7 @@ export const AddSkillModal = ({ onClose, onSave }) => {
               {/* Field 2: Learning Outcomes */}
               <div>
                 <label className="block text-sm font-extrabold text-slate-900 mb-1.5">
-                  🎯 Học viên sẽ đạt được gì?{" "}
+                  Học viên sẽ đạt được gì?{" "}
                   <span className="text-red-500">*</span>
                 </label>
                 <p className="text-xs text-slate-400 mb-2">
@@ -526,14 +522,13 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                   onChange={(e) => setOutcomeDesc(e.target.value)}
                   placeholder={`Ví dụ:\nHiểu vững các khái niệm cốt lõi\nXây dựng được project thực tế\nTự tin làm việc trong môi trường chuyên nghiệp`}
                   rows={5}
-                  className={`w-full px-4 py-3 rounded-xl border-2 text-sm outline-none transition focus:bg-white resize-none font-mono ${
-                    outcomeDesc.trim().length > 0 &&
-                    outcomeDesc.trim().length < 10
+                  className={`w-full px-4 py-3 rounded-xl border-2 text-sm outline-none transition focus:bg-white resize-none font-mono ${outcomeDesc.trim().length > 0 &&
+                      outcomeDesc.trim().length < 10
                       ? "border-red-300 bg-red-50/50 focus:border-red-400"
                       : outcomeDesc.trim().length >= 10
                         ? "border-emerald-300 bg-emerald-50/30 focus:border-emerald-400"
                         : "border-slate-200 bg-slate-50 focus:border-indigo-400"
-                  }`}
+                    }`}
                 />
                 {outcomeDesc.trim().length >= 10 && (
                   <div className="mt-2 p-3 bg-violet-50 border border-violet-100 rounded-xl">
@@ -561,7 +556,7 @@ export const AddSkillModal = ({ onClose, onSave }) => {
               {/* Field 3: Teaching Style — Optional */}
               <div>
                 <label className="block text-sm font-extrabold text-slate-900 mb-1.5">
-                  🌀 Phong cách giảng dạy{" "}
+                   Phong cách giảng dạy{" "}
                   <span className="text-slate-400 font-normal text-xs">
                     (tuỳ chọn)
                   </span>
@@ -586,11 +581,11 @@ export const AddSkillModal = ({ onClose, onSave }) => {
             <div className="space-y-6">
               {/* Score Card */}
               <div
-                className={`rounded-2xl border p-6 flex flex-col md:flex-row md:items-center gap-6 ${mandatoryCount < 2 ? "bg-red-50/30 border-red-100" : "bg-emerald-50/30 border-emerald-100"}`}
+                className={`rounded-2xl border p-6 flex flex-col md:flex-row md:items-center gap-6 ${recommendedCount < 2 ? "bg-red-50/30 border-red-100" : "bg-emerald-50/30 border-emerald-100"}`}
               >
                 <div className="flex items-center gap-5 md:w-1/2">
                   <div
-                    className={`relative w-16 h-16 rounded-full border-4 flex items-center justify-center font-extrabold text-xl shrink-0 ${mandatoryCount < 2 ? "border-red-100 text-red-500" : "border-emerald-100 text-emerald-500"}`}
+                    className={`relative w-16 h-16 rounded-full border-4 flex items-center justify-center font-extrabold text-xl shrink-0 ${recommendedCount < 2 ? "border-red-100 text-red-500" : "border-emerald-100 text-emerald-500"}`}
                   >
                     {score}
                     <svg
@@ -605,24 +600,24 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                         stroke="currentColor"
                         strokeWidth="8"
                         strokeDasharray={`${score * 2.89} 289`}
-                        className={`${mandatoryCount < 2 ? "text-red-400" : "text-emerald-400"}`}
+                        className={`${recommendedCount < 2 ? "text-red-400" : "text-emerald-400"}`}
                         strokeLinecap="round"
                       />
                     </svg>
                   </div>
                   <div className="flex-1">
                     <h3
-                      className={`font-extrabold text-lg flex items-center gap-2 ${mandatoryCount < 2 ? "text-red-600" : "text-emerald-600"}`}
+                      className={`font-extrabold text-lg flex items-center gap-2 ${recommendedCount < 2 ? "text-red-600" : "text-emerald-600"}`}
                     >
-                      {mandatoryCount < 2 ? (
+                      {recommendedCount < 2 ? (
                         <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />
                       ) : (
                         <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" />
                       )}
-                      {mandatoryCount < 2 ? "Chưa đủ" : "Đạt yêu cầu cơ bản"}
+                      {recommendedCount < 2 ? "Chưa đủ gợi ý" : "Trust score tốt"}
                     </h3>
                     <p className="text-sm text-slate-500 mb-2">
-                      Điểm chứng minh năng lực ({score}/100 điểm)
+                      Trust score (ước lượng) — {score}/100 điểm
                     </p>
                     <div className="h-2.5 bg-slate-200/60 rounded-full overflow-hidden">
                       <div
@@ -633,7 +628,7 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                   </div>
                 </div>
                 <div className="md:w-1/2 md:border-l md:border-slate-200 md:pl-6 space-y-3">
-                  {mandatoryCount < 2 ? (
+                  {recommendedCount < 2 ? (
                     <div className="bg-amber-50 rounded-xl p-3 border border-amber-200/50 flex items-start gap-2 text-sm text-amber-800 font-medium">
                       <WarningCircle
                         size={18}
@@ -641,8 +636,8 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                         weight="fill"
                       />
                       <p>
-                        {mandatoryCount}/2 bằng chứng bắt buộc — cần thêm{" "}
-                        {2 - mandatoryCount} nữa
+                        {recommendedCount}/2 minh chứng khuyến nghị — thêm{" "}
+                        {2 - recommendedCount} nữa để tăng uy tín
                       </p>
                     </div>
                   ) : (
@@ -652,12 +647,12 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                         className="shrink-0 mt-0.5"
                         weight="fill"
                       />
-                      <p>2/2 bằng chứng bắt buộc — Đã đủ để giảng dạy.</p>
+                      <p>2/2 minh chứng khuyến nghị — hồ sơ trông đáng tin hơn.</p>
                     </div>
                   )}
                   <p className="text-xs text-slate-500 flex items-center gap-1.5">
-                    <span className="text-amber-500">💡</span> Điền đủ bắt buộc
-                    → booking tăng 3×. Thêm không bắt buộc → tăng thêm 2× nữa.
+                    <span className="text-amber-500">💡</span> Thêm minh chứng
+                    giúp tăng độ tin cậy và tỷ lệ được đặt lịch.
                   </p>
                 </div>
               </div>
@@ -668,21 +663,21 @@ export const AddSkillModal = ({ onClose, onSave }) => {
 
               {/* Evidence items */}
               <div className="space-y-6">
-                {/* Mandatory */}
+                {/* Recommended */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="font-extrabold text-slate-900 flex items-center gap-2">
-                      Bắt buộc{" "}
-                      <span className="bg-red-50 text-red-600 px-2 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider">
-                        phải có để hiển thị uy tín
+                      Khuyến nghị{" "}
+                      <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider border border-amber-100">
+                        nên có để tăng uy tín
                       </span>
                     </h4>
                     <span className="text-sm font-bold text-amber-500">
-                      {mandatoryCount}/2 hoàn thành
+                      {recommendedCount}/2 hoàn thành
                     </span>
                   </div>
                   <div className="space-y-3">
-                    {EVIDENCE_DEFS.filter((e) => e.type === "mandatory").map(
+                    {EVIDENCE_DEFS.filter((e) => e.type === "recommended").map(
                       (ev) => (
                         <EvidenceItem
                           key={ev.id}
@@ -813,7 +808,7 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                   )}
                 </div>
                 <div
-                  className={`relative border rounded-2xl p-4 overflow-hidden ${mandatoryCount < 2 ? "bg-red-50/50 border-red-200" : "bg-emerald-50/50 border-emerald-200"}`}
+                  className={`relative border rounded-2xl p-4 overflow-hidden ${recommendedCount < 2 ? "bg-red-50/50 border-red-200" : "bg-emerald-50/50 border-emerald-200"}`}
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center font-extrabold text-sm border shadow-sm">
@@ -821,17 +816,17 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                     </div>
                     <div>
                       <p
-                        className={`font-extrabold flex items-center gap-2 ${mandatoryCount < 2 ? "text-red-600" : "text-emerald-700"}`}
+                        className={`font-extrabold flex items-center gap-2 ${recommendedCount < 2 ? "text-red-600" : "text-emerald-700"}`}
                       >
-                        {mandatoryCount < 2 ? (
+                        {recommendedCount < 2 ? (
                           <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
                         ) : (
                           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                         )}
-                        {mandatoryCount < 2 ? "Chưa đủ" : "Đạt Uy Tín"}
+                        {recommendedCount < 2 ? "Trust score thấp" : "Trust score tốt"}
                       </p>
                       <p className="text-xs text-slate-500">
-                        {mandatoryCount}/2 bắt buộc ·{" "}
+                        {recommendedCount}/2 khuyến nghị ·{" "}
                         {
                           Object.values(evidenceData).filter((e) => e?.done)
                             .length
@@ -843,15 +838,14 @@ export const AddSkillModal = ({ onClose, onSave }) => {
                 </div>
               </div>
 
-              {mandatoryCount < 2 && (
+              {recommendedCount < 2 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
                   <h5 className="font-extrabold text-amber-800 flex items-center gap-2 mb-1">
                     <WarningCircle weight="fill" size={18} /> Còn{" "}
-                    {2 - mandatoryCount} bằng chứng bắt buộc chưa điền
+                    {2 - recommendedCount} minh chứng khuyến nghị chưa điền
                   </h5>
                   <p className="text-sm text-amber-700/80">
-                    Có thể lưu, nhưng học viên sẽ thấy Trust Score thấp và ít
-                    book hơn.
+                    Bạn vẫn có thể lưu, nhưng hồ sơ sẽ kém thuyết phục hơn.
                   </p>
                 </div>
               )}
@@ -886,10 +880,10 @@ export const AddSkillModal = ({ onClose, onSave }) => {
             ← Quay lại
           </button>
           <div className="flex items-center gap-4">
-            {step === 3 && mandatoryCount < 2 && (
+            {step === 3 && recommendedCount < 2 && (
               <span className="text-xs font-bold text-amber-500 hidden sm:flex items-center gap-1.5">
-                <WarningCircle weight="fill" size={14} /> {2 - mandatoryCount}{" "}
-                bằng chứng bắt buộc còn thiếu
+                <WarningCircle weight="fill" size={14} /> {2 - recommendedCount}{" "}
+                minh chứng khuyến nghị còn thiếu
               </span>
             )}
             <button
@@ -900,16 +894,15 @@ export const AddSkillModal = ({ onClose, onSave }) => {
               }
               onClick={handleNext}
               className={`px-8 py-2.5 rounded-xl font-bold transition-all text-sm shadow-sm flex items-center gap-2
-                                ${
-                                  (step === 1 &&
-                                    (!selectedSkill || !selectedLevel)) ||
-                                  (step === 2 && !step2Valid) ||
-                                  saving
-                                    ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-                                    : step === 4
-                                      ? "bg-emerald-500 hover:bg-emerald-600 text-white"
-                                      : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200"
-                                }`}
+                                ${(step === 1 &&
+                  (!selectedSkill || !selectedLevel)) ||
+                  (step === 2 && !step2Valid) ||
+                  saving
+                  ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                  : step === 4
+                    ? "bg-emerald-500 hover:bg-emerald-600 text-white"
+                    : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200"
+                }`}
             >
               {saving ? (
                 <>
@@ -969,9 +962,9 @@ const EvidenceItem = ({
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <p className="font-bold text-slate-900 text-sm">{ev.label}</p>
-                {ev.type === "mandatory" && (
-                  <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold">
-                    BẮT BUỘC
+                {ev.type === "recommended" && (
+                  <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold border border-amber-200">
+                    KHUYẾN NGHỊ
                   </span>
                 )}
                 <span className="text-[10px] bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded font-bold">
@@ -1053,16 +1046,25 @@ const EvidenceItem = ({
                   <span className="text-xs text-slate-400">
                     {state?.file
                       ? state.file.name
-                      : "PNG, JPG, PDF, MP4 (Max 100MB)"}
+                      : ev.acceptText || "PNG, JPG, PDF, MP4 (Max 100MB)"}
                   </span>
                 </div>
                 <input
                   ref={fileRef}
                   type="file"
                   className="hidden"
-                  onChange={(e) =>
-                    e.target.files?.[0] && onFileChange(e.target.files[0])
-                  }
+                  accept={ev.accept}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      if (ev.id === 'video' && file.type !== 'video/mp4' && !file.name.toLowerCase().endsWith('.mp4')) {
+                        alert("Vui lòng chỉ tải lên file video định dạng .mp4");
+                        e.target.value = ""; // Clear the input
+                        return;
+                      }
+                      onFileChange(file);
+                    }
+                  }}
                 />
               </label>
             </div>

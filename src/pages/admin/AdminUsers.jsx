@@ -9,12 +9,11 @@ import ConfirmModal from '../../components/common/ConfirmModal';
 const RoleBadge = ({ role }) => {
     const cfg = {
         ADMIN: 'bg-violet-100 text-violet-700 border-violet-200',
-        MENTOR: 'bg-blue-100 text-blue-700 border-blue-200',
-        LEARNER: 'bg-slate-100 text-slate-600 border-slate-200',
+        USER: 'bg-slate-100 text-slate-600 border-slate-200',
     };
     return (
-        <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${cfg[role] || cfg.LEARNER}`}>
-            {role}
+        <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${cfg[role] || cfg.USER}`}>
+            {role || 'USER'}
         </span>
     );
 };
@@ -69,7 +68,7 @@ const AdminUsers = () => {
     );
 
     const totalBanned = users.filter(u => u.status === 'BANNED').length;
-    const totalMentors = users.filter(u => u.role === 'MENTOR').length;
+    const totalAdmins = users.filter(u => u.role === 'ADMIN').length;
 
     return (
         <div className="max-w-6xl mx-auto space-y-5 sm:space-y-6 pb-4">
@@ -90,7 +89,7 @@ const AdminUsers = () => {
             <div className="grid grid-cols-3 gap-3 sm:gap-4">
                 {[
                     { Icon: Users, label: 'Tổng người dùng', value: users.length, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', weight: 'duotone' },
-                    { Icon: ShieldCheck, label: 'Mentor', value: totalMentors, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', weight: 'duotone' },
+                    { Icon: ShieldCheck, label: 'Quản trị viên', value: totalAdmins, color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-100', weight: 'duotone' },
                     { Icon: ShieldSlash, label: 'Đã bị cấm', value: totalBanned, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', weight: 'duotone' },
                 ].map(s => (
                     <div key={s.label} className={`${s.bg} border ${s.border} rounded-2xl p-5 flex items-center gap-4`}>

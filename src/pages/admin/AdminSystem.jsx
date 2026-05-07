@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Database, CircleNotch, Warning, ArrowsClockwise, HardDrives, EnvelopeSimple, PaperPlaneRight } from '@phosphor-icons/react';
 import { getSystemLogs } from '../../services/adminLogService';
 import { getDlqMessageCount, retryAllDlqMessages } from '../../services/adminDlqService';
@@ -15,6 +15,8 @@ const AdminSystem = () => {
     const [error, setError] = useState(null);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
+    const [levelFilter, setLevelFilter] = useState('ALL');
+    const [searchTerm, setSearchTerm] = useState('');
 
     // DQL State
     const [dlqCount, setDlqCount] = useState(0);
@@ -79,6 +81,25 @@ const AdminSystem = () => {
             setRetrying(false);
         }
     };
+
+    const levelSummary = useMemo(() => {
+        return logs.reduce((acc, log) => {
+            const level = log.level || 'INFO';
+            acc[level] = (acc[level] || 0) + 1;
+            return acc;
+        }, { INFO: 0, WARNING: 0, ERROR: 0 });
+    }, [logs]);
+
+    const filteredLogs = useMemo(() => {
+        const keyword = searchTerm.trim().toLowerCase();
+        return logs.filter((log) => {
+            const byLevel = levelFilter === 'ALL' || log.level === levelFilter;
+            if (!byLevel) return false;
+            if (!keyword) return true;
+            const target = `${log.action || ''} ${log.userName || ''} ${log.userEmail || ''} ${log.ipAddress || ''}`.toLowerCase();
+            return target.includes(keyword);
+        });
+    }, [logs, levelFilter, searchTerm]);
 
     return (
         <div className="max-w-7xl mx-auto space-y-5 sm:space-y-6 pb-4">
@@ -162,6 +183,46 @@ const AdminSystem = () => {
                     )}
                 </div>
 
+                <div className="px-6 py-4 border-b border-slate-100 bg-white flex flex-col gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <p className="text-xs text-slate-500 font-semibold">Sự kiện trang hiện tại</p>
+                            <p className="text-xl font-extrabold text-slate-800 mt-1">{logs.length}</p>
+                        </div>
+                        <div className="rounded-xl border border-blue-200 bg-blue-50/60 px-4 py-3">
+                            <p className="text-xs text-blue-600 font-semibold">INFO</p>
+                            <p className="text-xl font-extrabold text-blue-700 mt-1">{levelSummary.INFO || 0}</p>
+                        </div>
+                        <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3">
+                            <p className="text-xs text-amber-600 font-semibold">WARNING</p>
+                            <p className="text-xl font-extrabold text-amber-700 mt-1">{levelSummary.WARNING || 0}</p>
+                        </div>
+                        <div className="rounded-xl border border-rose-200 bg-rose-50/70 px-4 py-3">
+                            <p className="text-xs text-rose-600 font-semibold">ERROR</p>
+                            <p className="text-xl font-extrabold text-rose-700 mt-1">{levelSummary.ERROR || 0}</p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row md:items-center gap-3">
+                        <input
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Tìm theo hành động, người dùng, email, IP..."
+                            className="w-full md:flex-1 px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-200"
+                        />
+                        <select
+                            value={levelFilter}
+                            onChange={(e) => setLevelFilter(e.target.value)}
+                            className="w-full md:w-44 px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-200"
+                        >
+                            <option value="ALL">Tất cả mức độ</option>
+                            <option value="INFO">INFO</option>
+                            <option value="WARNING">WARNING</option>
+                            <option value="ERROR">ERROR</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div className="divide-y divide-slate-50 flex-1">
                     {loading ? (
                         <div className="flex items-center justify-center h-64">
@@ -172,8 +233,13 @@ const AdminSystem = () => {
                             <Database size={32} weight="duotone" className="mb-2 text-slate-300" />
                             <p className="text-sm font-medium">Chưa có nhật ký nào được ghi lại</p>
                         </div>
+                    ) : filteredLogs.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+                            <Database size={32} weight="duotone" className="mb-2 text-slate-300" />
+                            <p className="text-sm font-medium">Không có log phù hợp với bộ lọc hiện tại</p>
+                        </div>
                     ) : (
-                        logs.map(log => {
+                        filteredLogs.map(log => {
                             const lc = levelConfig[log.level] || levelConfig.INFO;
                             return (
                                 <div key={log.id} className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 px-6 py-4 hover:bg-slate-50 transition-colors ${lc.bg}`}>
@@ -187,6 +253,15 @@ const AdminSystem = () => {
                                         {log.action}
                                     </div>
                                     <div className="flex items-center gap-4 shrink-0 sm:w-64 justify-between sm:justify-end">
+                                        <span className={`text-[10px] font-bold px-2 py-1 rounded-md border ${
+                                            log.level === 'ERROR'
+                                                ? 'border-rose-200 text-rose-600 bg-rose-50'
+                                                : log.level === 'WARNING'
+                                                    ? 'border-amber-200 text-amber-600 bg-amber-50'
+                                                    : 'border-blue-200 text-blue-600 bg-blue-50'
+                                        }`}>
+                                            {log.level || 'INFO'}
+                                        </span>
                                         <div className="text-xs font-semibold text-slate-500 truncate" title={log.userEmail}>
                                             {log.userName || log.userEmail || 'Hệ thống'}
                                         </div>

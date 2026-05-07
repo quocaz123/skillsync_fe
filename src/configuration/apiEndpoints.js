@@ -136,6 +136,7 @@ export const API_ENDPOINTS = {
     ADMIN_APPROVE: (id) => `/api/learning-paths/${id}/approve`,
     ADMIN_REJECT: (id) => `/api/learning-paths/${id}/reject`,
     RATE: (id) => `/api/learning-paths/${id}/reviews`,
+    DELETE: (id) => `/api/learning-paths/${id}`,
   },
 };
 

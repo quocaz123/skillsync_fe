@@ -4,11 +4,14 @@ import { Zap, TrendingUp, TrendingDown, Clock, BookOpen, Award, Gift, ArrowUpRig
 import { useStore } from '../../store';
 
 const TX_CONFIG = {
-    SESSION_BOOKED: { icon: BookOpen, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', label: 'Đặt lịch học', sign: '-' },
-    SESSION_COMPLETED: { icon: Award, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', label: 'Nhận từ buổi dạy', sign: '+' },
-    MISSION_REWARD: { icon: Gift, color: 'text-[#5A63F6]', bg: 'bg-indigo-50', border: 'border-indigo-100', label: 'Nhiệm vụ', sign: '+' },
-    DEPOSIT: { icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', label: 'Nạp credits', sign: '+' },
-    WITHDRAWAL: { icon: TrendingDown, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', label: 'Rút credits', sign: '-' }
+    SPEND_SESSION: { icon: BookOpen, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', label: 'Thanh toán buổi học' },
+    EARN_SESSION: { icon: Award, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', label: 'Nhận từ buổi dạy' },
+    SPEND_LEARNING_PATH: { icon: BookOpen, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', label: 'Thanh toán lộ trình' },
+    EARN_LEARNING_PATH: { icon: Award, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', label: 'Nhận từ lộ trình' },
+    MISSION_REWARD: { icon: Gift, color: 'text-[#5A63F6]', bg: 'bg-indigo-50', border: 'border-indigo-100', label: 'Thưởng nhiệm vụ' },
+    REFUND: { icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', label: 'Hoàn credits' },
+    WELCOME_BONUS: { icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', label: 'Thưởng chào mừng' },
+    PENALTY: { icon: TrendingDown, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', label: 'Khấu trừ' }
 };
 
 const CreditHistory = () => {
@@ -55,7 +58,7 @@ const CreditHistory = () => {
                         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 text-white text-xs font-bold uppercase tracking-wider mb-4 border border-white/10">
                             <Wallet size={12} className="text-amber-300" /> Ví Credits
                         </div>
-                        <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">Credit History</h1>
+                        <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">Lịch sử Credits</h1>
                         <p className="text-slate-400 mt-2">Theo dõi tất cả giao dịch credit của bạn</p>
                     </div>
 
@@ -117,7 +120,8 @@ const CreditHistory = () => {
                         {creditHistory.map((tx, idx) => {
                             const config = TX_CONFIG[tx.transactionType] || TX_CONFIG['MISSION_REWARD'];
                             const Icon = config.icon;
-                            const isPositive = tx.amount > 0;
+                            const amount = Number(tx.amount || 0);
+                            const isPositive = amount >= 0;
                             return (
                                 <div key={tx.id || idx} className="flex items-center gap-5 p-5 md:p-6 hover:bg-slate-50/80 transition-colors group">
                                     {/* Icon */}
@@ -139,7 +143,7 @@ const CreditHistory = () => {
                                     {/* Amount */}
                                     <div className={`text-xl font-extrabold shrink-0 flex items-center gap-1 ${isPositive ? 'text-emerald-600' : 'text-red-500'}`}>
                                         <Zap size={18} className="fill-current opacity-70" />
-                                        {isPositive ? '+' : ''}{tx.amount}
+                                        {isPositive ? '+' : '-'}{Math.abs(amount)}
                                     </div>
                                 </div>
                             );

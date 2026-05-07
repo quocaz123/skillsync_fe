@@ -23,6 +23,7 @@ import { mapFormToApiPayload } from './learning-path-management/pathFormUtils';
 import PathPreviewModal from './learning-path-management/PathPreviewModal';
 import { validatePathForm, countLessons } from './learning-path-management/pathFormUtils';
 import { getMyTeachingSkills } from '../../services/skillService';
+import { deleteLearningPath } from '../../services/learningPathService';
 import ConfirmModal from '../../components/common/ConfirmModal';
 
 const STATUS_META = {
@@ -177,10 +178,31 @@ export default function MentorLearningPathManagementPage() {
         setConfirmDeletePath(path);
     };
 
-    const executeDeletePath = () => {
+    const executeDeletePath = async () => {
         if (!confirmDeletePath) return;
-        setPaths((prev) => prev.filter((p) => p.id !== confirmDeletePath.id));
-        setConfirmDeletePath(null);
+        try {
+            // For Draft paths that haven't been saved to DB yet (id starts with mp-), just remove locally
+            if (String(confirmDeletePath.id).startsWith('mp-')) {
+                setPaths((prev) => prev.filter((p) => p.id !== confirmDeletePath.id));
+                toastSuccess('Xóa bản nháp thành công');
+                return;
+            }
+            await deleteLearningPath(confirmDeletePath.id);
+            toastSuccess('Xóa khóa học thành công');
+            setPaths((prev) => prev.filter((p) => p.id !== confirmDeletePath.id));
+        } catch (err) {
+            toastError(err, 'Lỗi khi xóa khóa học');
+        } finally {
+            setConfirmDeletePath(null);
+        }
+    };
+
+    const getDeleteMessage = () => {
+        if (!confirmDeletePath) return '';
+        if (confirmDeletePath.learners > 0) {
+            return `Khóa học "${confirmDeletePath.title}" đã có ${confirmDeletePath.learners} người đăng ký. Khóa học sẽ được chuyển vào mục Lưu trữ để đảm bảo quyền lợi học viên cũ. Bạn có chắc chắn muốn tiếp tục?`;
+        }
+        return `Bạn có chắc muốn xóa vĩnh viễn khóa học "${confirmDeletePath.title}" không? Hành động này không thể hoàn tác.`;
     };
 
     const handleSaveDraft = (payload) => {
@@ -495,10 +517,10 @@ export default function MentorLearningPathManagementPage() {
                 isOpen={!!confirmDeletePath} 
                 onCancel={() => setConfirmDeletePath(null)} 
                 onConfirm={executeDeletePath} 
-                title="Xóa Khóa Học" 
-                message={`Bạn có chắc muốn xóa khóa học "${confirmDeletePath?.title}" không? Hành động này không thể hoàn tác.`}
-                type="danger"
-                confirmText="Vâng, Xóa Khóa Học"
+                title={confirmDeletePath?.learners > 0 ? "Lưu Trữ Khóa Học" : "Xóa Khóa Học"} 
+                message={getDeleteMessage()}
+                type={confirmDeletePath?.learners > 0 ? "warning" : "danger"}
+                confirmText={confirmDeletePath?.learners > 0 ? "Vâng, Lưu trữ" : "Vâng, Xóa Khóa Học"}
             />
         </div>
     );

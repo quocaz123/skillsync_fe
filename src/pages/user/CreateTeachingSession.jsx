@@ -10,6 +10,7 @@ import { createSlotsBatch } from '../../services/sessionService';
 import { toastError, toastSuccess } from "../../utils/toastUtils";
 import { getNextDaysFromToday, formatDateYMDLocal, getMinTimeHHMMForDate } from '../../utils/dateUtils';
 import UserSkillCard from '../../components/common/UserSkillCard';
+import { SkillDynamicIcon } from '../../components/common/SkillDynamicIcon.jsx';
 
 const { TEACHING_SKILLS } = API_ENDPOINTS;
 
@@ -57,6 +58,7 @@ const getEndTimeOptionsForStart = (startTime, currentEnd) => {
 
 /** Giờ bắt đầu khả dụng: nếu chọn hôm nay thì chỉ sau thời điểm hiện tại */
 const getStartTimeOptionsForDate = (isoDate) => {
+    if (!isoDate) return TIME_OPTIONS;
     const today = formatDateYMDLocal(new Date());
     if (isoDate !== today) return TIME_OPTIONS;
     const min = getMinTimeHHMMForDate(isoDate);
@@ -75,14 +77,11 @@ const formatDate = (iso) => {
 
 // Tạo slot mới — giờ mặc định theo các mốc còn hợp lệ trong ngày đầu tiên
 const newSlot = () => {
-    const date = ALL_DATES[0];
-    const starts = getStartTimeOptionsForDate(date);
-    const time = starts[0] ?? '19:00';
     return {
         id: crypto.randomUUID(),
-        date,
-        time,
-        endTime: calcEndTime(time),
+        date: '',
+        time: '',
+        endTime: '',
         creditCost: 5,
     };
 };
@@ -166,7 +165,14 @@ const Step1 = ({ approvedSkills, loading, data, setData, onNext }) => {
 
             {data.teachingSkill && (
                 <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 ${style.bg} ${style.border} mb-6`}>
-                    <span className="text-2xl">{data.teachingSkill.skillIcon || '📘'}</span>
+                    <div className="text-2xl flex items-center justify-center">
+                        <SkillDynamicIcon
+                            skillName={data.teachingSkill.skillName}
+                            defaultIcon={data.teachingSkill.skillIcon}
+                            size={28}
+                            weight="duotone"
+                        />
+                    </div>
                     <div>
                         <p className={`font-extrabold text-sm ${style.text}`}>Đã chọn: {data.teachingSkill.skillName}</p>
                         <p className="text-xs text-slate-500">{data.teachingSkill.outcomeDesc}</p>
@@ -202,17 +208,23 @@ const Step2 = ({ data, setData, onNext, onBack }) => {
                 if (opts.length === 0) {
                     updated.time = '';
                     updated.endTime = '';
-                } else if (!opts.includes(updated.time)) {
-                    updated.time = opts[0];
-                    updated.endTime = calcEndTime(opts[0]);
+                } else if (updated.time && !opts.includes(updated.time)) {
+                    updated.time = '';
+                    updated.endTime = '';
                 }
             }
             if (field === 'time') {
-                updated.endTime = calcEndTime(value);
+                if (value) {
+                    updated.endTime = calcEndTime(value);
+                } else {
+                    updated.endTime = '';
+                }
             }
             if (field === 'time' || field === 'endTime') {
-                if (timeToMinutes(updated.endTime) <= timeToMinutes(updated.time)) {
-                    updated.endTime = calcEndTime(updated.time);
+                if (updated.time && updated.endTime) {
+                    if (timeToMinutes(updated.endTime) <= timeToMinutes(updated.time)) {
+                        updated.endTime = calcEndTime(updated.time);
+                    }
                 }
             }
             return updated;
@@ -225,10 +237,11 @@ const Step2 = ({ data, setData, onNext, onBack }) => {
     };
 
     const isValid = slots.length > 0 && slots.every(s => {
-        if (!s.date || !s.time || s.creditCost <= 0) return false;
+        if (!s.date || !s.time || !s.endTime || s.creditCost <= 0) return false;
+        if (isNaN(timeToMinutes(s.endTime)) || isNaN(timeToMinutes(s.time))) return false;
         if (timeToMinutes(s.endTime) <= timeToMinutes(s.time)) return false;
         const opts = getStartTimeOptionsForDate(s.date);
-        if (opts.length === 0 || !opts.includes(s.time)) return false;
+        if (opts.length > 0 && !opts.includes(s.time)) return false;
         return true;
     });
 
@@ -268,6 +281,7 @@ const Step2 = ({ data, setData, onNext, onBack }) => {
                                 onChange={e => updateSlot(slot.id, 'date', e.target.value)}
                                 className="w-full text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all cursor-pointer"
                             >
+                                <option value="" disabled>-- Chọn ngày --</option>
                                 {ALL_DATES.map(d => (
                                     <option key={d} value={d}>{formatDate(d)} ({d})</option>
                                 ))}
@@ -282,8 +296,9 @@ const Step2 = ({ data, setData, onNext, onBack }) => {
                                 onChange={e => updateSlot(slot.id, 'time', e.target.value)}
                                 className="w-full text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all cursor-pointer"
                             >
-                                {getStartTimeOptionsForDate(slot.date).length === 0 ? (
-                                    <option value="">Hết khung giờ — chọn ngày khác</option>
+                                <option value="" disabled>-- Chọn giờ --</option>
+                                {(!slot.date || getStartTimeOptionsForDate(slot.date).length === 0) ? (
+                                    <option value="" disabled>Hết khung giờ</option>
                                 ) : (
                                     getStartTimeOptionsForDate(slot.date).map(t => (
                                         <option key={t} value={t}>{t}</option>
@@ -300,7 +315,8 @@ const Step2 = ({ data, setData, onNext, onBack }) => {
                                 onChange={e => updateSlot(slot.id, 'endTime', e.target.value)}
                                 className="w-full text-sm font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all cursor-pointer"
                             >
-                                {getEndTimeOptionsForStart(slot.time, slot.endTime).map(t => (
+                                <option value="" disabled>-- Kết thúc --</option>
+                                {slot.time && getEndTimeOptionsForStart(slot.time, slot.endTime).map(t => (
                                     <option key={t} value={t}>{t}</option>
                                 ))}
                             </select>
@@ -385,7 +401,14 @@ const Step3 = ({ data, onBack, onSubmit, submitting, submitError }) => {
             {s && (
                 <div className={`rounded-2xl border-2 p-5 mb-4 ${categoryStyle(s.skillCategory).bg} ${categoryStyle(s.skillCategory).border}`}>
                     <div className="flex items-center gap-3">
-                        <span className="text-3xl">{s.skillIcon || '📘'}</span>
+                        <div className="text-3xl flex items-center justify-center">
+                            <SkillDynamicIcon
+                                skillName={s.skillName}
+                                defaultIcon={s.skillIcon}
+                                size={36}
+                                weight="duotone"
+                            />
+                        </div>
                         <div>
                             <div className="flex items-center gap-2 flex-wrap">
                                 <span className={`font-extrabold text-base ${categoryStyle(s.skillCategory).text}`}>{s.skillName}</span>

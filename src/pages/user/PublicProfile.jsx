@@ -2,9 +2,16 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
 import {
-  CalendarBlank, Star, ChalkboardTeacher, Laptop,
-  GraduationCap, Lightning, ArrowLeft, CircleNotch,
-  Medal, At, Heartbeat, ShieldCheck,
+  CalendarBlank,
+  Star,
+  ChalkboardTeacher,
+  Laptop,
+  GraduationCap,
+  Lightning,
+  ArrowLeft,
+  CircleNotch,
+  ShieldCheck,
+  X,
 } from '@phosphor-icons/react';
 import { getMentorProfile } from '../../services/userService';
 import { getApprovedTeachingSkills } from '../../services/skillService';
@@ -24,6 +31,142 @@ const LEVEL_COLOR = {
   EXPERT: 'bg-amber-50 text-amber-700 border-amber-200',
 };
 
+const SkillDetailModal = ({ skill, onClose, onBook }) => {
+  if (!skill) return null;
+
+  const levelLabel = LEVEL_LABEL[skill.level] || skill.level;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 bg-black/40 backdrop-blur-sm"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center">
+              <SkillDynamicIcon
+                skillName={skill.skillName}
+                defaultIcon={skill.skillIcon}
+                size={22}
+              />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-base">
+                {skill.skillName}
+              </h3>
+              <p className="text-xs text-slate-500 font-semibold">
+                Cấp độ:{" "}
+                <span className="font-bold text-violet-600">
+                  {levelLabel}
+                </span>
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors"
+          >
+            <X size={16} weight="bold" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-slate-400 font-semibold mb-1">
+                Mức phí tham khảo
+              </p>
+              <p className="flex items-center gap-1 text-base font-extrabold text-amber-600">
+                <Lightning size={16} weight="fill" className="text-amber-400" />
+                {skill.creditsPerHour}{" "}
+                <span className="text-xs text-slate-500 font-semibold">
+                  credits/giờ
+                </span>
+              </p>
+            </div>
+            {skill.totalReviews > 0 && (
+              <div className="text-right">
+                <p className="text-xs text-slate-400 font-semibold mb-1">
+                  Đánh giá
+                </p>
+                <p className="flex items-center justify-end gap-1 text-sm font-bold text-amber-600">
+                  <Star size={14} weight="fill" />
+                  {skill.averageRating?.toFixed(1)}{" "}
+                  <span className="text-[11px] text-slate-400">
+                    ({skill.totalReviews})
+                  </span>
+                </p>
+              </div>
+            )}
+          </div>
+
+          {skill.experienceDesc && (
+            <div className="bg-slate-50 rounded-xl border border-slate-100 p-4">
+              <p className="text-[11px] font-bold text-slate-500 uppercase mb-1">
+                Kinh nghiệm thực tế
+              </p>
+              <p className="text-sm text-slate-700 leading-relaxed">
+                {skill.experienceDesc}
+              </p>
+            </div>
+          )}
+
+          {skill.outcomeDesc && (
+            <div className="bg-slate-50 rounded-xl border border-slate-100 p-4">
+              <p className="text-[11px] font-bold text-slate-500 uppercase mb-1">
+                Học viên sẽ đạt được
+              </p>
+              <ul className="space-y-1">
+                {skill.outcomeDesc
+                  .split("\n")
+                  .map((line) => line.trim())
+                  .filter(Boolean)
+                  .map((line, idx) => (
+                    <li
+                      key={idx}
+                      className="text-xs text-slate-700 flex items-start gap-1.5"
+                    >
+                      <span className="text-violet-500 mt-[2px]">✓</span>
+                      <span>{line}</span>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
+
+          {skill.teachingStyle && (
+            <div className="bg-slate-50 rounded-xl border border-slate-100 p-4">
+              <p className="text-[11px] font-bold text-slate-500 uppercase mb-1">
+                Phong cách giảng dạy
+              </p>
+              <p className="text-sm text-slate-700 leading-relaxed italic">
+                {skill.teachingStyle}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="px-5 pb-5 pt-3 border-t border-slate-100 flex flex-col sm:flex-row gap-3 sm:gap-4">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            Đóng
+          </button>
+          <button
+            onClick={() => onBook(skill.id)}
+            className="flex-1 px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-sm font-bold text-white shadow-md shadow-violet-200 flex items-center justify-center gap-2 transition-all active:scale-95"
+          >
+            <CalendarBlank size={16} weight="duotone" />
+            Đặt lịch với kỹ năng này
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const PublicProfile = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
@@ -33,6 +176,7 @@ const PublicProfile = () => {
   const [teachingSkills, setTeachingSkills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [activeSkill, setActiveSkill] = useState(null);
 
   const isOwnProfile = currentUser?.id === userId;
 
@@ -57,9 +201,14 @@ const PublicProfile = () => {
       .finally(() => setLoading(false));
   }, [userId]);
 
-  /** Chuyển sang Explore với mentor được pre-select → booking flow */
-  const handleBookSkill = () => {
-    navigate('/app/explore', { state: { openMentorId: userId } });
+  /** Chuyển sang Explore với mentor/skill được pre-select → booking flow */
+  const handleBookSkill = (teachingSkillId = null) => {
+    navigate('/app/explore', {
+      state: {
+        openMentorId: userId,
+        ...(teachingSkillId ? { openSkillId: teachingSkillId } : {}),
+      },
+    });
   };
 
   if (loading) {
@@ -181,7 +330,8 @@ const PublicProfile = () => {
                 {teachingSkills.map((ts) => (
                   <div
                     key={ts.id}
-                    className="flex items-center justify-between gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-violet-200 hover:bg-violet-50/30 transition-all group"
+                    className="flex items-center justify-between gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-violet-200 hover:bg-violet-50/30 transition-all group cursor-pointer"
+                    onClick={() => setActiveSkill(ts)}
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-slate-200 shrink-0">
@@ -212,7 +362,10 @@ const PublicProfile = () => {
                       </div>
                       {!isOwnProfile && (
                         <button
-                          onClick={handleBookSkill}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleBookSkill(ts.id);
+                          }}
                           className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all hover:-translate-y-0.5 active:scale-95 opacity-0 group-hover:opacity-100"
                         >
                           Đặt lịch
@@ -246,7 +399,7 @@ const PublicProfile = () => {
           {/* CTA đặt lịch */}
           {!isOwnProfile && teachingSkills.length > 0 && (
             <button
-              onClick={handleBookSkill}
+              onClick={() => handleBookSkill()}
               className="w-full py-4 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white font-extrabold rounded-2xl shadow-lg shadow-violet-600/25 transition-all hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2"
             >
               <CalendarBlank size={20} weight="duotone" />
@@ -255,6 +408,17 @@ const PublicProfile = () => {
           )}
         </div>
       </div>
+
+      {activeSkill && (
+        <SkillDetailModal
+          skill={activeSkill}
+          onClose={() => setActiveSkill(null)}
+          onBook={(skillId) => {
+            setActiveSkill(null);
+            handleBookSkill(skillId);
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -155,3 +155,12 @@ export async function enrollLearningPath(pathId) {
         };
     }
 }
+
+/**
+ * DELETE /api/learning-paths/{id}
+ * Xoá lộ trình (Hybrid delete: xóa hẳn nếu không có học viên, lưu trữ nếu đã có)
+ */
+export async function deleteLearningPath(pathId) {
+    const response = await axiosClient.delete(API_ENDPOINTS.LEARNING_PATHS.DELETE(pathId));
+    return response;
+}

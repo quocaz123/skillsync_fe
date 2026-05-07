@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
 import * as sessionService from '../../services/sessionService';
 import { getAllSkills, getExploreTeachingSkills, getApprovedTeachingSkills } from '../../services/skillService';
@@ -317,6 +317,7 @@ const DETAIL_TABS = [
 const Explore = () => {
     const { credits, user, syncCredits } = useStore();
     const location = useLocation();
+    const navigate = useNavigate();
     const currentUserId = user?.id ?? null;
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedQ, setDebouncedQ] = useState('');
@@ -397,38 +398,79 @@ const Explore = () => {
         loadExplore(0, false);
     }, [loadExplore]);
 
-    // ── Auto-open từ AI Chat Bubble ──────────────────────────────────────────
-    // Khi navigate từ AiChatBubble với state { openMentorId }, tìm mentor
+    // ── Auto-open từ AI Chat Bubble / Profile ───────────────────────────────
+    // Khi navigate với state { openMentorId, openSkillId }, tìm mentor/skill
     // trong danh sách đã fetch và mở trang chi tiết ngay lập tức.
     useEffect(() => {
-        const targetId = location.state?.openMentorId;
-        if (!targetId || loadingMentors || mentors.length === 0) return;
+        const navState = location.state || {};
+        const targetMentorId = navState.openMentorId;
+        const targetSkillId = navState.openSkillId;
 
-        // AI trả về mentorId = User UUID của teacher → map sang m.teacherId trong Explore
-        // m.id là TeachingSkill ID (khác), m.teacherId mới là teacher's user UUID
-        const found = mentors.find(m => String(m.teacherId) === String(targetId));
-        if (found) {
-            setSelectedMentor(found);
+        if ((!targetMentorId && !targetSkillId) || loadingMentors || mentors.length === 0) {
+            return;
+        }
+
+        const openDetailFor = (mentorObj) => {
+            setSelectedMentor(mentorObj);
             setBookingStep(0);
             setActiveTab('intro');
-            // Xoá state khỏi history để không bị re-trigger khi navigate lại
             window.history.replaceState({}, '');
-        } else {
-            // Mentor might not be on the first page, let's fetch and map it
-            getApprovedTeachingSkills().then(allSkills => {
-                const mySkills = Array.isArray(allSkills) ? allSkills.filter(s => String(s.teacherId) === String(targetId)) : [];
-                if (mySkills.length > 0) {
-                    const mapped = mapSkillToMentor(mySkills[0]); // open the first matching skill
-                    setSelectedMentor(mapped);
-                    setBookingStep(0);
-                    setActiveTab('intro');
-                    window.history.replaceState({}, '');
+        };
+
+        // Ưu tiên mở đúng teachingSkill nếu có openSkillId
+        if (targetSkillId) {
+            const bySkillOnPage = mentors.find(
+                (m) => String(m.id) === String(targetSkillId),
+            );
+            if (bySkillOnPage) {
+                openDetailFor(bySkillOnPage);
+                return;
+            }
+        }
+
+        if (targetMentorId) {
+            // AI trả về mentorId = User UUID của teacher → map sang m.teacherId trong Explore
+            // m.id là TeachingSkill ID (khác), m.teacherId mới là teacher's user UUID
+            const byMentorOnPage = mentors.find(
+                (m) => String(m.teacherId) === String(targetMentorId),
+            );
+            if (byMentorOnPage) {
+                openDetailFor(byMentorOnPage);
+                return;
+            }
+        }
+
+        // Nếu không tìm thấy trong trang hiện tại → fallback lấy từ toàn bộ approved skills
+        getApprovedTeachingSkills()
+            .then((allSkills) => {
+                const skillsArr = Array.isArray(allSkills) ? allSkills : [];
+
+                let targetSkill = null;
+                if (targetSkillId) {
+                    targetSkill = skillsArr.find(
+                        (s) => String(s.id) === String(targetSkillId),
+                    );
+                }
+                if (!targetSkill && targetMentorId) {
+                    const mentorSkills = skillsArr.filter(
+                        (s) => String(s.teacherId) === String(targetMentorId),
+                    );
+                    if (mentorSkills.length > 0) {
+                        targetSkill = mentorSkills[0];
+                    }
+                }
+
+                if (targetSkill) {
+                    const mapped = mapSkillToMentor(targetSkill);
+                    openDetailFor(mapped);
                 } else {
-                    // Fallback if somehow not found at all
                     window.history.replaceState({}, '');
                 }
-            }).catch(e => console.error("Error fetching mentor skill", e));
-        }
+            })
+            .catch((e) => {
+                console.error('Error fetching mentor skill', e);
+                window.history.replaceState({}, '');
+            });
     }, [location.state, mentors, loadingMentors]);
 
     // Tải danh mục skill sau (idle / micro-delay) để ưu tiên request Explore — cảm nhận tải nhanh hơn.
@@ -450,7 +492,7 @@ const Explore = () => {
     }, []);
 
     // Fetch lịch trống khi click vào mentor
-    useEffect(() => {
+        useEffect(() => {
         if (!selectedMentor) return;
         const loadSlots = async () => {
             try {
@@ -475,6 +517,7 @@ const Explore = () => {
             }
         };
         loadSlots();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedMentor?.id]);
 
 
@@ -615,6 +658,17 @@ const Explore = () => {
                         {activeTab === 'creds' && <TabCredentials mentor={m} />}
                         {activeTab === 'schedule' && <TabSchedule mentor={m} onBook={() => setBookingStep(1)} isOwner={isOwner} />}
                         {activeTab === 'reviews' && <TabReviews mentor={m} />}
+
+                        {/* Link quay về trang profile public kèm toàn bộ kỹ năng */}
+                        <div className="mt-4 flex justify-end">
+                            <button
+                                type="button"
+                                onClick={() => navigate(`/app/profile/${m.teacherId}`)}
+                                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-violet-600 hover:underline"
+                            >
+                                Xem tất cả kỹ năng khác của mentor
+                            </button>
+                        </div>
                     </div>
 
                     {/* ─── Right: Booking Widget ────────────────── */}
