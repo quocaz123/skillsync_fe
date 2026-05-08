@@ -176,7 +176,7 @@ function EnrollmentModal({
 export default function LearningPathDetail() {
     const { pathId } = useParams();
     const navigate = useNavigate();
-    const { user, credits, syncCredits, deductCredits, addEnrolledPath, addCreditTransaction, enrolledPathIds } = useStore();
+    const { user, credits, syncCredits, addEnrolledPath, enrolledPathIds } = useStore();
 
     const [detail, setDetail] = useState(null);
     const [loadState, setLoadState] = useState('loading');
@@ -184,6 +184,7 @@ export default function LearningPathDetail() {
     const [openIdx, setOpenIdx] = useState(0);
     const [modalOpen, setModalOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [enrollErr, setEnrollErr] = useState('');
 
     const balance = useMemo(
         () => Number(user?.creditsBalance ?? credits ?? 0),
@@ -235,6 +236,7 @@ export default function LearningPathDetail() {
             navigate(`/app/learning-path/study/${detail.id}`);
             return;
         }
+        setEnrollErr('');
         setModalOpen(true);
     };
 
@@ -250,6 +252,7 @@ export default function LearningPathDetail() {
             navigate(`/app/learning-path/study/${detail.id}`);
             return;
         }
+        setEnrollErr('');
         const cost = Number(detail.totalCredits || 0);
         if (cost > 0 && balance < cost) return;
 
@@ -260,19 +263,12 @@ export default function LearningPathDetail() {
 
             if (res.creditsBalance != null && res.creditsBalance !== '') {
                 syncCredits(Number(res.creditsBalance));
-            } else if (res.offline && cost > 0) {
-                deductCredits(cost);
-                addCreditTransaction({
-                    type: 'path_enroll',
-                    amount: -cost,
-                    description: `Đăng ký lộ trình: ${detail.title}`,
-                });
             }
 
             setDetail((prev) => (prev ? { ...prev, enrolled: true, enrollmentId: res.enrollmentId || prev.enrollmentId } : prev));
             setModalOpen(false);
-        } catch {
-            /* axios đã throw — giữ modal mở */
+        } catch (e) {
+            setEnrollErr(e?.message || 'Không thể đăng ký lộ trình. Vui lòng thử lại.');
         } finally {
             setSubmitting(false);
         }
@@ -633,12 +629,20 @@ export default function LearningPathDetail() {
 
             <EnrollmentModal
                 open={modalOpen && !isOwner}
-                onClose={() => setModalOpen(false)}
+                onClose={() => {
+                    setModalOpen(false);
+                    setEnrollErr('');
+                }}
                 detail={detail}
                 balance={balance}
                 onConfirm={handleEnrollConfirm}
                 submitting={submitting}
             />
+            {enrollErr && (
+                <div className="fixed bottom-4 right-4 z-[110] rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 shadow-lg">
+                    {enrollErr}
+                </div>
+            )}
         </div>
     );
 }

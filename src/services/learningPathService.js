@@ -141,18 +141,14 @@ export async function enrollLearningPath(pathId) {
             raw: data,
         };
     } catch (e) {
-        /* Demo: enroll thành công khi offline — trừ credit phía client trong UI */
-        const mock = buildPathDetailMock(pathId);
-        if (!mock) throw e;
-        const cost = mock.totalCredits || 0;
-        return {
-            creditsBalance: null,
-            enrollmentId: `enroll_${pathId}_${Date.now()}`,
-            enrolled: true,
-            offline: true,
-            deductedCredits: cost,
-            raw: null,
-        };
+        const apiMessage =
+            e?.response?.data?.message
+            || e?.response?.data?.error
+            || e?.message
+            || 'Đăng ký lộ trình thất bại';
+        const err = new Error(apiMessage);
+        err.cause = e;
+        throw err;
     }
 }
 
