@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
     Map, Star, Target, BookOpen, ChevronDown, Zap, CheckCircle2, Play,
@@ -6,6 +6,7 @@ import {
     HelpCircle, Loader2, X, GraduationCap, ListChecks, Shield,
 } from 'lucide-react';
 import { fetchLearningPathById, enrollLearningPath } from '../../services/learningPathService';
+import { getMyProfile } from '../../services/userService';
 import { useStore } from '../../store';
 
 const LEVEL_LABEL = { Beginner: 'Cơ bản', Intermediate: 'Trung cấp', Advanced: 'Nâng cao' };
@@ -66,6 +67,7 @@ function EnrollmentModal({
     balance,
     onConfirm,
     submitting,
+    loadingBalance,
 }) {
     if (!open || !detail) return null;
 
@@ -159,11 +161,11 @@ function EnrollmentModal({
                             <button
                                 type="button"
                                 onClick={onConfirm}
-                                disabled={submitting}
+                                disabled={submitting || loadingBalance}
                                 className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
-                                {submitting ? <Loader2 size={16} className="animate-spin" /> : null}
-                                Xác nhận đăng ký
+                                {submitting || loadingBalance ? <Loader2 size={16} className="animate-spin" /> : null}
+                                {loadingBalance ? 'Đang đồng bộ credit...' : 'Xác nhận đăng ký'}
                             </button>
                         </>
                     )}
@@ -185,12 +187,31 @@ export default function LearningPathDetail() {
     const [modalOpen, setModalOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [enrollErr, setEnrollErr] = useState('');
+    const [loadingBalance, setLoadingBalance] = useState(false);
 
     const balance = useMemo(
         () => Number(user?.creditsBalance ?? credits ?? 0),
         [user?.creditsBalance, credits]
     );
     const currentUserId = user?.id ?? user?.userId ?? null;
+
+    const refreshCredits = useCallback(async () => {
+        try {
+            const me = await getMyProfile();
+            const nextBalance = Number(me?.creditsBalance);
+            if (Number.isFinite(nextBalance)) {
+                syncCredits(
+                    nextBalance,
+                    me?.pendingLearnerCredits,
+                    me?.pendingTeacherCredits
+                );
+                return nextBalance;
+            }
+        } catch {
+            /* ignore profile refresh error and fallback to cached value */
+        }
+        return Number(useStore.getState().credits ?? 0);
+    }, [syncCredits]);
 
     useEffect(() => {
         let cancelled = false;
@@ -214,6 +235,10 @@ export default function LearningPathDetail() {
         };
     }, [pathId]);
 
+    useEffect(() => {
+        refreshCredits();
+    }, [refreshCredits]);
+
     const enrolledIdSet = useMemo(
         () => new Set((enrolledPathIds || []).map((id) => String(id))),
         [enrolledPathIds]
@@ -226,7 +251,7 @@ export default function LearningPathDetail() {
         (detail?.id != null && enrolledIdSet.has(String(detail.id)))
     );
 
-    const handlePrimaryCta = () => {
+    const handlePrimaryCta = async () => {
         if (!detail) return;
         if (isOwner) {
             navigate('/mentor/learning-paths');
@@ -237,6 +262,9 @@ export default function LearningPathDetail() {
             return;
         }
         setEnrollErr('');
+        setLoadingBalance(true);
+        await refreshCredits();
+        setLoadingBalance(false);
         setModalOpen(true);
     };
 
@@ -254,7 +282,10 @@ export default function LearningPathDetail() {
         }
         setEnrollErr('');
         const cost = Number(detail.totalCredits || 0);
-        if (cost > 0 && balance < cost) return;
+        setLoadingBalance(true);
+        const latestBalance = await refreshCredits();
+        setLoadingBalance(false);
+        if (cost > 0 && latestBalance < cost) return;
 
         setSubmitting(true);
         try {
@@ -637,6 +668,7 @@ export default function LearningPathDetail() {
                 balance={balance}
                 onConfirm={handleEnrollConfirm}
                 submitting={submitting}
+                loadingBalance={loadingBalance}
             />
             {enrollErr && (
                 <div className="fixed bottom-4 right-4 z-[110] rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 shadow-lg">

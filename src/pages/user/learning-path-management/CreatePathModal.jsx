@@ -417,6 +417,7 @@ function StepBasicInfo({ form, update, pathType, allowedSkills = [] }) {
                             value={form.level}
                             onChange={(e) => update({ level: e.target.value })}
                         >
+                            <option value="">Chọn trình độ</option>
                             {LEVEL_OPTIONS.map(l => <option key={l} value={l}>{l}</option>)}
                         </select>
                     </div>
