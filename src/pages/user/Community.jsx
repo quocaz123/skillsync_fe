@@ -116,6 +116,35 @@ const MY_POST_SORT_OPTIONS = [
 
 const SUGGESTION_ICON_POOL = [BookOpen, ChalkboardTeacher, Lightbulb, Star];
 
+/** Avatar component dùng chung: hiển thị ảnh thực nếu có, fallback initials + màu */
+const ForumAvatar = ({ avatarUrl, name, role, size = 'w-10 h-10', textSize = 'text-sm' }) => {
+  const [imgErr, setImgErr] = useState(false);
+  const initials = name
+    ? name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+    : '?';
+  const COLORS = [
+    'bg-violet-500', 'bg-indigo-500', 'bg-sky-500',
+    'bg-teal-500', 'bg-emerald-500', 'bg-rose-500', 'bg-amber-500',
+  ];
+  const colorIdx = name ? name.charCodeAt(0) % COLORS.length : 0;
+  const color = role === 'MENTOR' ? 'bg-gradient-to-br from-violet-500 to-indigo-500' : COLORS[colorIdx];
+
+  if (avatarUrl && !imgErr) {
+    return (
+      <img
+        src={avatarUrl} alt={name || 'avatar'}
+        onError={() => setImgErr(true)}
+        className={`${size} rounded-xl object-cover shrink-0 ring-1 ring-slate-100`}
+      />
+    );
+  }
+  return (
+    <div className={`${size} rounded-xl ${color} text-white flex items-center justify-center font-extrabold ${textSize} shrink-0`}>
+      {initials}
+    </div>
+  );
+};
+
 const normalizeKeyword = (value) =>
   String(value || "")
     .toLowerCase()
@@ -168,10 +197,17 @@ const transformCommentWithMentions = (text, mentionsList) => {
   return transformed;
 };
 
+const parseTimestamp = (input) => {
+  if (!input) return null;
+  const s = String(input);
+  const hasOffset = s.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(s);
+  return new Date(hasOffset ? s : s + 'Z');
+};
+
 const formatRelativeTimeLabel = (input) => {
   if (!input) return "";
-  const createdAt = new Date(input);
-  if (Number.isNaN(createdAt.getTime())) return "";
+  const createdAt = parseTimestamp(input);
+  if (!createdAt || Number.isNaN(createdAt.getTime())) return "";
 
   const diffInSeconds = Math.floor((Date.now() - createdAt.getTime()) / 1000);
   if (diffInSeconds < 60) return `${Math.max(diffInSeconds, 1)} giây trước`;
@@ -200,11 +236,7 @@ const CommentItem = ({ comment, depth = 0, onLike, onReply, onDelete, currentUse
   return (
     <div className={depth > 0 ? "ml-10 pl-4 border-l border-slate-200" : ""}>
       <div className="flex gap-3">
-        <div
-          className={`w-10 h-10 rounded-full ${comment.authorColor} text-white flex items-center justify-center font-bold text-sm shrink-0`}
-        >
-          {comment.authorInitials}
-        </div>
+        <ForumAvatar avatarUrl={comment.authorAvatar} name={comment.authorName} role={comment.authorRole} />
         <div className="flex-1 min-w-0">
           <div className="bg-white border border-slate-100 rounded-2xl rounded-tl-none p-3 shadow-sm inline-block max-w-full">
             <p className="font-bold text-sm text-slate-900 mb-0.5">
@@ -382,11 +414,7 @@ const MyPostCard = ({ post, onEdit, onDelete, onOpen }) => (
     <div className="p-5 pb-3">
       <div className="flex items-start gap-3 mb-3 justify-between">
         <div className="flex items-start gap-3 flex-1">
-          <div
-            className={`w-10 h-10 rounded-xl ${post.authorColor} text-white flex items-center justify-center font-extrabold text-sm shrink-0`}
-          >
-            {post.authorInitials}
-          </div>
+          <ForumAvatar avatarUrl={post.authorAvatar} name={post.authorName} role={post.authorRole} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center flex-wrap gap-2">
               <span className="font-bold text-slate-900 text-sm">
@@ -747,11 +775,7 @@ const PostCard = ({ post, onToggleLike, onToggleSave, onOpen }) => (
     {/* Header */}
     <div className="p-5 pb-3">
       <div className="flex items-start gap-3 mb-3">
-        <div
-          className={`w-10 h-10 rounded-xl ${post.authorColor} text-white flex items-center justify-center font-extrabold text-sm shrink-0`}
-        >
-          {post.authorInitials}
-        </div>
+        <ForumAvatar avatarUrl={post.authorAvatar} name={post.authorName} role={post.authorRole} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center flex-wrap gap-2">
             <span className="font-bold text-slate-900 text-sm">
@@ -760,7 +784,7 @@ const PostCard = ({ post, onToggleLike, onToggleSave, onOpen }) => (
             <span className="text-xs text-slate-400">{post.authorRole}</span>
             <span className="text-xs text-slate-300">·</span>
             <span className="text-xs text-slate-400 flex items-center gap-0.5">
-              <Clock size={11} weight="regular" /> {post.timeAgo}
+              <Clock size={11} weight="regular" /> {formatRelativeTimeLabel(post.updatedAt || post.createdAt)}
             </span>
           </div>
           <span
@@ -1050,11 +1074,7 @@ const PostDetailModal = ({
             {/* Author Info */}
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
-                <div
-                  className={`w-12 h-12 rounded-xl ${post.authorColor} text-white flex items-center justify-center font-extrabold text-lg shrink-0`}
-                >
-                  {post.authorInitials}
-                </div>
+                <ForumAvatar avatarUrl={post.authorAvatar} name={post.authorName} role={post.authorRole} size="w-12 h-12" textSize="text-lg" />
                 <div>
                   <h4 className="font-bold text-slate-900">
                     {post.authorName}
@@ -1063,7 +1083,7 @@ const PostDetailModal = ({
                 </div>
               </div>
               <span className="text-sm text-slate-400 flex items-center gap-1 font-medium bg-white px-3 py-1.5 rounded-lg border border-slate-100">
-                <Clock size={14} /> {post.timeAgo}
+                <Clock size={14} /> {formatRelativeTimeLabel(post.updatedAt || post.createdAt)}
               </span>
             </div>
 

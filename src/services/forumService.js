@@ -82,10 +82,19 @@ function getAvatarColor(name) {
   return AVATAR_COLORS[index];
 }
 
+function parseTimestamp(input) {
+  if (!input) return null;
+  // Backend trả LocalDateTime không có timezone (ví dụ: "2026-05-10T04:30:00")
+  // Nếu không có Z hoặc +/-offset, thêm 'Z' để trình duyệt hiểu là UTC
+  const s = String(input);
+  const hasOffset = s.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(s);
+  return new Date(hasOffset ? s : s + 'Z');
+}
+
 function formatRelativeTime(input) {
   if (!input) return "";
-  const createdAt = new Date(input);
-  if (Number.isNaN(createdAt.getTime())) return "";
+  const createdAt = parseTimestamp(input);
+  if (!createdAt || Number.isNaN(createdAt.getTime())) return "";
 
   const diffInSeconds = Math.floor((Date.now() - createdAt.getTime()) / 1000);
   if (diffInSeconds < 60) return `${Math.max(diffInSeconds, 1)} giây trước`;
@@ -113,12 +122,12 @@ function normalizeComment(comment) {
     content: comment.content || "",
     likeCount: Number(comment.likeCount ?? 0),
     liked: Boolean(comment.liked),
-    timeAgo: formatRelativeTime(comment.createdAt),
+    // Không đóng băng timeAgo — luưu createdAt để tính động trong render
+    createdAt: comment.createdAt || null,
+    updatedAt: comment.updatedAt || null,
     replies: Array.isArray(comment.replies)
       ? comment.replies.map(normalizeComment).filter(Boolean)
       : [],
-    createdAt: comment.createdAt || null,
-    updatedAt: comment.updatedAt || null,
   };
 }
 
@@ -168,7 +177,7 @@ export function mapForumPost(post) {
     authorName,
     authorRole: post.authorRole || "USER",
     authorAvatar: post.authorAvatar || null,
-    timeAgo: formatRelativeTime(post.updatedAt || post.createdAt),
+    // Không đóng băng timeAgo — luưu createdAt/updatedAt để tính động trong render
     title: post.title || "",
     content: post.content || "",
     tags: Array.isArray(post.tags) ? post.tags : [],

@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, ArrowRight, Check, Sparkle, Lightning,
-    CalendarBlank, Plus, Trash, Rocket, Spinner, WarningCircle
+    CalendarBlank, Plus, Trash, Rocket, Spinner, WarningCircle,
+    Clock, Timer, Coins
 } from '@phosphor-icons/react';
 import httpClient from '../../configuration/axiosClient';
 import { API_ENDPOINTS } from '../../configuration/apiEndpoints';
@@ -261,10 +262,13 @@ const Step2 = ({ data, setData, onNext, onBack }) => {
 
             {/* Header */}
             <div className="hidden md:grid grid-cols-[1fr_130px_130px_110px_36px] gap-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-wide mb-2 px-1">
-                <span>📅 Ngày</span>
-                <span>🕐 Bắt đầu</span>
-                <span>🕑 Kết thúc</span>
-                <span>⚡ Credits</span>
+                <span className="flex items-center gap-1"><CalendarBlank size={11} weight="fill" /> Ngày</span>
+                <span className="flex items-center gap-1"><Clock size={11} weight="fill" /> Bắt đầu</span>
+                <span className="flex flex-col gap-0.5">
+                    <span className="flex items-center gap-1"><Clock size={11} weight="duotone" /> Kết thúc</span>
+                    <span className="text-[9px] normal-case font-medium text-violet-400 tracking-normal">(tự động +1h)</span>
+                </span>
+                <span className="flex items-center gap-1"><Lightning size={11} weight="fill" /> Credits</span>
                 <span></span>
             </div>
 
@@ -275,7 +279,9 @@ const Step2 = ({ data, setData, onNext, onBack }) => {
 
                         {/* Ngày */}
                         <div>
-                            <label className="text-[10px] font-bold text-slate-400 md:hidden mb-1 block">📅 Ngày</label>
+                            <label className="text-[10px] font-bold text-slate-400 md:hidden mb-1 flex items-center gap-1">
+                                <CalendarBlank size={11} weight="fill" /> Ngày
+                            </label>
                             <select
                                 value={slot.date}
                                 onChange={e => updateSlot(slot.id, 'date', e.target.value)}
@@ -290,7 +296,9 @@ const Step2 = ({ data, setData, onNext, onBack }) => {
 
                         {/* Giờ bắt đầu */}
                         <div>
-                            <label className="text-[10px] font-bold text-slate-400 md:hidden mb-1 block">🕐 Bắt đầu</label>
+                            <label className="text-[10px] font-bold text-slate-400 md:hidden mb-1 flex items-center gap-1">
+                                <Clock size={11} weight="fill" /> Bắt đầu
+                            </label>
                             <select
                                 value={slot.time}
                                 onChange={e => updateSlot(slot.id, 'time', e.target.value)}
@@ -307,9 +315,11 @@ const Step2 = ({ data, setData, onNext, onBack }) => {
                             </select>
                         </div>
 
-                        {/* Giờ kết thúc */}
+                    {/* Giờ kết thúc */}
                         <div>
-                            <label className="text-[10px] font-bold text-slate-400 md:hidden mb-1 block">🕑 Kết thúc</label>
+                            <label className="text-[10px] font-bold text-slate-400 md:hidden mb-1 flex items-center gap-1">
+                                <Clock size={11} weight="duotone" /> Kết thúc
+                            </label>
                             <select
                                 value={slot.endTime}
                                 onChange={e => updateSlot(slot.id, 'endTime', e.target.value)}
@@ -320,11 +330,26 @@ const Step2 = ({ data, setData, onNext, onBack }) => {
                                     <option key={t} value={t}>{t}</option>
                                 ))}
                             </select>
+                            {/* Badge thời lượng */}
+                            {slot.time && slot.endTime && (() => {
+                                const dur = timeToMinutes(slot.endTime) - timeToMinutes(slot.time);
+                                if (dur <= 0 || isNaN(dur)) return null;
+                                const h = Math.floor(dur / 60);
+                                const m = dur % 60;
+                                const label = h > 0 && m > 0 ? `${h}g${m}ph` : h > 0 ? `${h} giờ` : `${m} phút`;
+                                return (
+                                    <span className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+                                        <Timer size={10} weight="fill" /> {label}
+                                    </span>
+                                );
+                            })()}
                         </div>
 
                         {/* Credits */}
                         <div>
-                            <label className="text-[10px] font-bold text-slate-400 md:hidden mb-1 block">⚡ Credits</label>
+                            <label className="text-[10px] font-bold text-slate-400 md:hidden mb-1 flex items-center gap-1">
+                                <Lightning size={11} weight="fill" /> Credits
+                            </label>
                             <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
                                 <Lightning size={14} weight="fill" className="text-amber-400 shrink-0" />
                                 <input
