@@ -1,5 +1,6 @@
 import React from 'react';
 import { MOCK_SKILLS, LEVEL_OPTIONS } from './learningPathMocks';
+import ThumbnailUploader from '../../../components/common/ThumbnailUploader';
 
 export default function LearningPathBasicInfoSection({ data, onChange, errors }) {
     const set = (field, value) => onChange({ ...data, [field]: value });
@@ -96,18 +97,11 @@ export default function LearningPathBasicInfoSection({ data, onChange, errors })
                     />
                 </div>
                 <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Thumbnail (URL ảnh)</label>
-                    <input
-                        type="url"
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Ảnh đại diện lộ trình</label>
+                    <ThumbnailUploader
                         value={data.thumbnail}
-                        onChange={(e) => set('thumbnail', e.target.value)}
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/30"
-                        placeholder="https://example.com/banner.jpg"
+                        onChange={(url) => set('thumbnail', url)}
                     />
-                    <p className="text-[11px] text-slate-400 mt-1 leading-snug">
-                        Dán <strong className="text-slate-500">đường dẫn file ảnh</strong> (kết thúc .jpg, .png, .webp…). Link bài viết / trang chủ thường{' '}
-                        <em>không</em> phải ảnh; một số host cũng chặn hiển thị ngoài site (hotlink).
-                    </p>
                 </div>
             </div>
 

@@ -29,6 +29,7 @@ import {
     emptyLesson,
     countLessons,
 } from './pathFormUtils';
+import ThumbnailUploader from '../../../components/common/ThumbnailUploader';
 
 const STEPS = [
     { id: 1, label: 'Thông tin' },
@@ -449,14 +450,13 @@ function StepBasicInfo({ form, update, pathType, allowedSkills = [] }) {
                 </div>
                 
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2.5">Thumbnail URL</label>
-                  <input
-                      className="w-full rounded-xl border border-slate-200 px-5 py-3 text-sm font-medium focus:border-indigo-600 outline-none transition-all placeholder:text-slate-300"
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2.5">Ảnh đại diện lộ trình</label>
+                  <ThumbnailUploader
                       value={form.thumbnail}
-                      onChange={(e) => update({ thumbnail: e.target.value })}
-                      placeholder="https://images.unsplash.com/..."
+                      onChange={(url) => update({ thumbnail: url })}
                   />
                 </div>
+
                 
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2.5">Thời gian học dự kiến (Tuần)</label>

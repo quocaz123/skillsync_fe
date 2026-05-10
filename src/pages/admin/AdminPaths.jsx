@@ -87,6 +87,7 @@ function mapBackendPathToPreview(path) {
         level: path.level || '—',
         priceNote: `${path.totalCredits || 0} CR`,
         createdAt: path.createdAt ? new Date(path.createdAt).toLocaleDateString('vi-VN') : '—',
+        thumbnailUrl: path.thumbnailUrl || null,
         modules,
         rejectionReason: path.rejectionReason || null,
     };

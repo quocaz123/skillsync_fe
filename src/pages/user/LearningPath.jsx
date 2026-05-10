@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-    Map, Star, Target, BookOpen, ChevronRight, Zap, CheckCircle2, Play,
+    Map, Target, BookOpen, ChevronRight, Zap, CheckCircle2, Play,
     Clock, Search, Users, Book, SlidersHorizontal,
-    X, Sparkles, LayoutGrid, Video, Layers, ChevronDown, BadgeCheck,
+    X, LayoutGrid, Video, Layers, ChevronDown, Sparkles,
 } from 'lucide-react';
 import axiosClient from '../../configuration/axiosClient';
 import API_ENDPOINTS from '../../configuration/apiEndpoints';
@@ -51,6 +51,7 @@ const mapBackendPathToLocal = (p) => ({
     level: p.level,
     duration: p.duration,
     emoji: p.emoji || '📚',
+    thumbnailUrl: p.thumbnailUrl || null,
     thumbnailFrom: CATEGORY_COLORS[p.category]?.from || '#6366f1',
     thumbnailTo: CATEGORY_COLORS[p.category]?.to || '#a855f7',
     totalCredits: p.totalCredits,
@@ -60,18 +61,12 @@ const mapBackendPathToLocal = (p) => ({
     moduleCount: p.moduleCount ?? p.modules?.length ?? 0,
     lessonCount: p.lessonCount ?? (p.modules || []).reduce((sum, m) => sum + (m.lessons?.length || 0), 0),
     type: p.teacherRole === 'ADMIN' ? 'system' : 'mentor',
-    rating: p.rating != null ? p.rating : 0,
-    totalReviews: p.totalReviews != null ? p.totalReviews : 0,
-    featured: p.isFeatured || false,
-    newest: true,
     mentor: p.teacherName ? {
         name: p.teacherName,
         role: p.teacherRole === 'ADMIN' ? 'Hệ thống SkillSync' : 'Mentor chuyên gia',
         avatarGrad: 'from-violet-500 to-indigo-500',
         avatarText: p.teacherName.charAt(0),
         avatarUrl: p.teacherAvatarUrl,
-        rating: 4.9,
-        verified: true
     } : null
 });
 
@@ -133,12 +128,24 @@ function PathCard({ path }) {
             {/* Thumbnail */}
             <div
                 className="relative h-40 flex items-center justify-center overflow-hidden"
-                style={{ background: `linear-gradient(135deg, ${path.thumbnailFrom}, ${path.thumbnailTo})` }}
+                style={!path.thumbnailUrl ? { background: `linear-gradient(135deg, ${path.thumbnailFrom}, ${path.thumbnailTo})` } : {}}
             >
-                <span
-                    className="text-6xl select-none opacity-90 drop-shadow-lg group-hover:scale-110 transition-transform duration-300"
-                    style={{ textShadow: '0 4px 24px rgba(0,0,0,0.18)' }}
-                >{path.emoji}</span>
+                {path.thumbnailUrl ? (
+                    <img
+                        src={path.thumbnailUrl}
+                        alt={path.title}
+                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.parentElement.style.background = `linear-gradient(135deg, ${path.thumbnailFrom}, ${path.thumbnailTo})`;
+                        }}
+                    />
+                ) : (
+                    <span
+                        className="text-6xl select-none opacity-90 drop-shadow-lg group-hover:scale-110 transition-transform duration-300"
+                        style={{ textShadow: '0 4px 24px rgba(0,0,0,0.18)' }}
+                    >{path.emoji}</span>
+                )}
 
                 {/* Floating badges top-left */}
                 <div className="absolute top-3 left-3 flex flex-col gap-1.5">
@@ -146,13 +153,6 @@ function PathCard({ path }) {
                     <LevelBadge level={path.level} />
                 </div>
 
-                {/* Rating top-right */}
-                {path.rating > 0 && (
-                    <div className="absolute top-3 right-3 bg-black/30 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
-                        <Star size={11} className="text-amber-300 fill-current" /> {path.rating.toFixed(1)}
-                        {path.totalReviews > 0 && <span className="ml-0.5 text-[10px] opacity-80">({path.totalReviews})</span>}
-                    </div>
-                )}
 
                 {/* Gradient overlay bottom */}
                 <div className="absolute bottom-0 inset-x-0 h-12 bg-gradient-to-t from-black/20 to-transparent" />
@@ -188,14 +188,8 @@ function PathCard({ path }) {
                             {path.mentor.avatarText}
                         </div>
                         <div className="min-w-0">
-                            <p className="text-xs font-bold text-slate-800 flex items-center gap-1 truncate">
-                                {path.mentor.name}
-                                {path.mentor.verified && <BadgeCheck size={12} className="text-emerald-500 shrink-0" />}
-                            </p>
+                            <p className="text-xs font-bold text-slate-800 truncate">{path.mentor.name}</p>
                             <p className="text-[10px] text-slate-400 truncate">{path.mentor.role}</p>
-                        </div>
-                        <div className="ml-auto shrink-0 flex items-center gap-1 text-[11px] font-bold text-amber-500">
-                            <Star size={11} className="fill-current" /> {path.mentor.rating}
                         </div>
                     </div>
                 )}
@@ -234,10 +228,8 @@ function PathCard({ path }) {
 // Explore Tab Content
 // ─────────────────────────────────────────────
 const SORT_OPTIONS = [
-    { value: 'featured', label: 'Nổi bật' },
-    { value: 'newest', label: 'Mới nhất' },
     { value: 'popular', label: 'Phổ biến' },
-    { value: 'rating', label: 'Rating cao' },
+    { value: 'az', label: 'A → Z' },
 ];
 const TYPE_LABEL_FILTER = { 'Tất cả': 'Tất cả', mentor: 'Có mentor hướng dẫn', system: 'Tự học' };
 
@@ -248,7 +240,7 @@ function ExploreTab() {
     const [levelFilter, setLevelFilter] = useState('Tất cả');
     const [typeFilter, setTypeFilter] = useState('Tất cả');
     const [priceFilter, setPriceFilter] = useState('Tất cả'); // 'Tất cả' | 'free' | 'paid'
-    const [sortBy, setSortBy] = useState('featured');
+    const [sortBy, setSortBy] = useState('popular');
     const [loading, setLoading] = useState(true);
     const [showFilter, setShowFilter] = useState(false);
 
@@ -260,9 +252,6 @@ function ExploreTab() {
         setLoading(true);
         try {
             const res = await axiosClient.get(API_ENDPOINTS.LEARNING_PATHS.GET_APPROVED);
-            console.log('Learning Paths Response:', res);
-            // axiosClient đã bóc tách apiRes.data nếu khớp pattern, 
-            // nhưng ta handle thêm cả result hoặc mảng trực tiếp cho an toàn tuyệt đối.
             const data = Array.isArray(res) ? res : (res?.data || res?.result || []);
             const mapped = data.map(mapBackendPathToLocal);
             setPaths(mapped);
@@ -309,16 +298,13 @@ function ExploreTab() {
         if (priceFilter === 'paid') list = list.filter(p => p.totalCredits > 0);
 
         switch (sortBy) {
-            case 'newest': return list.sort((a, b) => (b.newest ? 1 : 0) - (a.newest ? 1 : 0));
             case 'popular': return list.sort((a, b) => b.learnerCount - a.learnerCount);
-            case 'rating': return list.sort((a, b) => b.rating - a.rating);
-            case 'featured': default:
-                return list.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+            case 'az': return list.sort((a, b) => a.title.localeCompare(b.title));
+            default: return list;
         }
     }, [paths, keyword, skillFilter, levelFilter, typeFilter, priceFilter, sortBy]);
 
-    const recommended = useMemo(() =>
-        paths.filter(p => p.featured).slice(0, 3), [paths]);
+
 
 
     return (
@@ -466,20 +452,6 @@ function ExploreTab() {
                 )}
             </div>
 
-            {/* ── Featured / Recommended Section (shown when no keyword/filter) ── */}
-            {!hasActiveFilter && (
-                <div>
-                    <div className="flex items-center gap-2 mb-4">
-                        <Sparkles size={17} className="text-amber-500" />
-                        <h2 className="text-base font-extrabold text-slate-800">Gợi ý dành cho bạn</h2>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {recommended.map(path => (
-                            <PathCard key={path.id} path={path} />
-                        ))}
-                    </div>
-                </div>
-            )}
 
             {/* ── Full Grid ── */}
             <div>

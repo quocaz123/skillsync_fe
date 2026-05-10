@@ -156,6 +156,25 @@ export default function PathPreviewModal({
                     </button>
                 </div>
                 <div className="p-4 space-y-4 text-sm flex-1 overflow-y-auto min-h-0">
+                    {/* Thumbnail banner */}
+                    {path.thumbnailUrl ? (
+                        <div className="rounded-xl overflow-hidden border border-slate-100 shadow-sm">
+                            <img
+                                src={path.thumbnailUrl}
+                                alt="Thumbnail lộ trình"
+                                className="w-full h-44 object-cover"
+                                onError={(e) => { e.target.style.display = 'none'; }}
+                            />
+                        </div>
+                    ) : (
+                        <div className={`rounded-xl h-28 flex items-center justify-center ${
+                            isMentor
+                                ? 'bg-gradient-to-br from-violet-500 to-indigo-600'
+                                : 'bg-gradient-to-br from-indigo-500 to-sky-500'
+                        }`}>
+                            <span className="text-5xl select-none drop-shadow-md">{path.emoji || '📚'}</span>
+                        </div>
+                    )}
                     <p>
                         <span className="text-slate-500">Loại:</span>{' '}
                         <span className="font-bold">{path.pathType}</span>
