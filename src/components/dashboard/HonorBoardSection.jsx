@@ -158,8 +158,8 @@ export default function HonorBoardSection() {
                                     <CaretDoubleUp size={22} weight="bold" />
                                 </div>
                                 <p className="text-[11px] text-slate-600 font-bold leading-tight">
-                                    Tích lũy Credits qua dạy học và đóng góp cộng đồng để thăng hạng. <br />
-                                    <span className="text-violet-600">Thứ hạng Diamond trở lên nhận hoa hồng 85%.</span>
+                                    Tích lũy Điểm cống hiến qua dạy học và đóng góp để thăng hạng. <br />
+                                    <span className="text-violet-600">Hạng Diamond trở lên nhận hoa hồng 85%. Bảng xếp hạng Reset hàng tháng.</span>
                                 </p>
                             </div>
                         </div>
@@ -193,7 +193,7 @@ export default function HonorBoardSection() {
                                                     <div className="flex items-center gap-1.5 mt-1">
                                                         <Lightning size={12} weight="fill" className="text-amber-400" />
                                                         <span className="text-xs font-black text-violet-700">{Math.floor(user.score || 0).toLocaleString()}</span>
-                                                        <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">Credits</span>
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">Points</span>
                                                     </div>
                                                 </div>
                                                 <div className="text-[10px] font-black text-slate-300">
@@ -229,11 +229,11 @@ export default function HonorBoardSection() {
 
 const RankRoadmapModal = ({ onClose }) => {
     const TIERS = [
-        { name: 'Vanguard', score: '100.000+', color: 'text-amber-500', icon: Crown, bg: 'bg-amber-50', border: 'border-amber-200', desc: 'Đẳng cấp vinh quang nhất, dành cho những bậc thầy tri thức có sức ảnh hưởng lớn nhất cộng đồng.' },
-        { name: 'Diamond', score: '50.000+', color: 'text-sky-500', icon: Diamond, bg: 'bg-sky-50', border: 'border-sky-200', desc: 'Đặc quyền Mentor: Nhận 85% hoa hồng từ mọi buổi dạy. Tên của bạn sẽ lấp lánh trên bảng vàng.', highlight: true },
-        { name: 'Platinum', score: '20.000+', color: 'text-indigo-500', icon: SketchLogo, bg: 'bg-indigo-50', border: 'border-indigo-200', desc: 'Được ưu tiên hiển thị hàng đầu trên trang Khám phá và nhận huy hiệu xác minh chuyên gia.' },
-        { name: 'Gold', score: '5.000+', color: 'text-yellow-600', icon: MedalMilitary, bg: 'bg-yellow-50', border: 'border-yellow-200', desc: 'Mentor tiềm năng, mở khóa tính năng tạo các nhóm học tập chuyên sâu.' },
-        { name: 'Silver', score: '1.000+', color: 'text-slate-500', icon: Medal, bg: 'bg-slate-50', border: 'border-slate-200', desc: 'Bước chân đầu tiên vào hàng ngũ Mentor, bắt đầu hành trình chia sẻ giá trị.' },
+        { name: 'Vanguard', score: '100.000+', color: 'text-amber-500', icon: Crown, bg: 'bg-amber-50', border: 'border-amber-200', desc: 'Đỉnh cao của sự cống hiến. Dành cho những bậc thầy có sức ảnh hưởng lan tỏa mạnh mẽ nhất cộng đồng.' },
+        { name: 'Diamond', score: '50.000+', color: 'text-sky-500', icon: Diamond, bg: 'bg-sky-50', border: 'border-sky-200', desc: 'Vị thế thượng lưu. Mở khóa đặc quyền nhận 85% hoa hồng và ưu tiên hiển thị hồ sơ cấp cao.', highlight: true },
+        { name: 'Platinum', score: '20.000+', color: 'text-indigo-500', icon: SketchLogo, bg: 'bg-indigo-50', border: 'border-indigo-200', desc: 'Chuyên gia ưu tú. Nhận huy hiệu xác minh chuyên gia và được hệ thống đề xuất ưu tiên trên trang Khám phá.' },
+        { name: 'Gold', score: '5.000+', color: 'text-yellow-600', icon: MedalMilitary, bg: 'bg-yellow-50', border: 'border-yellow-200', desc: 'Mentor tiềm năng. Mở khóa tính năng quản lý nhóm học tập chuyên sâu và sự kiện cộng đồng.' },
+        { name: 'Silver', score: '1.000+', color: 'text-slate-500', icon: Medal, bg: 'bg-slate-50', border: 'border-slate-200', desc: 'Người truyền cảm hứng. Bước chân đầu tiên vào hàng ngũ Mentor chuyên nghiệp của SkillSync.' },
     ];
 
     return (
@@ -258,8 +258,39 @@ const RankRoadmapModal = ({ onClose }) => {
                         </div>
                     </div>
                     <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                        Tích lũy Credits thông qua việc giảng dạy và đóng góp để nâng tầm vị thế của bạn tại SkillSync.
+                        Tích lũy Điểm cống hiến để nâng tầm vị thế. Lưu ý: Điểm này dùng để thăng hạng (không phải tiền ví) và sẽ tự động Reset vào ngày 1 hàng tháng để tạo cơ hội công bằng cho mọi người.
                     </p>
+                    <div className="mt-4 p-4 bg-gradient-to-br from-violet-50 to-indigo-50 rounded-2xl border border-violet-100 shadow-sm">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Star size={16} weight="fill" className="text-violet-600" />
+                            <h4 className="text-[11px] font-black text-slate-800 uppercase tracking-wider">Hệ thống tính điểm đóng góp</h4>
+                        </div>
+                        <div className="space-y-2.5">
+                            <div className="flex items-center justify-between text-[10px] font-bold">
+                                <span className="text-slate-500 flex items-center gap-1.5"><Lightning size={12} weight="fill" className="text-amber-400" /> Hoàn thành buổi dạy</span>
+                                <span className="text-violet-700">Credits x 1.2</span>
+                            </div>
+                            <div className="h-px bg-slate-200/50" />
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] font-bold">
+                                <div className="flex items-center justify-between p-1.5 rounded-lg bg-white/60">
+                                    <span className="text-emerald-600 flex items-center gap-1">5 <Star weight="fill" size={8} /></span>
+                                    <span className="text-emerald-700">+50đ</span>
+                                </div>
+                                <div className="flex items-center justify-between p-1.5 rounded-lg bg-white/60">
+                                    <span className="text-blue-600 flex items-center gap-1">4 <Star weight="fill" size={8} /></span>
+                                    <span className="text-blue-700">+20đ</span>
+                                </div>
+                                <div className="flex items-center justify-between p-1.5 rounded-lg bg-white/60">
+                                    <span className="text-slate-400 flex items-center gap-1">3 <Star weight="fill" size={8} /></span>
+                                    <span className="text-slate-500">0đ</span>
+                                </div>
+                                <div className="flex items-center justify-between p-1.5 rounded-lg bg-white/60">
+                                    <span className="text-rose-500 flex items-center gap-1">1-2 <Star weight="fill" size={8} /></span>
+                                    <span className="text-rose-700">-20đ</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Vertical Timeline Roadmap */}
@@ -282,7 +313,7 @@ const RankRoadmapModal = ({ onClose }) => {
                                     <div className="flex items-center justify-between mb-2">
                                         <h4 className={`font-black text-xs uppercase tracking-widest ${tier.color}`}>{tier.name}</h4>
                                         <span className="text-[10px] font-black bg-white px-2 py-0.5 rounded-md border border-slate-100 text-slate-400">
-                                            {tier.score} Credits
+                                            {tier.score} Điểm
                                         </span>
                                     </div>
                                     <p className="text-xs text-slate-600 font-bold leading-relaxed">
