@@ -472,34 +472,8 @@ function StepCurriculum({ form, update, pathType }) {
                                 onChange={(e) => patchModule(mi, { objective: e.target.value })}
                             />
                         </div>
-                        <div className="flex items-end gap-4">
-                            <label className="flex-1 flex items-center justify-between p-4 px-6 rounded-2xl border-2 border-slate-100 bg-slate-50/20 cursor-pointer hover:border-[#5A63F6]/20 transition-all group">
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-6 h-6 rounded-xl border-2 transition-all flex items-center justify-center ${mod.hasQuiz ? 'bg-[#5A63F6] border-[#5A63F6] shadow-lg shadow-indigo-100' : 'bg-white border-slate-200 group-hover:border-slate-300'}`}>
-                                        {mod.hasQuiz && <CheckCircle2 size={14} className="text-white" />}
-                                    </div>
-                                    <span className={`text-[12px] font-black ${mod.hasQuiz ? 'text-slate-900' : 'text-slate-400'}`}>Kèm Quiz đánh giá</span>
-                                </div>
-                                <input
-                                    type="checkbox"
-                                    className="sr-only"
-                                    checked={mod.hasQuiz}
-                                    onChange={(e) => patchModule(mi, { hasQuiz: e.target.checked })}
-                                />
-                            </label>
-                            {mod.hasQuiz && (
-                                <label className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-white border-2 border-slate-100 cursor-pointer group shadow-sm">
-                                    <input
-                                        type="checkbox"
-                                        className="w-5 h-5 rounded-lg border-2 border-slate-200 text-[#5A63F6] focus:ring-[#5A63F6]"
-                                        checked={mod.isQuizMandatory}
-                                        onChange={(e) => patchModule(mi, { isQuizMandatory: e.target.checked })}
-                                    />
-                                    <span className="text-[11px] font-black text-slate-400 group-hover:text-slate-600 uppercase tracking-widest leading-none">Bắt buộc</span>
-                                </label>
-                            )}
-                        </div>
                     </div>
+
 
                     {/* Lessons list */}
                     <div className="space-y-6">
@@ -713,11 +687,6 @@ function StepReview({ form, pathType, mentor }) {
                                     <span className="text-[9px] font-black px-2 py-1 rounded-lg bg-white/5 text-slate-400 tracking-widest uppercase">
                                         {m.lessons?.length || 0} bài
                                     </span>
-                                    {m.hasQuiz && (
-                                        <span className="text-[9px] font-black px-2 py-1 rounded-lg bg-amber-500/20 text-amber-300 tracking-widest uppercase border border-amber-500/20">
-                                            QUIZ
-                                        </span>
-                                    )}
                                 </div>
                             </div>
                         ))}

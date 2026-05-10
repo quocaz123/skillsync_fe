@@ -7,6 +7,7 @@ import PathPreviewModal from '../user/learning-path-management/PathPreviewModal'
 import CreatePathModal from '../user/learning-path-management/CreatePathModal';
 import { toastSuccess, toastError } from '../../utils/toastUtils';
 import { mapFormToApiPayload } from '../user/learning-path-management/pathFormUtils';
+import { getAllSkills } from '../../services/skillService';
 
 const statusConfig = {
     draft: { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200', dot: 'bg-slate-400', label: 'Nháp' },
@@ -93,6 +94,7 @@ function mapBackendPathToPreview(path) {
 
 const AdminPaths = () => {
     const [paths, setPaths] = useState([]);
+    const [allSkills, setAllSkills] = useState([]);
     const [filter, setFilter] = useState('all');
     const [viewPath, setViewPath] = useState(null);
     const [rejectTarget, setRejectTarget] = useState(null);
@@ -135,6 +137,18 @@ const AdminPaths = () => {
     };
 
     useEffect(() => { fetchPaths(); }, []);
+
+    // Fetch toàn bộ skill list cho admin khi tạo lộ trình
+    useEffect(() => {
+        getAllSkills()
+            .then(data => {
+                const skills = Array.isArray(data) ? data : [];
+                // Lấy tên skill (field 'name'), lọc trùng
+                const names = [...new Set(skills.map(s => s.name || s).filter(Boolean))];
+                setAllSkills(names);
+            })
+            .catch(() => setAllSkills([]));
+    }, []);
 
     const showToast = (message) => {
         setToast(message);
@@ -478,6 +492,7 @@ const AdminPaths = () => {
                 open={isCreateOpen}
                 onClose={() => setIsCreateOpen(false)}
                 pathType="SYSTEM"
+                allowedSkills={allSkills}
                 onSubmitApproval={async (payload) => {
                     try {
                         const apiPayload = mapFormToApiPayload(payload);

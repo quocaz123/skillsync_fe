@@ -60,8 +60,6 @@ export default function LearningPathReviewSection({ data, pathType, mentor }) {
                             </p>
                             <p className="text-xs text-slate-500 mt-1">
                                 {m.lessons?.length ?? 0} bài học
-                                {m.hasQuiz && ' · có quiz'}
-                                {m.quizRequired && ' (bắt buộc)'}
                             </p>
                             {isMentor && (
                                 <p className="text-xs text-violet-700 font-semibold mt-1 flex items-center gap-1">

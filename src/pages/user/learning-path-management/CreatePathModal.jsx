@@ -391,7 +391,20 @@ function StepBasicInfo({ form, update, pathType, allowedSkills = [] }) {
                                     ))
                                 )}
                             </select>
+                        ) : allowedSkills.length > 0 ? (
+                            /* Admin: select từ toàn bộ skill hệ thống */
+                            <select
+                                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold focus:border-indigo-600 outline-none cursor-pointer bg-white"
+                                value={form.skill}
+                                onChange={(e) => update({ skill: e.target.value })}
+                            >
+                                <option value="">— Chọn kỹ năng —</option>
+                                {allowedSkills.map((skill) => (
+                                    <option key={skill} value={skill}>{skill}</option>
+                                ))}
+                            </select>
                         ) : (
+                            /* Fallback: input tự do nếu chưa load xong */
                             <div className="relative group">
                                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
                                 <input
@@ -399,7 +412,7 @@ function StepBasicInfo({ form, update, pathType, allowedSkills = [] }) {
                                     className="w-full rounded-xl border border-slate-200 pl-11 pr-4 py-3 text-sm font-semibold focus:border-indigo-600 outline-none"
                                     value={form.skill}
                                     onChange={(e) => update({ skill: e.target.value })}
-                                    placeholder="Search skills..."
+                                    placeholder="Nhập kỹ năng..."
                                 />
                                 <datalist id="skills">{SKILL_SUGGESTIONS.map(s => <option key={s} value={s} />)}</datalist>
                             </div>
@@ -409,6 +422,7 @@ function StepBasicInfo({ form, update, pathType, allowedSkills = [] }) {
                                 Chỉ hiển thị kỹ năng bạn đã đăng ký và được admin duyệt.
                             </p>
                         )}
+
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2.5">Trình độ</label>
@@ -542,21 +556,8 @@ function StepCurriculum({ form, update, pathType }) {
                             </button>
                         </header>
 
+
                         <div className="p-6 space-y-6">
-                            <div className="grid sm:grid-cols-2 gap-4">
-                               <div className="flex items-center gap-4 py-2">
-                                  <label className="flex items-center gap-2 cursor-pointer">
-                                     <input type="checkbox" className="w-4 h-4 rounded text-indigo-600" checked={mod.hasQuiz} onChange={e => updateModule(mi, { hasQuiz: e.target.checked })} />
-                                     <span className="text-xs font-bold text-slate-700">Chứa Quiz cuối module</span>
-                                  </label>
-                                  {mod.hasQuiz && (
-                                     <label className="flex items-center gap-2 cursor-pointer pl-4 border-l border-slate-100">
-                                        <input type="checkbox" className="w-4 h-4 rounded text-rose-500" checked={mod.isQuizMandatory} onChange={e => updateModule(mi, { isQuizMandatory: e.target.checked })} />
-                                        <span className="text-[11px] font-bold text-rose-500">Bắt buộc pass</span>
-                                     </label>
-                                  )}
-                               </div>
-                            </div>
 
                             <div className="space-y-3">
                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Danh sách bài học</label>

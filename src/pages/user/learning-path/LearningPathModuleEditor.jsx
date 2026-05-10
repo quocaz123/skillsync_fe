@@ -124,27 +124,8 @@ export default function LearningPathModuleEditor({
                 />
             </div>
 
-            <div className="flex flex-wrap gap-4 items-center">
-                <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-                    <input
-                        type="checkbox"
-                        checked={module.hasQuiz}
-                        onChange={(e) => onChange({ ...module, hasQuiz: e.target.checked })}
-                        className="rounded border-slate-300 text-indigo-600"
-                    />
-                    Có quiz
-                </label>
-                <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-                    <input
-                        type="checkbox"
-                        checked={module.quizRequired}
-                        onChange={(e) => onChange({ ...module, quizRequired: e.target.checked })}
-                        disabled={!module.hasQuiz}
-                        className="rounded border-slate-300 text-indigo-600 disabled:opacity-40"
-                    />
-                    Bắt buộc qua quiz
-                </label>
-                {showSupport && (
+            {showSupport && (
+                <div className="flex flex-wrap gap-4 items-center">
                     <label className="inline-flex items-center gap-2 text-sm font-medium text-violet-800 bg-violet-50 px-3 py-1.5 rounded-xl border border-violet-100">
                         <input
                             type="checkbox"
@@ -154,8 +135,8 @@ export default function LearningPathModuleEditor({
                         />
                         Hỗ trợ mentor (enableSupport)
                     </label>
-                )}
-            </div>
+                </div>
+            )}
 
             {errLessons && <p className="text-xs text-rose-600 font-medium">{errLessons}</p>}
 

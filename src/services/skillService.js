@@ -6,8 +6,9 @@ const { SKILLS, TEACHING_SKILLS } = API_ENDPOINTS;
 /** Lấy tất cả skills, có thể filter theo category */
 export const getAllSkills = async (category = null) => {
   const params = category ? { category } : {};
+  // axiosClient interceptor đã bóc apiRes.data → res là array skill trực tiếp
   const res = await httpClient.get(SKILLS.GET_ALL, { params });
-  return res.data ?? res;
+  return Array.isArray(res) ? res : (res?.data ?? res ?? []);
 };
 
 /** Danh sách teaching skills của user hiện tại */
