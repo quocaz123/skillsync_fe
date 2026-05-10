@@ -182,7 +182,11 @@ const Sessions = () => {
     5: "Tuyệt vời!",
   };
 
-  const isTeacher = (session) => session.teacherId === user?.id;
+  const isTeacher = (session) => {
+    if (!user) return false;
+    const currentUserId = user.id || user.userId || user.sub;
+    return session.teacherId === currentUserId;
+  };
 
   const formatSlotTime = (session) => {
     if (!session.slotDate || !session.slotTime) return "";
@@ -456,8 +460,15 @@ const Sessions = () => {
                         <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg text-xs">
                           <CalendarDays size={14} /> {formatSlotTime(session)}
                         </span>
-                        <div className="flex items-center gap-1 text-red-500">
-                          <Zap size={16} className="fill-red-500" /> -
+                        <div
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold ${
+                            isTeacher(session)
+                              ? "bg-emerald-50 text-emerald-600"
+                              : "bg-red-50 text-red-600"
+                          }`}
+                        >
+                          <Zap size={14} className="fill-current" />
+                          {isTeacher(session) ? "+" : "-"}
                           {session.creditCost}
                         </div>
                       </div>
