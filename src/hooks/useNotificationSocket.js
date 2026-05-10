@@ -20,7 +20,7 @@ const useNotificationSocket = (onNewNotification, onUnreadCountChange) => {
         if (!isAuthenticated) return;
 
         // SockJS: có thể trỏ ws subdomain riêng (cloudflared). Mặc định cùng host với API.
-        const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/skillsync';
+        const apiBase = import.meta.env.VITE_API_BASE_URL || (window.location.origin + '/skillsync');
         const wsBase = import.meta.env.VITE_WS_BASE_URL || apiBase;
         const socketUrl = `${wsBase}/ws`;
 
