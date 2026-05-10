@@ -140,7 +140,7 @@ const Sessions = () => {
       await confirmSession(sessionId);
       setSessions((prev) =>
         prev.map((s) =>
-          s.id === sessionId ? { ...s, status: "COMPLETED", mentorPaid: true } : s,
+          s.id === sessionId ? { ...s, status: "COMPLETED", isPaid: true } : s,
         ),
       );
       trackAction("FIRST_SESSION_JOINED").catch(console.error);
@@ -497,7 +497,7 @@ const Sessions = () => {
                         ) : (
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div className="flex gap-2">
-                              {!isTeacher(session) && !session.mentorPaid && (
+                              {!isTeacher(session) && !session.isPaid && (
                                 <>
                                   <button
                                     onClick={() => handleConfirmSession(session.id)}
@@ -516,7 +516,7 @@ const Sessions = () => {
                                   </button>
                                 </>
                               )}
-                              {session.mentorPaid && (
+                              {session.isPaid && (
                                 <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
                                   <CheckCircle2 size={14} /> Đã thanh toán
                                 </span>
