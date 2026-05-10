@@ -26,6 +26,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { getGreeting, getDateString } from "../../utils/formatUtils";
 import { getMySessions } from "../../services/sessionService";
 import { getApprovedTeachingSkills } from "../../services/skillService";
+import HonorBoardSection from "../../components/dashboard/HonorBoardSection";
 
 // ── Sub-components ────────────────────────────────
 
@@ -408,6 +409,9 @@ const UserDashboard = () => {
         </div>
       </div>
 
+      {/* ─── HONOR BOARD SECTION ─── */}
+      <HonorBoardSection />
+
       {/* ─── UPCOMING SESSIONS ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
         {/* Teaching */}
@@ -525,8 +529,6 @@ const UserDashboard = () => {
           </div>
         </div>
       </div>
-
-
     </div>
   );
 };

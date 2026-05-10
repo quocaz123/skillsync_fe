@@ -112,7 +112,6 @@ function App() {
           <Route path="community" element={<Community />} />
           <Route path="profile/:userId" element={<PublicProfile />} />
           <Route path="missions" element={<Missions />} />
-
         </Route>
 
         {/* Admin Routes (Protected) */}

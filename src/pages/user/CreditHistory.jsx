@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getMyTransactions } from '../../services/userService';
-import { Zap, TrendingUp, TrendingDown, Clock, BookOpen, Award, Gift, ArrowUpRight, ArrowDownRight, Wallet } from 'lucide-react';
+import { Zap, TrendingUp, TrendingDown, Clock, BookOpen, Award, Gift, ArrowUpRight, ArrowDownRight, Wallet, Receipt } from 'lucide-react';
 import { useStore } from '../../store';
 
 const TX_CONFIG = {
@@ -111,9 +111,12 @@ const CreditHistory = () => {
                 {loading ? (
                     <div className="p-16 text-center text-slate-500 animate-pulse">Đang tải lịch sử giao dịch...</div>
                 ) : creditHistory.length === 0 ? (
-                    <div className="p-16 text-center">
-                        <div className="text-5xl mb-4">💳</div>
-                        <p className="text-slate-500 font-medium">Chưa có giao dịch nào</p>
+                    <div className="p-16 text-center flex flex-col items-center">
+                        <div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center mb-6 border border-slate-100 shadow-inner">
+                            <Receipt size={40} className="text-slate-300" strokeWidth={1.5} />
+                        </div>
+                        <p className="text-slate-500 font-bold text-lg">Chưa có giao dịch nào</p>
+                        <p className="text-slate-400 text-sm mt-1 font-medium">Lịch sử chi tiêu và thu nhập của bạn sẽ xuất hiện tại đây</p>
                     </div>
                 ) : (
                     <div className="divide-y divide-slate-50">

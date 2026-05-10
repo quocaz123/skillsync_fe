@@ -136,8 +136,11 @@ export const API_ENDPOINTS = {
     ADMIN_APPROVE: (id) => `/api/learning-paths/${id}/approve`,
     ADMIN_REJECT: (id) => `/api/learning-paths/${id}/reject`,
     RATE: (id) => `/api/learning-paths/${id}/reviews`,
+    GET_REVIEWS: (id) => `/api/learning-paths/${id}/reviews`,
+    CHECK_MY_REVIEW: (id) => `/api/learning-paths/${id}/reviews/me/check`,
     DELETE: (id) => `/api/learning-paths/${id}`,
   },
+  LEADERBOARD: "/api/leaderboard",
 };
 
 export default API_ENDPOINTS;

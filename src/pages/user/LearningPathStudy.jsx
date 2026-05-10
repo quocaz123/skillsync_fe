@@ -15,8 +15,13 @@ import {
   Target,
   StickyNote,
   ChevronRight,
+  Star,
+  X,
 } from "lucide-react";
+import axiosClient from "../../configuration/axiosClient";
+import API_ENDPOINTS from "../../configuration/apiEndpoints";
 import { fetchUserLearningPath } from "../../services/userLearningPathService";
+import { checkMyReviewStatus } from "../../services/learningPathService";
 
 const MODULE_STATUS_LABEL = {
   LOCKED: "Đã khóa",
@@ -198,6 +203,74 @@ function QuizModal({ open, onClose, moduleTitle }) {
   );
 }
 
+function ReviewModal({ pathId, pathTitle, onClose, onSuccess }) {
+    const [rating, setRating] = useState(0);
+    const [hovered, setHovered] = useState(0);
+    const [comment, setComment] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleSubmit = async () => {
+        if (rating === 0) { setError('Vui lòng chọn số sao.'); return; }
+        setSubmitting(true); setError('');
+        try {
+            await axiosClient.post(API_ENDPOINTS.LEARNING_PATHS.RATE(pathId), {
+                rating,
+                comment: comment.trim() || null,
+                tags: [],
+            });
+            onSuccess();
+            onClose();
+        } catch (e) {
+            setError(e?.response?.data?.message || 'Đánh giá thất bại. Vui lòng thử lại.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const starLabel = ['', 'Tệ', 'Không tốt', 'Bình thường', 'Tốt', 'Xuất sắc'];
+
+    return (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+                <div className="flex items-start justify-between mb-4">
+                    <div>
+                        <h3 className="font-extrabold text-slate-900 text-lg">Đánh giá lộ trình</h3>
+                        <p className="text-sm text-slate-500 mt-0.5 line-clamp-1">{pathTitle}</p>
+                    </div>
+                    <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
+                        <X size={16} />
+                    </button>
+                </div>
+                <div className="flex flex-col items-center gap-2 py-4">
+                    <div className="flex items-center gap-1.5">
+                        {[1,2,3,4,5].map(s => (
+                            <button key={s} onMouseEnter={() => setHovered(s)} onMouseLeave={() => setHovered(0)} onClick={() => setRating(s)} className="transition-transform hover:scale-110 active:scale-95">
+                                <Star size={36} className={`transition-colors ${s <= (hovered || rating) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'}`} />
+                            </button>
+                        ))}
+                    </div>
+                    <span className={`text-sm font-bold ${(hovered || rating) ? 'text-amber-500' : 'text-slate-300'}`}>
+                        {starLabel[hovered || rating] || 'Chọn số sao của bạn'}
+                    </span>
+                </div>
+                <div className="mb-4">
+                    <label className="text-xs font-bold text-slate-500 mb-1.5 block">Nhận xét của bạn</label>
+                    <textarea rows={3} value={comment} onChange={e => setComment(e.target.value)} placeholder="Chia sẻ trải nghiệm học tập của bạn…" className="w-full text-sm text-slate-700 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-400 resize-none" maxLength={500} />
+                </div>
+                {error && <p className="text-sm text-red-600 font-medium mb-3">{error}</p>}
+                <div className="flex gap-3">
+                    <button onClick={onClose} className="flex-1 py-2.5 rounded-xl font-bold text-sm text-slate-600 bg-slate-100 hover:bg-slate-200">Hủy</button>
+                    <button onClick={handleSubmit} disabled={submitting || rating === 0} className={`flex-1 py-2.5 rounded-xl font-bold text-sm text-white transition-all ${rating > 0 ? 'bg-amber-400 hover:bg-amber-500 shadow-lg shadow-amber-100' : 'bg-slate-200'}`}>
+                        {submitting ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'Gửi đánh giá'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function LearningPathStudy() {
   const { pathId } = useParams();
   const navigate = useNavigate();
@@ -206,9 +279,10 @@ export default function LearningPathStudy() {
   const [error, setError] = useState(null);
   const [selectedModuleId, setSelectedModuleId] = useState(null);
   const [supportOpen, setSupportOpen] = useState(false);
-  const [quizOpen, setQuizOpen] = useState(false);
   const [quizModuleId, setQuizModuleId] = useState(null);
   const [supportModuleId, setSupportModuleId] = useState(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [hasReviewed, setHasReviewed] = useState(false);
 
   useEffect(() => {
     let c = false;
@@ -234,6 +308,11 @@ export default function LearningPathStudy() {
     return () => {
       c = true;
     };
+  }, [pathId]);
+
+  useEffect(() => {
+      if (!pathId) return;
+      checkMyReviewStatus(pathId).then(setHasReviewed);
   }, [pathId]);
 
   const selectedModule = data?.modules?.find((m) => m.id === selectedModuleId);
@@ -361,6 +440,21 @@ export default function LearningPathStudy() {
                 hoàn thành path
               </p>
             </div>
+            {data.progressPercent >= 100 && !hasReviewed && (
+                <div className="shrink-0">
+                    <button
+                        onClick={() => setReviewOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-amber-400 hover:bg-amber-500 text-white font-bold text-xs rounded-xl shadow-sm shadow-amber-100 transition-all"
+                    >
+                        <Star size={14} className="fill-current" /> Đánh giá ngay
+                    </button>
+                </div>
+            )}
+            {hasReviewed && (
+                <div className="shrink-0 flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl border border-emerald-100 text-xs font-bold">
+                    <CheckCircle2 size={14} /> Bạn đã đánh giá
+                </div>
+            )}
           </div>
           <div className="mt-4 h-2.5 bg-slate-100 rounded-full overflow-hidden">
             <div
@@ -736,6 +830,14 @@ export default function LearningPathStudy() {
         open={quizOpen}
         onClose={() => setQuizOpen(false)}
         moduleTitle={quizModule?.title ?? ""}
+      />
+
+      <ReviewModal
+          open={reviewOpen}
+          pathId={pathId}
+          pathTitle={data.pathTitle}
+          onClose={() => setReviewOpen(false)}
+          onSuccess={() => setHasReviewed(true)}
       />
     </div>
   );

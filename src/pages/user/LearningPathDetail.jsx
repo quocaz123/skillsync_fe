@@ -5,7 +5,7 @@ import {
     Clock, Users, Sparkles, Video, Layers, ChevronLeft, BadgeCheck,
     HelpCircle, Loader2, X, GraduationCap, ListChecks, Shield,
 } from 'lucide-react';
-import { fetchLearningPathById, enrollLearningPath } from '../../services/learningPathService';
+import { fetchLearningPathById, enrollLearningPath, fetchReviews } from '../../services/learningPathService';
 import { getMyProfile } from '../../services/userService';
 import { useStore } from '../../store';
 
@@ -186,8 +186,10 @@ export default function LearningPathDetail() {
     const [openIdx, setOpenIdx] = useState(0);
     const [modalOpen, setModalOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [enrollErr, setEnrollErr] = useState('');
     const [loadingBalance, setLoadingBalance] = useState(false);
+    const [reviews, setReviews] = useState([]);
+    const [loadingReviews, setLoadingReviews] = useState(false);
+    const [enrollErr, setEnrollErr] = useState('');
 
     const balance = useMemo(
         () => Number(user?.creditsBalance ?? credits ?? 0),
@@ -230,6 +232,12 @@ export default function LearningPathDetail() {
                     setLoadState('error');
                 }
             });
+
+        setLoadingReviews(true);
+        fetchReviews(pathId)
+            .then(res => { if (!cancelled) setReviews(res); })
+            .finally(() => { if (!cancelled) setLoadingReviews(false); });
+
         return () => {
             cancelled = true;
         };
@@ -604,6 +612,63 @@ export default function LearningPathDetail() {
                                 </div>
                             ))}
                         </div>
+                    </section>
+
+                    {/* G. Reviews */}
+                    <section className="pt-4">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                                <Star className="text-amber-500 fill-amber-500" size={22} /> Đánh giá từ người học
+                            </h2>
+                            {detail.rating > 0 && (
+                                <div className="flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-100">
+                                    <span className="text-lg font-black text-amber-600">{detail.rating.toFixed(1)}</span>
+                                    <div className="flex items-center gap-0.5">
+                                        {[1,2,3,4,5].map(s => (
+                                            <Star key={s} size={12} className={s <= Math.round(detail.rating) ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'} />
+                                        ))}
+                                    </div>
+                                    <span className="text-xs text-slate-400 font-bold">({detail.totalReviews || reviews.length} lượt)</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {loadingReviews ? (
+                            <div className="py-10 flex justify-center"><Loader2 className="animate-spin text-slate-300" size={24} /></div>
+                        ) : reviews.length === 0 ? (
+                            <div className="bg-slate-50 rounded-2xl border border-dashed border-slate-200 p-10 text-center">
+                                <p className="text-slate-400 text-sm font-medium italic">Chưa có đánh giá nào cho lộ trình này.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {reviews.map((rv, idx) => (
+                                    <div key={rv.id || idx} className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-md transition-shadow">
+                                        <div className="flex items-start justify-between mb-3">
+                                            <div className="flex items-center gap-3">
+                                                {rv.reviewerAvatarUrl ? (
+                                                    <img src={rv.reviewerAvatarUrl} alt={rv.reviewerName} className="w-10 h-10 rounded-xl object-cover border border-slate-100" />
+                                                ) : (
+                                                    <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-black text-xs">
+                                                        {rv.reviewerName?.charAt(0).toUpperCase() || 'U'}
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <p className="text-sm font-bold text-slate-900">{rv.reviewerName || 'Người học SkillSync'}</p>
+                                                    <p className="text-[10px] text-slate-400 font-semibold">{rv.createdAt ? new Date(rv.createdAt).toLocaleDateString('vi-VN') : 'Gần đây'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-0.5 bg-amber-50 px-2 py-1 rounded-lg">
+                                                <span className="text-xs font-black text-amber-600 mr-1">{rv.rating}</span>
+                                                <Star size={10} className="text-amber-400 fill-amber-400" />
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-slate-600 leading-relaxed italic line-clamp-3">
+                                            "{rv.comment || 'Khóa học rất hữu ích!'}"
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </section>
                 </div>
 

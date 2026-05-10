@@ -160,3 +160,23 @@ export async function deleteLearningPath(pathId) {
     const response = await axiosClient.delete(API_ENDPOINTS.LEARNING_PATHS.DELETE(pathId));
     return response;
 }
+
+/** Lấy danh sách đánh giá của lộ trình */
+export async function fetchReviews(pathId) {
+    try {
+        const response = await axiosClient.get(API_ENDPOINTS.LEARNING_PATHS.GET_REVIEWS(pathId));
+        return response?.result ?? response?.data?.result ?? response ?? [];
+    } catch {
+        return [];
+    }
+}
+
+/** Kiểm tra user hiện tại đã đánh giá lộ trình này chưa */
+export async function checkMyReviewStatus(pathId) {
+    try {
+        const response = await axiosClient.get(API_ENDPOINTS.LEARNING_PATHS.CHECK_MY_REVIEW(pathId));
+        return response?.result?.hasReviewed ?? response?.data?.result?.hasReviewed ?? false;
+    } catch {
+        return false;
+    }
+}

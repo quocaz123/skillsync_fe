@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
     Map, Target, BookOpen, ChevronRight, Zap, CheckCircle2, Play,
     Clock, Search, Users, Book, SlidersHorizontal,
-    X, LayoutGrid, Video, Layers, ChevronDown, Sparkles,
+    X, LayoutGrid, Video, Layers, ChevronDown, Sparkles, Star, MessageSquare, Trophy,
 } from 'lucide-react';
 import axiosClient from '../../configuration/axiosClient';
 import API_ENDPOINTS from '../../configuration/apiEndpoints';
@@ -58,6 +58,8 @@ const mapBackendPathToLocal = (p) => ({
     learnerCount: p.enrollmentCount || 0,
     progressPercent: Number(p.progressPercent ?? 0),
     enrollmentStatus: p.enrollmentStatus || null,
+    rating: p.rating || 0,
+    totalReviews: p.totalReviews || 0,
     moduleCount: p.moduleCount ?? p.modules?.length ?? 0,
     lessonCount: p.lessonCount ?? (p.modules || []).reduce((sum, m) => sum + (m.lessons?.length || 0), 0),
     type: p.teacherRole === 'ADMIN' ? 'system' : 'mentor',
@@ -153,9 +155,16 @@ function PathCard({ path }) {
                     <LevelBadge level={path.level} />
                 </div>
 
-
-                {/* Gradient overlay bottom */}
-                <div className="absolute bottom-0 inset-x-0 h-12 bg-gradient-to-t from-black/20 to-transparent" />
+                {/* Rating badge top-right */}
+                <div className="absolute top-3 right-3 flex flex-col gap-1.5">
+                    <div className="bg-black/40 backdrop-blur-md text-white text-[10px] font-black px-2 py-1 rounded-lg flex items-center gap-1 border border-white/20 shadow-lg">
+                        <Star size={10} className="text-amber-400 fill-amber-400" />
+                        <span>{path.rating > 0 ? path.rating.toFixed(1) : 'Mới'}</span>
+                        {path.totalReviews > 0 && (
+                            <span className="text-white/60 ml-0.5">({path.totalReviews})</span>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* Body */}
@@ -175,6 +184,12 @@ function PathCard({ path }) {
 
                 {/* Stats row */}
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-slate-500 font-semibold">
+                    {path.rating > 0 && (
+                        <span className="flex items-center gap-1 text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded-lg border border-amber-100">
+                            <Star size={11} className="fill-current" /> {path.rating.toFixed(1)}
+                            <span className="text-slate-400 font-medium ml-0.5">({path.totalReviews})</span>
+                        </span>
+                    )}
                     <span className="flex items-center gap-1"><Clock size={11} className="text-slate-400" /> {path.duration}</span>
                     <span className="flex items-center gap-1"><Layers size={11} className="text-slate-400" /> {path.moduleCount} module</span>
                     <span className="flex items-center gap-1"><Video size={11} className="text-slate-400" /> {path.lessonCount} bài</span>
@@ -269,7 +284,8 @@ function ExploreTab() {
 
     const applyFilters = () => {
         setLoading(true);
-        setTimeout(() => setLoading(false), 400);
+        // Tối ưu: Hiển thị kết quả ngay lập tức
+        setLoading(false);
     };
 
     const hasActiveFilter = keyword || skillFilter !== 'Tất cả' || levelFilter !== 'Tất cả' || typeFilter !== 'Tất cả' || priceFilter !== 'Tất cả';
@@ -518,9 +534,122 @@ function Chip({ label, onRemove }) {
 }
 
 // ─────────────────────────────────────────────
-// My Path Card (Lộ trình của tôi — không hiển thị mentor support; CTA chỉ Vào học / Tiếp tục học)
+// Review Modal
 // ─────────────────────────────────────────────
-function MyPathCard({ path }) {
+function ReviewModal({ path, onClose, onSuccess }) {
+    const [rating, setRating] = useState(0);
+    const [hovered, setHovered] = useState(0);
+    const [comment, setComment] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleSubmit = async () => {
+        if (rating === 0) { setError('Vui lòng chọn số sao.'); return; }
+        setSubmitting(true); setError('');
+        try {
+            await axiosClient.post(API_ENDPOINTS.LEARNING_PATHS.RATE(path.id), {
+                rating,
+                comment: comment.trim() || null,
+                tags: [],
+            });
+            onSuccess(rating);
+            onClose();
+        } catch (e) {
+            setError(e?.response?.data?.message || 'Đánh giá thất bại. Vui lòng thử lại.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const starLabel = ['', 'Tệ', 'Không tốt', 'Bình thường', 'Tốt', 'Xuất sắc'];
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-in">
+                {/* Header */}
+                <div className="flex items-start justify-between mb-4">
+                    <div>
+                        <h3 className="font-extrabold text-slate-900 text-lg">Đánh giá khóa học</h3>
+                        <p className="text-sm text-slate-500 mt-0.5 line-clamp-1">{path.title}</p>
+                    </div>
+                    <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0">
+                        <X size={16} />
+                    </button>
+                </div>
+
+                {/* Stars */}
+                <div className="flex flex-col items-center gap-2 py-4">
+                    <div className="flex items-center gap-1.5">
+                        {[1,2,3,4,5].map(s => (
+                            <button key={s}
+                                onMouseEnter={() => setHovered(s)}
+                                onMouseLeave={() => setHovered(0)}
+                                onClick={() => setRating(s)}
+                                className="transition-transform hover:scale-110 active:scale-95"
+                            >
+                                <Star
+                                    size={36}
+                                    className={`transition-colors ${
+                                        s <= (hovered || rating)
+                                            ? 'text-amber-400 fill-amber-400'
+                                            : 'text-slate-200 fill-slate-200'
+                                    }`}
+                                />
+                            </button>
+                        ))}
+                    </div>
+                    <span className={`text-sm font-bold transition-all ${
+                        (hovered || rating) ? 'text-amber-500' : 'text-slate-300'
+                    }`}>
+                        {starLabel[hovered || rating] || 'Chọn số sao của bạn'}
+                    </span>
+                </div>
+
+                {/* Comment */}
+                <div className="mb-4">
+                    <label className="text-xs font-bold text-slate-500 mb-1.5 block">Nhận xét (không bắt buộc)</label>
+                    <textarea
+                        rows={3}
+                        value={comment}
+                        onChange={e => setComment(e.target.value)}
+                        placeholder="Chia sẻ trải nghiệm của bạn về khóa học này…"
+                        className="w-full text-sm text-slate-700 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none transition-all"
+                        maxLength={500}
+                    />
+                    <p className="text-right text-[10px] text-slate-400 mt-0.5">{comment.length}/500</p>
+                </div>
+
+                {error && <p className="text-sm text-red-600 font-medium mb-3">{error}</p>}
+
+                <div className="flex gap-3">
+                    <button onClick={onClose} disabled={submitting}
+                        className="flex-1 py-2.5 rounded-xl font-bold text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">
+                        Hủy
+                    </button>
+                    <button onClick={handleSubmit} disabled={submitting || rating === 0}
+                        className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+                            rating > 0 && !submitting
+                                ? 'bg-amber-400 hover:bg-amber-500 text-white shadow-sm shadow-amber-200'
+                                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                        }`}>
+                        {submitting ? (
+                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                            <Star size={14} className="fill-current" />
+                        )}
+                        Gửi đánh giá
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────
+// My Path Card — có nút Đánh giá nếu chưa review
+// ─────────────────────────────────────────────
+function MyPathCard({ path, onReview }) {
     const isCompleted = path.status === 'COMPLETED';
     const statusBadge = () => {
         if (isCompleted) return <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold border border-emerald-200">Hoàn thành</span>;
@@ -528,17 +657,6 @@ function MyPathCard({ path }) {
     };
 
     const showContinue = !isCompleted && path.progress > 0;
-    const ctaLabel = showContinue ? 'Tiếp tục học' : 'Vào học';
-
-    const ctaButton = () => (
-        <Link
-            to={`/app/learning-path/study/${path.id}`}
-            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm shadow-indigo-200 flex items-center justify-center gap-1.5"
-        >
-            {showContinue ? <Play size={13} className="fill-current" /> : <BookOpen size={13} />}
-            {ctaLabel}
-        </Link>
-    );
 
     return (
         <div className={`bg-white rounded-2xl border overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col group
@@ -551,6 +669,12 @@ function MyPathCard({ path }) {
             >
                 <span className="text-5xl select-none opacity-90 drop-shadow-md group-hover:scale-110 transition-transform duration-300">{path.emoji}</span>
                 <div className="absolute top-3 left-3">{statusBadge()}</div>
+                {/* Đã đánh giá badge */}
+                {path.hasReviewed && (
+                    <div className="absolute top-3 right-3 flex items-center gap-1 bg-amber-400 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
+                        <Star size={9} className="fill-current" /> Đã đánh giá
+                    </div>
+                )}
             </div>
 
             {/* Body */}
@@ -575,7 +699,6 @@ function MyPathCard({ path }) {
                     </p>
                 </div>
 
-                {/* Module / bài hiện tại (đang học) hoặc tóm tắt khi đã xong */}
                 {!isCompleted && (path.currentModuleTitle || path.currentLesson) && (
                     <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100 space-y-1">
                         {path.currentModuleTitle && (
@@ -594,17 +717,34 @@ function MyPathCard({ path }) {
                 )}
                 {isCompleted && (
                     <div className="text-xs text-slate-600">
-                        {path.completedDate ? (
-                            <span className="flex items-center gap-1.5 font-medium text-emerald-700">
-                                <CheckCircle2 size={13} className="shrink-0" /> Hoàn thành ngày {path.completedDate}
-                            </span>
-                        ) : (
-                            <span className="text-slate-500">Đã hoàn thành toàn bộ lộ trình</span>
-                        )}
+                        <span className="flex items-center gap-1.5 font-medium text-emerald-700">
+                            <CheckCircle2 size={13} className="shrink-0" />
+                            {path.completedDate ? `Hoàn thành ngày ${path.completedDate}` : 'Đã hoàn thành toàn bộ lộ trình'}
+                        </span>
                     </div>
                 )}
 
-                <div className="mt-auto pt-1">{ctaButton()}</div>
+                {/* CTAs */}
+                <div className="mt-auto pt-1 flex flex-col gap-2">
+                    <Link
+                        to={`/app/learning-path/study/${path.id}`}
+                        className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm shadow-indigo-200 flex items-center justify-center gap-1.5"
+                    >
+                        {showContinue ? <Play size={13} className="fill-current" /> : <BookOpen size={13} />}
+                        {showContinue ? 'Tiếp tục học' : 'Vào học'}
+                    </Link>
+
+                    {/* Nút đánh giá — chỉ hiện nếu chưa review */}
+                    {!path.hasReviewed && (
+                        <button
+                            onClick={() => onReview(path)}
+                            className="w-full py-2 border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                        >
+                            <Star size={12} className="fill-amber-400 text-amber-400" />
+                            Đánh giá khóa học
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -616,6 +756,23 @@ function MyPathCard({ path }) {
 function MyPathsTab({ onExplore, enrolledPaths = [] }) {
     const [subTab, setSubTab] = useState('ongoing'); // 'ongoing' | 'completed'
     const completedLessonsMap = useStore(state => state.completedLessons);
+    const [reviewedIds, setReviewedIds] = useState(new Set());
+    const [reviewModal, setReviewModal] = useState(null);
+
+    useEffect(() => {
+        if (!enrolledPaths.length) return;
+        Promise.allSettled(
+            enrolledPaths.map(p =>
+                axiosClient.get(API_ENDPOINTS.LEARNING_PATHS.CHECK_MY_REVIEW(p.id))
+                    .then(r => ({ id: p.id, has: r?.hasReviewed ?? false }))
+                    .catch(() => ({ id: p.id, has: false }))
+            )
+        ).then(results => {
+            const ids = new Set();
+            results.forEach(r => { if (r.status === 'fulfilled' && r.value.has) ids.add(r.value.id); });
+            setReviewedIds(ids);
+        });
+    }, [enrolledPaths]);
 
     const myPathsAll = enrolledPaths.map((p) => {
         const completed = completedLessonsMap[p.id] || [];
@@ -636,60 +793,67 @@ function MyPathsTab({ onExplore, enrolledPaths = [] }) {
             currentModuleTitle: finalProgress >= 100 ? null : 'Tiếp tục lộ trình',
             currentLesson: finalProgress >= 100 ? null : 'Bài học kế tiếp',
             completedDate: finalProgress >= 100 ? new Date().toLocaleDateString('vi-VN') : null,
+            hasReviewed: reviewedIds.has(p.id),
         };
     });
     const activePaths = myPathsAll.filter(p => p.status !== 'COMPLETED');
     const completedPaths = myPathsAll.filter(p => p.status === 'COMPLETED');
-
     const shownPaths = subTab === 'ongoing' ? activePaths : completedPaths;
 
     return (
+        <>
+        {reviewModal && (
+            <ReviewModal
+                path={reviewModal}
+                onClose={() => setReviewModal(null)}
+                onSuccess={() => {
+                    setReviewedIds(prev => {
+                        const next = new Set(prev);
+                        next.add(reviewModal.id);
+                        return next;
+                    });
+                    setReviewModal(null);
+                }}
+            />
+        )}
         <div className="space-y-6">
-            {/* Sub-tabs: chỉ Đang học / Đã hoàn thành */}
             <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl w-fit">
-                <button
-                    type="button"
-                    onClick={() => setSubTab('ongoing')}
-                    className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm transition-all duration-200 ${subTab === 'ongoing' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
+                <button type="button" onClick={() => setSubTab('ongoing')}
+                    className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm transition-all duration-200 ${subTab === 'ongoing' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                     Đang học
                     {activePaths.length > 0 && <span className="bg-indigo-100 text-indigo-700 text-[10px] font-black px-1.5 py-0.5 rounded-full">{activePaths.length}</span>}
                 </button>
-                <button
-                    type="button"
-                    onClick={() => setSubTab('completed')}
-                    className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm transition-all duration-200 ${subTab === 'completed' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
+                <button type="button" onClick={() => setSubTab('completed')}
+                    className={`flex items-center gap-2 px-5 py-2 rounded-lg font-bold text-sm transition-all duration-200 ${subTab === 'completed' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                     Đã hoàn thành
                     {completedPaths.length > 0 && <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-1.5 py-0.5 rounded-full">{completedPaths.length}</span>}
                 </button>
             </div>
 
-            {/* Cards */}
             {shownPaths.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
-                    <div className="w-20 h-20 rounded-3xl bg-slate-100 flex items-center justify-center text-4xl mb-4 shadow-inner">
-                        {subTab === 'ongoing' ? '📚' : '🏆'}
+                    <div className="w-24 h-24 rounded-[2.5rem] bg-slate-50 border border-slate-100 flex items-center justify-center mb-6 shadow-inner">
+                        {subTab === 'ongoing' ? (
+                            <BookOpen size={48} className="text-indigo-300" strokeWidth={1.5} />
+                        ) : (
+                            <Trophy size={48} className="text-amber-400" strokeWidth={1.5} />
+                        )}
                     </div>
                     <h3 className="text-lg font-extrabold text-slate-700 mb-1">
                         {subTab === 'ongoing' ? 'Bạn chưa đăng ký lộ trình nào' : 'Chưa có lộ trình hoàn thành'}
                     </h3>
                     <p className="text-sm text-slate-400 max-w-xs mb-6">
-                        {subTab === 'ongoing'
-                            ? 'Khám phá các lộ trình phù hợp với kỹ năng và mục tiêu của bạn.'
-                            : 'Tiếp tục học để hoàn thành lộ trình đầu tiên của bạn!'}
+                        {subTab === 'ongoing' ? 'Khám phá các lộ trình phù hợp với kỹ năng và mục tiêu của bạn.' : 'Tiếp tục học để hoàn thành lộ trình đầu tiên của bạn!'}
                     </p>
                     {subTab === 'ongoing' && (
-                        <button onClick={onExplore}
-                            className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 flex items-center gap-2">
+                        <button onClick={onExplore} className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200 flex items-center gap-2">
                             <Search size={15} /> Khám phá lộ trình
                         </button>
                     )}
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {shownPaths.map(path => <MyPathCard key={path.id} path={path} />)}
-                    {/* Add new path card */}
+                    {shownPaths.map(path => <MyPathCard key={path.id} path={path} onReview={setReviewModal} />)}
                     {subTab === 'ongoing' && (
                         <button onClick={onExplore}
                             className="rounded-2xl border-2 border-dashed border-slate-200 p-8 flex flex-col items-center justify-center gap-3 text-slate-400 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50/30 transition-all duration-200 group min-h-[200px]">
@@ -702,6 +866,7 @@ function MyPathsTab({ onExplore, enrolledPaths = [] }) {
                 </div>
             )}
         </div>
+        </>
     );
 }
 

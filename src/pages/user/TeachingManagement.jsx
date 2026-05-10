@@ -55,7 +55,9 @@ const SlotChip = ({ slot, onDeleted }) => {
     const d = new Date(`${slot.slotDate}T${slot.slotTime}`);
     const dayLabel = d.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'numeric' });
     const timeLabel = slot.slotTime?.slice(0, 5) ?? d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    const endLabel = slot.slotEndTime ? slot.slotEndTime.slice(0, 5) : null;
+    
+    // Nếu BE trả về null cho endTime (data cũ), FE tự cộng 1h để hiển thị đồng nhất
+    const endLabel = slot.slotEndTime ? slot.slotEndTime.slice(0, 5) : addOneHourTime(timeLabel);
 
     return (
         <div className={`relative rounded-xl border-2 ${cfg.border} px-3 pt-2.5 pb-3 min-w-[110px] shrink-0 text-xs font-semibold group`}>
@@ -162,11 +164,15 @@ const TabSchedule = ({ skills, onToggleVisibility }) => {
                     next.endTime = '';
                 }
             }
-            if (field === 'startTime' && next.endTime) {
-                const endM = timeToMinutes(next.endTime);
-                const startM = timeToMinutes(next.startTime);
-                if (!Number.isNaN(endM) && !Number.isNaN(startM) && endM <= startM) {
+            if (field === 'startTime') {
+                if (!next.endTime) {
                     next.endTime = addOneHourTime(next.startTime);
+                } else {
+                    const endM = timeToMinutes(next.endTime);
+                    const startM = timeToMinutes(next.startTime);
+                    if (!Number.isNaN(endM) && !Number.isNaN(startM) && endM <= startM) {
+                        next.endTime = addOneHourTime(next.startTime);
+                    }
                 }
             }
             return next;
@@ -175,12 +181,23 @@ const TabSchedule = ({ skills, onToggleVisibility }) => {
     const addRow = () => setRows(prev => [...prev, EMPTY_ROW(selectedSkill?.creditsPerHour || 5)]);
     const removeRow = (i) => setRows(prev => prev.filter((_, idx) => idx !== i));
 
-    const validRows = rows.filter(r => r.date && r.startTime);
+    // Một dòng được coi là "đang nhập" nếu có ít nhất 1 trường có dữ liệu
+    const isRowDirty = (r) => r.date || r.startTime || r.endTime;
+    // Một dòng được coi là "hợp lệ" nếu điền ĐỦ cả 3 trường
+    const isRowComplete = (r) => r.date && r.startTime && r.endTime;
+
+    // Danh sách các dòng thực sự sẽ được gửi đi (bỏ qua các dòng trống hoàn toàn)
+    const rowsToCreate = rows.filter(isRowComplete);
+    // Kiểm tra xem có dòng nào đang nhập dở dang không
+    const hasIncompleteRow = rows.some(r => isRowDirty(r) && !isRowComplete(r));
 
     const handleCreate = async () => {
-        if (!selectedSkill || validRows.length === 0) return;
+        if (!selectedSkill || rowsToCreate.length === 0 || hasIncompleteRow) {
+            if (hasIncompleteRow) toastError(null, 'Vui lòng điền đầy đủ thông tin (Ngày, Bắt đầu, Kết thúc) cho tất cả các dòng.');
+            return;
+        }
 
-        for (const r of validRows) {
+        for (const r of rowsToCreate) {
             if (r.endTime) {
                 const sm = timeToMinutes(r.startTime);
                 const em = timeToMinutes(r.endTime);
@@ -200,7 +217,7 @@ const TabSchedule = ({ skills, onToggleVisibility }) => {
         setCreating(true);
         setCreateMsg('');
         try {
-            const slotsPayload = validRows.map(r => ({
+            const slotsPayload = rowsToCreate.map(r => ({
                 date: r.date,
                 time: r.startTime,
                 endTime: r.endTime || null,
@@ -337,20 +354,20 @@ const TabSchedule = ({ skills, onToggleVisibility }) => {
                                     min={minSlotDate}
                                     value={row.date}
                                     onChange={e => updateRow(i, 'date', e.target.value)}
-                                    className="px-3 py-2.5 rounded-xl border-2 border-slate-100 bg-slate-50 text-sm font-semibold text-slate-700 focus:border-violet-400 focus:bg-white outline-none transition-all w-full"
+                                    className={`px-3 py-2.5 rounded-xl border-2 bg-slate-50 text-sm font-semibold text-slate-700 focus:border-violet-400 focus:bg-white outline-none transition-all w-full ${isRowDirty(row) && !row.date ? 'border-red-200' : 'border-slate-100'}`}
                                 />
                                 <input
                                     type="time"
                                     min={getMinTimeHHMMForDate(row.date) ?? undefined}
                                     value={row.startTime}
                                     onChange={e => updateRow(i, 'startTime', e.target.value)}
-                                    className="px-3 py-2.5 rounded-xl border-2 border-slate-100 bg-slate-50 text-sm font-semibold text-slate-700 focus:border-violet-400 focus:bg-white outline-none transition-all w-full"
+                                    className={`px-3 py-2.5 rounded-xl border-2 bg-slate-50 text-sm font-semibold text-slate-700 focus:border-violet-400 focus:bg-white outline-none transition-all w-full ${isRowDirty(row) && !row.startTime ? 'border-red-200' : 'border-slate-100'}`}
                                 />
                                 <input
                                     type="time"
                                     value={row.endTime}
                                     onChange={e => updateRow(i, 'endTime', e.target.value)}
-                                    className="px-3 py-2.5 rounded-xl border-2 border-slate-100 bg-slate-50 text-sm font-semibold text-slate-700 focus:border-violet-400 focus:bg-white outline-none transition-all w-full"
+                                    className={`px-3 py-2.5 rounded-xl border-2 bg-slate-50 text-sm font-semibold text-slate-700 focus:border-violet-400 focus:bg-white outline-none transition-all w-full ${isRowDirty(row) && !row.endTime ? 'border-red-200' : 'border-slate-100'}`}
                                 />
                                 {rows.length > 1 ? (
                                     <button onClick={() => removeRow(i)}
@@ -376,14 +393,14 @@ const TabSchedule = ({ skills, onToggleVisibility }) => {
 
                         <button
                             onClick={handleCreate}
-                            disabled={creating || validRows.length === 0}
-                            className={`ml-auto flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${!creating && validRows.length > 0
+                            disabled={creating || rowsToCreate.length === 0 || hasIncompleteRow}
+                            className={`ml-auto flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${!creating && rowsToCreate.length > 0 && !hasIncompleteRow
                                 ? 'bg-violet-600 text-white hover:bg-violet-700 shadow-sm'
                                 : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                                 }`}
                         >
                             {creating ? <Spinner size={14} className="animate-spin" /> : <Plus size={14} weight="bold" />}
-                            {creating ? 'Đang tạo...' : `Tạo ${validRows.length} slot`}
+                            {creating ? 'Đang tạo...' : `Tạo ${rowsToCreate.length} slot`}
                         </button>
                     </div>
                 </div>
