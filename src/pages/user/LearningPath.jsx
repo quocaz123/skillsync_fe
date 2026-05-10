@@ -665,9 +665,21 @@ function MyPathCard({ path, onReview }) {
             {/* Thumbnail */}
             <div
                 className="relative h-36 flex items-center justify-center overflow-hidden"
-                style={{ background: `linear-gradient(135deg, ${path.thumbnailFrom}, ${path.thumbnailTo})` }}
+                style={!path.thumbnailUrl ? { background: `linear-gradient(135deg, ${path.thumbnailFrom}, ${path.thumbnailTo})` } : {}}
             >
-                <span className="text-5xl select-none opacity-90 drop-shadow-md group-hover:scale-110 transition-transform duration-300">{path.emoji}</span>
+                {path.thumbnailUrl ? (
+                    <img
+                        src={path.thumbnailUrl}
+                        alt={path.title}
+                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.parentElement.style.background = `linear-gradient(135deg, ${path.thumbnailFrom}, ${path.thumbnailTo})`;
+                        }}
+                    />
+                ) : (
+                    <span className="text-5xl select-none opacity-90 drop-shadow-md group-hover:scale-110 transition-transform duration-300">{path.emoji}</span>
+                )}
                 <div className="absolute top-3 left-3">{statusBadge()}</div>
                 {/* Đã đánh giá badge */}
                 {path.hasReviewed && (
@@ -784,6 +796,7 @@ function MyPathsTab({ onExplore, enrolledPaths = [] }) {
             id: p.id,
             title: p.title,
             emoji: p.emoji || '📚',
+            thumbnailUrl: p.thumbnailUrl || null,
             thumbnailFrom: p.thumbnailFrom || '#6366f1',
             thumbnailTo: p.thumbnailTo || '#8b5cf6',
             status: finalProgress >= 100 ? 'COMPLETED' : 'ONGOING',

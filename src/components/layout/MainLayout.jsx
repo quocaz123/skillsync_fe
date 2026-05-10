@@ -247,7 +247,7 @@ const MainLayout = () => {
         <div className="flex h-screen bg-slate-50 overflow-hidden">
             <MissionWelcomePopup />
 
-            <aside className={`hidden md:flex ${isCollapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200 flex-col transition-all duration-300 relative z-20 shrink-0`}>
+            <aside className={`hidden md:flex ${isCollapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200 flex-col transition-all duration-300 relative z-40 shrink-0`}>
                 <SidebarContent
                     onLinkClick={undefined}
                     isCollapsed={isCollapsed}
@@ -261,11 +261,11 @@ const MainLayout = () => {
             {/* ── MOBILE DRAWER OVERLAY ── */}
             {mobileOpen && (
                 <div
-                    className="fixed inset-0 bg-black/40 z-30 md:hidden"
+                    className="fixed inset-0 bg-black/40 z-50 md:hidden"
                     onClick={() => setMobileOpen(false)}
                 />
             )}
-            <aside className={`fixed top-0 left-0 h-full w-72 bg-white border-r border-slate-200 flex flex-col z-40 md:hidden transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+            <aside className={`fixed top-0 left-0 h-full w-72 bg-white border-r border-slate-200 flex flex-col z-[60] md:hidden transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 {/* Close button on mobile drawer */}
                 <button
                     className="absolute top-4 right-4 p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 transition-colors"
@@ -286,7 +286,7 @@ const MainLayout = () => {
             {/* ── MAIN CONTENT ── */}
             <main className="flex-1 flex flex-col overflow-y-auto w-full min-w-0 relative">
                 {/* Top Header */}
-                <header className="h-14 md:h-16 bg-white border-b border-slate-200 flex items-center justify-between px-3 md:px-8 z-10 shrink-0 sticky top-0">
+                <header className="h-14 md:h-16 bg-white border-b border-slate-200 flex items-center justify-between px-3 md:px-8 z-30 shrink-0 sticky top-0">
                     <div className="flex items-center gap-2 md:gap-4">
                         {/* Mobile: hamburger opens drawer | Desktop: collapse toggle */}
                         <button

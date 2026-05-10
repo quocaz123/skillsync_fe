@@ -81,6 +81,7 @@ export function normalizePathDetail(raw) {
         totalLessons: Number(pick(r, 'totalLessons', 'total_lessons', 'lessonCount') ?? 0),
         totalCredits: Number(pick(r, 'totalCredits', 'total_credits', 'creditCost', 'priceCredits') ?? 0),
         pathType: pathType === 'MENTOR' ? 'mentor' : pathType === 'SYSTEM' ? 'system' : pathType,
+        thumbnailUrl: pick(r, 'thumbnailUrl', 'thumbnail_url', 'image'),
         thumbnailFrom: pick(r, 'thumbnailFrom', 'thumbnail_from', 'bannerFrom'),
         thumbnailTo: pick(r, 'thumbnailTo', 'thumbnail_to', 'bannerTo'),
         emoji: pick(r, 'emoji', 'iconEmoji'),

@@ -12,7 +12,7 @@ import {
     getSlotsBySkill, createSlotsBatch, deleteSlot,
     getMySessions, approveSession, rejectSession
 } from '../../services/sessionService';
-import { toggleTeachingSkillVisibility } from '../../services/skillService.js';
+import { toggleTeachingSkillVisibility, updateSkillPrice } from '../../services/skillService.js';
 import { toastError, toastSuccess } from "../../utils/toastUtils";
 import ConfirmModal from '../../components/common/ConfirmModal';
 import Avatar from '../../components/common/Avatar';
@@ -83,28 +83,98 @@ const SlotChip = ({ slot, onDeleted }) => {
 };
 
 // â”€â”€ Skill Description Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const SkillCard = ({ skill }) => (
-    <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 flex items-start gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-white border border-violet-200 flex items-center justify-center text-xl shrink-0 shadow-sm overflow-hidden text-violet-600">
-            <SkillDynamicIcon skillName={skill.skillName} defaultIcon={skill.skillIcon} size={22} />
-        </div>
-        <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2 mb-1">
-                <span className="font-extrabold text-violet-800 text-base">{skill.skillName}</span>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-white border border-violet-200 text-violet-600">{skill.level}</span>
-                <span className="flex items-center gap-1 text-[11px] font-extrabold text-amber-600">
-                    <Lightning size={11} weight="fill" className="text-amber-400" /> {skill.creditsPerHour} credits/h
-                </span>
+const SkillCard = ({ skill, onUpdatePrice }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [price, setPrice] = useState(skill.creditsPerHour);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        setPrice(skill.creditsPerHour);
+    }, [skill.creditsPerHour]);
+
+    const handleSave = async () => {
+        if (price === skill.creditsPerHour) {
+            setIsEditing(false);
+            return;
+        }
+        if (price < 0) {
+            toastError(null, "Giá credit không thể âm.");
+            return;
+        }
+        setLoading(true);
+        try {
+            await onUpdatePrice(skill.id, price);
+            setIsEditing(false);
+            toastSuccess("Đã cập nhật giá credit thành công.");
+        } catch (e) {
+            toastError(e, "Cập nhật giá thất bại.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-white border border-violet-200 flex items-center justify-center text-xl shrink-0 shadow-sm overflow-hidden text-violet-600">
+                <SkillDynamicIcon skillName={skill.skillName} defaultIcon={skill.skillIcon} size={22} />
             </div>
-            {skill.experienceDesc && (
-                <p className="text-xs text-violet-600 leading-relaxed line-clamp-2">{skill.experienceDesc}</p>
-            )}
-            {skill.outcomeDesc && (
-                <p className="text-[11px] text-slate-500 mt-1 line-clamp-1">{skill.outcomeDesc}</p>
-            )}
+            <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <span className="font-extrabold text-violet-800 text-base">{skill.skillName}</span>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-white border border-violet-200 text-violet-600">{skill.level}</span>
+                    
+                    {isEditing ? (
+                        <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-violet-200 shadow-sm">
+                            <input
+                                type="number"
+                                value={price}
+                                onChange={(e) => setPrice(parseInt(e.target.value) || 0)}
+                                className="w-16 px-2 py-1 text-sm font-black text-violet-700 bg-slate-50 rounded-lg outline-none focus:ring-1 focus:ring-violet-400"
+                                min="0"
+                                autoFocus
+                            />
+                            <button 
+                                onClick={handleSave}
+                                disabled={loading}
+                                className="p-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-50"
+                                title="Lưu"
+                            >
+                                {loading ? <Spinner size={14} className="animate-spin" /> : <Check size={14} weight="bold" />}
+                            </button>
+                            <button 
+                                onClick={() => { setIsEditing(false); setPrice(skill.creditsPerHour); }}
+                                className="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors"
+                                title="Hủy"
+                            >
+                                <X size={14} weight="bold" />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full">
+                                <Lightning size={12} weight="fill" className="text-amber-500" />
+                                <span className="text-xs font-black text-amber-700">{skill.creditsPerHour} cr/h</span>
+                            </div>
+                            <button 
+                                onClick={() => setIsEditing(true)}
+                                className="flex items-center gap-1 px-3 py-1 rounded-full bg-violet-600 text-white hover:bg-violet-700 text-[10px] font-black uppercase tracking-wider transition-all shadow-sm active:scale-95"
+                            >
+                                <PencilSimple size={12} weight="bold" />
+                                Đổi giá
+                            </button>
+                        </div>
+                    )}
+                </div>
+                {skill.experienceDesc && (
+                    <p className="text-xs text-violet-600 leading-relaxed line-clamp-2">{skill.experienceDesc}</p>
+                )}
+                {skill.outcomeDesc && (
+                    <p className="text-[11px] text-slate-500 mt-1 line-clamp-1">{skill.outcomeDesc}</p>
+                )}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 // â”€â”€ TabSchedule â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const EMPTY_ROW = () => ({ date: '', startTime: '', endTime: '' });
@@ -280,7 +350,14 @@ const TabSchedule = ({ skills, onToggleVisibility }) => {
                                 Kỹ năng đang <strong>tạm ẩn</strong>: không xuất hiện trên Khám phá / gợi ý AI; học viên mới không đặt lịch. Lịch &amp; buổi học đã có vẫn giữ nguyên.
                             </div>
                         )}
-                        <SkillCard skill={selectedSkill} />
+                        <SkillCard 
+                            skill={selectedSkill} 
+                            onUpdatePrice={async (id, newPrice) => {
+                                await updateSkillPrice(id, newPrice);
+                                // Cập nhật local state trong cha
+                                onToggleVisibility(null, { id, newPrice, type: 'price' });
+                            }} 
+                        />
                     </>
                 )}
 
@@ -695,6 +772,15 @@ const TeachingManagement = () => {
         }
     };
 
+    const handleUpdateSkillData = (skillId, newData) => {
+        setSkills(prev => prev.map(s => {
+            if (s.id === skillId) {
+                return { ...s, ...newData };
+            }
+            return s;
+        }));
+    };
+
     return (
         <div className="max-w-6xl mx-auto font-sans pb-4 space-y-5 sm:space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -739,7 +825,18 @@ const TeachingManagement = () => {
                     </div>
                 ) : (
                     <>
-                        {activeTab === 'schedule' && <TabSchedule skills={skills} onToggleVisibility={handleToggleVisibility} />}
+                        {activeTab === 'schedule' && (
+                            <TabSchedule 
+                                skills={skills} 
+                                onToggleVisibility={(skill, extra) => {
+                                    if (extra && extra.type === 'price') {
+                                        handleUpdateSkillData(extra.id, { creditsPerHour: extra.newPrice });
+                                    } else {
+                                        handleToggleVisibility(skill);
+                                    }
+                                }} 
+                            />
+                        )}
                         {activeTab === 'requests' && <TabRequests navigate={navigate} />}
                     </>
                 )}

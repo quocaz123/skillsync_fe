@@ -203,12 +203,14 @@ function QuizModal({ open, onClose, moduleTitle }) {
   );
 }
 
-function ReviewModal({ pathId, pathTitle, onClose, onSuccess }) {
+function ReviewModal({ open, pathId, pathTitle, onClose, onSuccess }) {
     const [rating, setRating] = useState(0);
     const [hovered, setHovered] = useState(0);
     const [comment, setComment] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
+
+    if (!open) return null;
 
     const handleSubmit = async () => {
         if (rating === 0) { setError('Vui lòng chọn số sao.'); return; }
@@ -283,6 +285,7 @@ export default function LearningPathStudy() {
   const [supportModuleId, setSupportModuleId] = useState(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [hasReviewed, setHasReviewed] = useState(false);
+  const [quizOpen, setQuizOpen] = useState(false);
 
   useEffect(() => {
     let c = false;

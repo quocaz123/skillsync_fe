@@ -132,7 +132,10 @@ const Sessions = () => {
     }
   };
 
+  const [actionLoading, setActionLoading] = useState({});
+
   const handleConfirmSession = async (sessionId) => {
+    setActionLoading(prev => ({ ...prev, [sessionId]: true }));
     try {
       await confirmSession(sessionId);
       setSessions((prev) =>
@@ -144,6 +147,8 @@ const Sessions = () => {
       toastSuccess("Đã chuyển tiền cho Mentor.");
     } catch (error) {
       toastError(error, "Chuyển tiền thất bại. Vui lòng thử lại.");
+    } finally {
+      setActionLoading(prev => ({ ...prev, [sessionId]: false }));
     }
   };
 
@@ -227,7 +232,7 @@ const Sessions = () => {
             onClick={() => setActiveTab("past")}
             className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-bold transition-all duration-300 ${activeTab === "past" ? "bg-white text-slate-800 shadow-md scale-[1.02]" : "text-white hover:bg-white/10"}`}
           >
-            Đã hoàn thành{" "}
+            Lịch sử buổi học{" "}
             <span
               className={`text-[11px] px-2.5 py-0.5 rounded-full font-black ${activeTab === "past" ? "bg-slate-100 text-slate-700" : "bg-white/20 text-white"}`}
             >
@@ -456,8 +461,10 @@ const Sessions = () => {
                           {session.creditCost}
                         </div>
                       </div>
-                      {session.review ? (
-                        <div className="bg-amber-50/50 rounded-2xl p-5 border border-amber-100/50 relative mt-auto">
+
+                      {/* Review Display */}
+                      {session.review && (
+                        <div className="bg-amber-50/50 rounded-2xl p-5 border border-amber-100/50 relative mt-2">
                           <div className="absolute -top-3 left-4 bg-white border border-amber-100 px-2 py-0.5 rounded-full flex gap-0.5">
                             {[...Array(5)].map((_, i) => (
                               <Star
@@ -475,47 +482,58 @@ const Sessions = () => {
                             "{session.review}"
                           </p>
                         </div>
-                      ) : session.status === "CANCELLED" ? (
-                        <div className="mt-auto pt-4 text-red-500 font-bold flex items-center gap-2">
-                          <XCircle size={18} /> Đã hủy / Hoàn tiền
-                        </div>
-                      ) : session.status === "DISPUTED" ? (
-                        <div className="mt-auto pt-4 text-amber-600 font-bold flex items-center gap-2">
-                          <AlertTriangle size={18} /> Đang xử lý khiếu nại
-                        </div>
-                      ) : (
-                        <div className="mt-auto pt-4 flex justify-end gap-3 flex-wrap">
-                          {!isTeacher(session) &&
-                            session.status === "COMPLETED" && (
-                              <>
-                                {!session.mentorPaid && (
-                                  <>
-                                    <button
-                                      onClick={() => handleConfirmSession(session.id)}
-                                      className="text-xs font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-4 py-2 rounded-lg transition-colors flex items-center gap-1"
-                                    >
-                                      <CheckCircle2 size={14} /> Chuyển tiền Mentor
-                                    </button>
-                                    <button
-                                      onClick={() => handleOpenReport(session)}
-                                      className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg transition-colors flex items-center gap-1"
-                                    >
-                                      <ShieldAlert size={14} /> Báo cáo sự cố
-                                    </button>
-                                  </>
-                                )}
-                              </>
-                            )}
-                          {session.status === "COMPLETED" && !session.review && (
-                            <button
-                              onClick={() => handleOpenReview(session)}
-                              className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-lg transition-colors"
-                            >
-                              Viết đánh giá
-                            </button>
-                          )}
-                        </div>
                       )}
+
+                      {/* Status & Action Buttons */}
+                      <div className="mt-auto pt-4 border-t border-slate-50 flex flex-col gap-3">
+                        {session.status === "CANCELLED" ? (
+                          <div className="text-red-500 font-bold flex items-center gap-2 text-sm">
+                            <XCircle size={18} /> Đã hủy / Hoàn tiền
+                          </div>
+                        ) : session.status === "DISPUTED" ? (
+                          <div className="text-amber-600 font-bold flex items-center gap-2 text-sm">
+                            <AlertTriangle size={18} /> Đang xử lý khiếu nại
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex gap-2">
+                              {!isTeacher(session) && !session.mentorPaid && (
+                                <>
+                                  <button
+                                    onClick={() => handleConfirmSession(session.id)}
+                                    disabled={actionLoading[session.id]}
+                                    className="text-xs font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                                  >
+                                    {actionLoading[session.id] ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                                    Chuyển tiền Mentor
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenReport(session)}
+                                    disabled={actionLoading[session.id]}
+                                    className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                                  >
+                                    <ShieldAlert size={14} /> Báo cáo sự cố
+                                  </button>
+                                </>
+                              )}
+                              {session.mentorPaid && (
+                                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                                  <CheckCircle2 size={14} /> Đã thanh toán
+                                </span>
+                              )}
+                            </div>
+
+                            {!session.review && (
+                              <button
+                                onClick={() => handleOpenReview(session)}
+                                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-lg transition-colors"
+                              >
+                                Viết đánh giá
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))

@@ -101,6 +101,30 @@ const Profile = () => {
     }
   };
 
+  const loadReviews = async () => {
+    const targetId = profile?.id || user?.id || user?.userId;
+    if (!targetId) return;
+
+    setLoadingReviews(true);
+    try {
+      const data = await getReviewsByUserId(targetId);
+      // Backend returns result: [...] or just the array
+      const reviewList = data?.result || data || [];
+      setReviews(Array.isArray(reviewList) ? reviewList : []);
+    } catch (err) {
+      console.error("Failed to load reviews:", err);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
+  // Load reviews when tab changes
+  useEffect(() => {
+    if (activeTab === "reviews" && reviews.length === 0) {
+      loadReviews();
+    }
+  }, [activeTab, profile?.id, user?.id]);
+
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -348,7 +372,7 @@ const Profile = () => {
               size={20}
               weight={activeTab === "reviews" ? "duotone" : "regular"}
             />{" "}
-            Lời khen
+            Đánh giá
           </button>
         </div>
       </div>

@@ -342,7 +342,7 @@ export default function LearningPathDetail() {
                 to="/app/learning-path"
                 className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-800 mb-6"
             >
-                <ChevronLeft size={18} /> Quay lại Khám phá
+                <ChevronLeft size={18} /> Quay lại Lộ trình học
             </Link>
 
             <div className="lg:grid lg:grid-cols-3 lg:gap-10 lg:items-start">
@@ -350,12 +350,24 @@ export default function LearningPathDetail() {
                     {/* A. Hero */}
                     <section className="rounded-3xl overflow-hidden border border-slate-200 bg-white shadow-sm">
                         <div
-                            className="relative h-52 sm:h-64 flex items-center justify-center"
-                            style={{
+                            className="relative h-52 sm:h-64 flex items-center justify-center overflow-hidden"
+                            style={!detail.thumbnailUrl ? {
                                 background: `linear-gradient(135deg, ${detail.thumbnailFrom || '#6366f1'}, ${detail.thumbnailTo || '#8b5cf6'})`,
-                            }}
+                            } : {}}
                         >
-                            <span className="text-7xl sm:text-8xl drop-shadow-lg select-none">{detail.emoji || '📚'}</span>
+                            {detail.thumbnailUrl ? (
+                                <img 
+                                    src={detail.thumbnailUrl} 
+                                    alt={detail.title} 
+                                    className="absolute inset-0 w-full h-full object-cover"
+                                    onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.parentElement.style.background = `linear-gradient(135deg, ${detail.thumbnailFrom || '#6366f1'}, ${detail.thumbnailTo || '#8b5cf6'})`;
+                                    }}
+                                />
+                            ) : (
+                                <span className="text-7xl sm:text-8xl drop-shadow-lg select-none">{detail.emoji || '📚'}</span>
+                            )}
                             <div className="absolute top-4 left-4 flex flex-wrap gap-2">
                                 {isMentor ? (
                                     <span className="px-2.5 py-1 rounded-full bg-white/90 text-violet-700 text-xs font-bold border border-violet-200 flex items-center gap-1">
