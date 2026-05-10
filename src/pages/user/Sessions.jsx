@@ -523,14 +523,14 @@ const Sessions = () => {
                               )}
                             </div>
 
-                            {!session.review && (
-                              <button
-                                onClick={() => handleOpenReview(session)}
-                                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-lg transition-colors"
-                              >
-                                Viết đánh giá
-                              </button>
-                            )}
+                        {session.status === "COMPLETED" && !session.review && !isTeacher(session) && (
+                        <button
+                          onClick={() => handleOpenReview(session)}
+                          className="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"
+                        >
+                          <Star size={14} /> Viết đánh giá
+                        </button>
+                      )}
                           </div>
                         )}
                       </div>
