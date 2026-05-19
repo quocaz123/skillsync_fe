@@ -129,7 +129,7 @@ const AdminLayout = () => {
             items: [
                 { path: '/admin/missions', label: 'Nhiệm vụ (Missions)', icon: Flag },
                 { path: '/admin/system', label: 'Nhật ký Hoạt động', icon: Database },
-                { path: '/admin/ai-config', label: 'Cấu hình AI', icon: Brain },
+                { path: '/admin/ai-config', label: 'Cấu hình', icon: Brain },
             ],
         },
     ];
@@ -145,7 +145,7 @@ const AdminLayout = () => {
         '/admin/paths': 'Quản lý Lộ trình Học',
         '/admin/missions': 'Quản lý Nhiệm vụ (Missions)',
         '/admin/system': 'Nhật ký Hoạt động Hệ thống',
-        '/admin/ai-config': 'Cấu hình AI',
+        '/admin/ai-config': 'Cấu hình',
     };
 
     return (

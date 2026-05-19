@@ -141,7 +141,7 @@ const AdminAiConfig = () => {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
             <Brain size={24} weight="duotone" className="text-indigo-500" />
-            Cấu hình AI — SkillSync
+            Cấu hình — SkillSync
           </h1>
           <p className="text-sm text-slate-400 font-medium mt-1">
             Thay đổi có hiệu lực ngay lập tức, không cần restart server
